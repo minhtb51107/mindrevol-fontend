@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@theme {
+  /* --- THEME CONFIG --- */
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-foreground: var(--fg);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+
+  /* Màu chủ đạo: Electric Blue - Năng lượng Gen Z */
+  --color-primary: #62C5FF; 
+  --color-primary-foreground: #ffffff;
+
+  /* Font */
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  
+  /* Bo góc */
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+:root {
+  /* LIGHT MODE: Sáng sủa, sạch sẽ (như Instagram) */
+  --bg: #ffffff;
+  --surface: #f3f4f6; /* Gray 100 - Dùng làm nền cho cột trái */
+  --fg: #111827;      /* Gray 900 */
+  --border: #e5e7eb;  /* Gray 200 */
+  --muted: #6b7280;   /* Gray 500 */
+}
+
+.dark {
+  /* DARK MODE: Đen sâu, huyền bí (như Locket/Spotify) */
+  --bg: #09090b;      /* Zinc 950 */
+  --surface: #101012; /* Zinc 925 - Nền cột trái tối hơn */
+  --fg: #fafafa;      /* Zinc 50 */
+  --border: #27272a;  /* Zinc 800 */
+  --muted: #a1a1aa;   /* Zinc 400 */
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark Mode: Đảo ngược màu icon từ Đen sang Trắng */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.8; /* Làm mờ chút cho đỡ chói */
+    cursor: pointer;
+}
+
+/* Tùy chỉnh thêm cho đẹp (Optional) */
+.dark ::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
