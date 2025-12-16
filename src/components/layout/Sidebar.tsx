@@ -1,59 +1,131 @@
-import React from 'react';
-import { Home, Compass, MessageCircle, Heart, User, Plus, LogOut, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+// src/components/layout/Sidebar.tsx
+import React, { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { Home, Map, MessageCircle, Compass, User, LogOut, PlusCircle, Users } from 'lucide-react';
+import { useAuth } from '@/modules/auth/store/AuthContext';
+import { CreateJourneyModal } from '@/modules/journey/components/CreateJourneyModal';
+import { JourneyListModal } from '@/modules/journey/components/JourneyListModal';
+import { FriendsModal } from '@/modules/user/components/FriendsModal';
 
-// Item menu đơn lẻ
-const NavItem = ({ icon: Icon, label, active }: any) => (
-  <button className={`flex items-center gap-4 p-3 rounded-2xl w-full transition-all group ${active ? 'bg-primary/10 text-primary font-bold' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}>
-    <Icon className={`w-7 h-7 transition-transform group-hover:scale-110 ${active ? 'fill-current' : ''}`} strokeWidth={active ? 2.5 : 2} />
-    <span className="text-base tracking-wide hidden xl:block">{label}</span>
-  </button>
-);
+export const Sidebar: React.FC = () => {
+  const { logout, user } = useAuth();
 
-export const Sidebar = () => {
+  // State quản lý đóng mở các Modal
+  const [isCreateOpen, setCreateOpen] = useState(false);
+  const [isListOpen, setListOpen] = useState(false);
+  const [isFriendsOpen, setFriendsOpen] = useState(false);
+
+  const navItems = [
+    { icon: Home, label: 'Trang chủ', to: '/' },
+    { icon: Compass, label: 'Khám phá', to: '/discovery' },
+    { 
+      icon: Map, 
+      label: 'Hành trình', 
+      to: '/journeys',
+      // Logic: Bấm vào thì mở Modal, không chuyển trang
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        setListOpen(true);
+      }
+    },
+    { 
+      icon: Users, 
+      label: 'Bạn bè', 
+      to: '/friends', // Đường dẫn ảo để active style hoạt động nếu cần
+      // Logic: Bấm vào thì mở Modal Bạn bè
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        setFriendsOpen(true);
+      }
+    },
+    // [UPDATE] Trỏ đúng về trang ChatPage
+    { icon: MessageCircle, label: 'Tin nhắn', to: '/chat' }, 
+    { icon: User, label: 'Cá nhân', to: '/profile' },
+  ];
+
   return (
-    <aside className="fixed left-0 top-0 h-full w-[80px] xl:w-[280px] bg-surface border-r border-border p-4 flex flex-col justify-between z-50 transition-all duration-300">
-      
-      {/* 1. Logo */}
-      <div className="pl-2 xl:pl-4 mb-8 pt-2 flex items-center gap-3">
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center transform rotate-3 shadow-lg shadow-primary/30 shrink-0">
-          <span className="text-white font-black text-xl">M</span>
+    <>
+      <aside className="h-full w-full flex flex-col text-white/90">
+        {/* Logo */}
+        <div className="flex flex-col gap-4 mb-8 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+              M
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg tracking-tight leading-none">MindRevol</span>
+              <span className="text-xs text-zinc-500 font-medium">Bản khởi nghiệp</span>
+            </div>
+          </div>
         </div>
-        <span className="text-2xl font-extrabold tracking-tighter text-foreground hidden xl:block">MindRevol</span>
-      </div>
 
-      {/* 2. Menu Chính */}
-      <nav className="flex-1 space-y-2">
-        <NavItem icon={Home} label="Trang chủ" active />
-        <NavItem icon={Compass} label="Khám phá" />
-        <NavItem icon={MessageCircle} label="Tin nhắn" />
-        <NavItem icon={Heart} label="Thông báo" />
-        <NavItem icon={User} label="Hồ sơ" />
-      </nav>
+        {/* Nút Tạo Hành Trình */}
+        <div className="px-2 mb-6">
+          <button 
+            onClick={() => setCreateOpen(true)}
+            className="w-full bg-white/10 hover:bg-white/20 border border-white/5 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <PlusCircle className="w-5 h-5 text-blue-400" />
+            <span>Tạo Hành Trình</span>
+          </button>
+        </div>
 
-      {/* 3. Nút Tạo Mới (Nổi bật) */}
-      <div className="mb-6">
-        <Button className="w-full h-12 xl:h-14 rounded-2xl xl:rounded-full bg-primary hover:bg-blue-600 shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
-          <Plus className="w-6 h-6 text-white" strokeWidth={3} />
-          <span className="hidden xl:inline ml-2 text-white text-base">Check-in Mới</span>
-        </Button>
-      </div>
+        {/* Menu Navigation */}
+        <nav className="flex-1 flex flex-col gap-1.5 px-2">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.label}
+              to={item.to}
+              onClick={item.onClick}
+              className={({ isActive }) => `
+                flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden
+                ${isActive && !item.onClick
+                  ? 'bg-gradient-to-r from-blue-600/20 to-cyan-500/20 text-white font-bold border border-white/5' 
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }
+              `}
+            >
+              <item.icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${item.label === 'Khám phá' ? 'text-purple-400' : ''}`} />
+              <span className="text-sm">{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
 
-      {/* 4. Footer Menu */}
-      <div className="space-y-2 pt-4 border-t border-border">
-        <NavItem icon={Settings} label="Cài đặt" />
-        <button 
-          onClick={() => { 
-            localStorage.removeItem('accessToken'); 
-            localStorage.removeItem('refreshToken');
-            window.location.reload(); 
-          }}
-          className="flex items-center gap-4 p-3 rounded-2xl w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all group"
-        >
-          <LogOut className="w-7 h-7 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-base font-bold hidden xl:block">Đăng xuất</span>
-        </button>
-      </div>
-    </aside>
+        {/* Logout */}
+        <div className="flex flex-col gap-1 mt-auto border-t border-white/10 pt-4 px-2">
+          <button 
+            onClick={logout}
+            className="flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-sm font-medium">Đăng xuất</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* --- RENDER CÁC MODAL --- */}
+      {/* 1. Tạo hành trình */}
+      <CreateJourneyModal 
+        isOpen={isCreateOpen} 
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => setListOpen(true)}
+      />
+
+      {/* 2. Danh sách hành trình */}
+      <JourneyListModal 
+        isOpen={isListOpen}
+        onClose={() => setListOpen(false)}
+        // onCreateNew={() => { // Đã xử lý logic này bên trong component JourneyListModal rồi
+        //   setListOpen(false);
+        //   setCreateOpen(true);
+        // }}
+      />
+
+      {/* 3. Bạn bè & Tìm kiếm (MỚI) */}
+      <FriendsModal 
+        isOpen={isFriendsOpen}
+        onClose={() => setFriendsOpen(false)}
+      />
+    </>
   );
 };

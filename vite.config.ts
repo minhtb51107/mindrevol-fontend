@@ -7,15 +7,36 @@ import path from 'path'
 export default defineConfig({
   plugins: [
     react(),
-    basicSsl() // Tự động tạo chứng chỉ HTTPS (Bắt buộc cho FB Login)
+    basicSsl() // Tự động tạo HTTPS cho Frontend (Localhost)
   ],
+  
+  // [QUAN TRỌNG] Fix lỗi "global is not defined" của thư viện SockJS
+  define: {
+    global: 'window', 
+  },
+
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // Giữ lại cấu hình đường dẫn tắt
+      "@": path.resolve(__dirname, "./src"),
     },
   },
+
   server: {
     port: 5173,
-    // host: true, // Bỏ comment dòng này nếu muốn truy cập từ điện thoại chung wifi
+    https: true, // Kích hoạt HTTPS cho frontend
+    // Cấu hình Proxy để đẩy request sang Backend (đang chạy HTTPS 8080)
+    proxy: {
+      '/api': {
+        target: 'https://localhost:8080', 
+        changeOrigin: true,
+        secure: false, // [QUAN TRỌNG] Bỏ qua lỗi chứng chỉ tự ký của Backend
+      },
+      '/ws': {
+        target: 'https://localhost:8080',
+        ws: true,      // Kích hoạt proxy cho WebSocket
+        changeOrigin: true,
+        secure: false, // [QUAN TRỌNG]
+      },
+    },
   }
 })

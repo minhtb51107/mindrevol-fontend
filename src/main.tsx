@@ -4,16 +4,19 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from '@/modules/auth/store/AuthContext'
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { BrowserRouter } from 'react-router-dom'; // Added BrowserRouter here
 
-// Đọc từ .env
+// Read from .env
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
     </GoogleOAuthProvider>
   </StrictMode>,
 )
