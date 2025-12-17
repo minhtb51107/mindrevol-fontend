@@ -1,34 +1,24 @@
-import React, { useEffect } from 'react';
-import MainLayout from '@/components/layout/MainLayout';
+import { useEffect } from 'react';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
-import { useChatSocket } from '../hooks/useChatSocket';
+import MainLayout from '@/components/layout/MainLayout';
 import { useChatStore } from '../store/useChatStore';
-import { chatService } from '../services/chat.service';
 
 export const ChatPage = () => {
-  // 1. Kích hoạt Socket
-  useChatSocket();
-  
-  // 2. Load danh sách hội thoại ban đầu
-  const { setConversations } = useChatStore();
-  
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const data = await chatService.getConversations();
-        setConversations(data);
-      } catch (e) { console.error(e); }
-    };
-    init();
-  }, []);
-
   return (
     <MainLayout>
-      <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-black">
+    <div className="flex h-[100dvh] w-full bg-[#121212] overflow-hidden">
+      
+      {/* Cột trái: List Conversation */}
+      <div className="w-[300px] md:w-[350px] h-full shrink-0 border-r border-white/5">
         <ConversationList />
+      </div>
+
+      {/* Cột phải: Chat Window - flex-1 để chiếm hết không gian còn lại */}
+      <div className="flex-1 h-full min-w-0 bg-[#121212] relative">
         <ChatWindow />
       </div>
+    </div>
     </MainLayout>
   );
 };

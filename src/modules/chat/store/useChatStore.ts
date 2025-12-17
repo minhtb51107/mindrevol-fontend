@@ -4,15 +4,17 @@ import { Conversation, Message, MessageDeliveryStatus } from '../types';
 
 interface ChatState {
   conversations: Conversation[];
-  activeConversationId: number | null;
-  messages: Record<number, Message[]>; // Cache tin nhắn theo conversationId
+  activeConversationId: number | null; // Nếu có ID => Drawer mở, Null => Drawer đóng
+  messages: Record<number, Message[]>; // Cache tin nhắn
   isSidebarOpen: boolean; // Mobile toggle
 
   // Actions
   setConversations: (list: Conversation[]) => void;
-  setActiveConversation: (id: number | null) => void;
+  openChat: (conversationId: number) => void; // Mở chat với 1 người/nhóm
+  closeChat: () => void; // Đóng chat
+  
   setMessages: (convId: number, msgs: Message[]) => void;
-  addMessage: (msg: Message) => void; // Dùng khi nhận socket hoặc gửi tin
+  addMessage: (msg: Message) => void; 
   updateMessageStatus: (clientSideId: string, status: MessageDeliveryStatus, realId?: number) => void;
   markAsRead: (convId: number) => void;
   setTyping: (convId: number, isTyping: boolean) => void;
@@ -28,7 +30,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setConversations: (list) => set({ conversations: list }),
   
-  setActiveConversation: (id) => set({ activeConversationId: id, isSidebarOpen: false }),
+  // LOGIC MỚI: Mở chat drawer
+  openChat: (id) => set({ activeConversationId: id }),
+  
+  // LOGIC MỚI: Đóng chat drawer
+  closeChat: () => set({ activeConversationId: null }),
 
   setMessages: (convId, msgs) => set((state) => ({
     messages: { ...state.messages, [convId]: msgs }
@@ -43,14 +49,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
     const newMsgs = [...currentMsgs, msg]; // Append xuống cuối
 
-    // 2. Update Conversation List (Move to top + Update preview)
+    // 2. Update Conversation List (đưa lên đầu)
     const convIndex = state.conversations.findIndex(c => c.id === msg.conversationId);
     let newConversations = [...state.conversations];
 
     if (convIndex > -1) {
       const updatedConv = { ...newConversations[convIndex] };
       updatedConv.lastMessageContent = msg.type === 'IMAGE' ? '[Hình ảnh]' : msg.content;
-      updatedConv.lastMessageAt = new Date().toISOString(); // Hoặc msg.createdAt
+      updatedConv.lastMessageAt = new Date().toISOString(); 
       updatedConv.lastSenderId = msg.senderId;
       
       // Nếu không phải đang chat -> Tăng unread
@@ -61,9 +67,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Xóa vị trí cũ, đưa lên đầu
       newConversations.splice(convIndex, 1);
       newConversations.unshift(updatedConv);
-    } else {
-      // Trường hợp message mới từ conversation chưa có trong list (cần fetch lại list hoặc xử lý sau)
-    }
+    } 
 
     return { 
       messages: { ...state.messages, [msg.conversationId]: newMsgs },
@@ -72,7 +76,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   }),
 
   updateMessageStatus: (clientSideId, status, realId) => set((state) => {
-    // Tìm và update status tin nhắn (Optimistic -> Real)
     const newMessages = { ...state.messages };
     for (const convId in newMessages) {
       newMessages[convId] = newMessages[convId].map(m => {
