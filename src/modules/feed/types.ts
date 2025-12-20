@@ -50,4 +50,16 @@ export interface JourneyPost {
   reactionCount?: number;
   commentCount?: number;
   isLiked?: boolean; // User hiện tại đã like chưa?
+
+  latestReactions: ReactionDetail[]; 
+}
+
+export interface ReactionDetail {
+  id: string; // UUID reaction id
+  userId: number; // Backend trả về userId là Long (number)
+  userFullName: string;
+  userAvatar: string;
+  emoji: string;
+  mediaUrl?: string;
+  createdAt: string;
 }

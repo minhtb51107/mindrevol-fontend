@@ -113,5 +113,5 @@ export const journeyService = {
   getMyPendingInvitations: async (): Promise<JourneyInvitationResponse[]> => {
     const response = await http.get<{ data: { content: JourneyInvitationResponse[] } }>(`${INVITATION_URL}/pending`);
     return response.data.data.content;
-  }
+  },
 };
