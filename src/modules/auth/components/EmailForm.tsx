@@ -12,13 +12,13 @@ import FacebookLogin from '@greatsumini/react-facebook-login';
 import { generateCodeVerifier, generateCodeChallenge } from '@/lib/pkce';
 
 // --- CONFIG ---
-const FACEBOOK_APP_ID = "1578813576625180";
+const FACEBOOK_APP_ID = "1578813576625180"; 
 
-// [FIX]: Gán thẳng chuỗi vào, không dùng import.meta.env nữa
+// Vẫn dùng Key Sandbox (vì app chưa được duyệt Production)
 const TIKTOK_CLIENT_KEY = "sbawuq6944l3tftyri"; 
 
-// [FIX]: Gán thẳng link localhost vào
-const TIKTOK_REDIRECT_URI = "http://localhost:5173/auth/callback/tiktok";
+// [QUAN TRỌNG]: Đổi sang link Vercel
+const TIKTOK_REDIRECT_URI = "https://mindrevol.vercel.app/auth/callback/tiktok";
 
 const schema = z.object({
   email: z.string().email("Email không hợp lệ"),
