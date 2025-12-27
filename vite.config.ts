@@ -23,7 +23,6 @@ export default defineConfig({
 
   server: {
     port: 5173,
-    https: true, // Kích hoạt HTTPS cho frontend
     // Cấu hình Proxy để đẩy request sang Backend (đang chạy HTTPS 8080)
     proxy: {
       '/api': {

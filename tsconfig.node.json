@@ -12,7 +12,8 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
-    "noEmit": true,
+    "composite": true,      // <--- THÊM DÒNG NÀY
+    "noEmit": false,        // <--- SỬA THÀNH FALSE (hoặc xóa luôn dòng này)
 
     /* Linting */
     "strict": true,
