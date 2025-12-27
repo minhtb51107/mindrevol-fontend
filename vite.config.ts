@@ -1,41 +1,42 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import basicSsl from '@vitejs/plugin-basic-ssl'
-import path from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    basicSsl() // Tự động tạo HTTPS cho Frontend (Localhost)
-  ],
-  
-  // [QUAN TRỌNG] Fix lỗi "global is not defined" của thư viện SockJS
-  define: {
-    global: 'window', 
-  },
-
+  plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
     },
   },
+  // [CẤU HÌNH MỚI CHO PRODUCTION]
+  build: {
+    // 1. Tăng giới hạn cảnh báo lên 1000kb (đỡ ngứa mắt)
+    chunkSizeWarningLimit: 1000, 
+    
+    // 2. Tự động xóa console.log khi build (giữ lại warn và error)
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
 
-  server: {
-    port: 5173,
-    // Cấu hình Proxy để đẩy request sang Backend (đang chạy HTTPS 8080)
-    proxy: {
-      '/api': {
-        target: 'https://localhost:8080', 
-        changeOrigin: true,
-        secure: false, // [QUAN TRỌNG] Bỏ qua lỗi chứng chỉ tự ký của Backend
-      },
-      '/ws': {
-        target: 'https://localhost:8080',
-        ws: true,      // Kích hoạt proxy cho WebSocket
-        changeOrigin: true,
-        secure: false, // [QUAN TRỌNG]
+    // 3. Chiến thuật chia nhỏ file (Manual Chunks)
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // Tách các thư viện React core ra riêng (thường ít thay đổi)
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'react-vendor';
+            }
+            // Tách thư viện UI nặng (Framer Motion, Lucide, Radix...)
+            if (id.includes('framer-motion') || id.includes('lucide-react') || id.includes('zod')) {
+              return 'ui-vendor';
+            }
+            // Các thư viện còn lại gom vào vendor chung
+            return 'vendor';
+          }
+        },
       },
     },
-  }
-})
+  },
+});

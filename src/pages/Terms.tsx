@@ -1,0 +1,1 @@
+"Đây là điều khoản của MindRevol..."
