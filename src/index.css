@@ -10,8 +10,8 @@
   --color-muted: var(--muted);
 
   /* Màu chủ đạo: Electric Blue - Năng lượng Gen Z */
-  --color-primary: #62C5FF; 
-  --color-primary-foreground: #ffffff;
+  --color-primary: #FFF5C0; 
+  --color-primary-foreground: #000000; 
 
   /* Font */
   --font-sans: "Plus Jakarta Sans", sans-serif;
@@ -68,3 +68,4 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+

@@ -17,20 +17,20 @@ const getLocalDateString = () => {
 };
 
 export const useCreateJourney = (onSuccess?: () => void, onClose?: () => void) => {
-  const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  // Chỉ còn 1 bước duy nhất
+  const currentStepIdx = 0; 
   const [isLoading, setIsLoading] = useState(false);
   
-  // Tổng số bước: Type (0) -> Info (1) -> Settings (2)
-  const TOTAL_STEPS = 3; 
-
+  // Thiết lập giá trị mặc định cho các trường đã bị ẩn khỏi UI
   const [formData, setFormData] = useState<CreateJourneyRequest>({
-    type: JourneyType.CHALLENGE,
     name: '',
     description: '',
     startDate: getLocalDateString(),
     endDate: '',
-    theme: '#6366f1',
-    visibility: JourneyVisibility.PUBLIC,
+    // --- Các giá trị mặc định (Hardcoded) ---
+    type: JourneyType.CHALLENGE, // Mặc định là Challenge
+    theme: '#6366f1',            // Màu tím mặc định
+    visibility: JourneyVisibility.PUBLIC, 
     interactionType: InteractionType.GROUP_DISCUSS
   });
 
@@ -38,24 +38,11 @@ export const useCreateJourney = (onSuccess?: () => void, onClose?: () => void) =
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
-  const nextStep = () => {
-    if (currentStepIdx < TOTAL_STEPS - 1) {
-      setCurrentStepIdx(prev => prev + 1);
-    } else {
-      submitForm();
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStepIdx > 0) {
-      setCurrentStepIdx(prev => prev - 1);
-    }
-  };
-
+  // Hàm xử lý tạo mới (Submit trực tiếp)
   const submitForm = async () => {
-    // 1. Validate Logic
+    // 1. Validate đơn giản
     if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên hành trình"); // Bạn có thể thay bằng Toast notification
+      alert("Vui lòng nhập tên hành trình");
       return;
     }
 
@@ -79,25 +66,24 @@ export const useCreateJourney = (onSuccess?: () => void, onClose?: () => void) =
 
   const resetForm = () => {
     setFormData({
-      type: JourneyType.CHALLENGE,
       name: '',
       description: '',
       startDate: getLocalDateString(),
       endDate: '',
+      type: JourneyType.CHALLENGE,
       theme: '#6366f1',
       visibility: JourneyVisibility.PUBLIC,
       interactionType: InteractionType.GROUP_DISCUSS
     });
-    setCurrentStepIdx(0);
   };
 
+  // Không cần nextStep/prevStep nữa vì chỉ có 1 màn hình
   return {
     currentStepIdx,
     formData,
     isLoading,
     updateFormData,
-    nextStep,
-    prevStep,
+    submitForm, // Thay nextStep bằng submitForm
     resetForm
   };
 };

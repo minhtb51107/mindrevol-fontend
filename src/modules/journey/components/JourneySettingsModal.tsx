@@ -1,12 +1,15 @@
 // src/modules/journey/components/JourneySettingsModal.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // [MỚI] Import hooks điều hướng
 import { X, Save, Loader2, LogOut, Trash2, UserCog, Share2, Copy, Check } from 'lucide-react';
 import { JourneyResponse } from '../types';
 import { useJourneySettings } from '../hooks/useJourneySettings';
 import { useJourneyAction } from '../hooks/useJourneyAction';
 import { TransferOwnershipModal } from './TransferOwnershipModal';
 import { useAuth } from '@/modules/auth/store/AuthContext';
+import { PendingRequestsList } from './PendingRequestsList';
+import { MemberList } from './MemberList';
 
 interface Props {
   isOpen: boolean;
@@ -19,19 +22,45 @@ export const JourneySettingsModal: React.FC<Props> = ({
   isOpen, onClose, journey, onUpdateSuccess 
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate(); // [MỚI]
+  const [searchParams] = useSearchParams(); // [MỚI]
+  
   const { settings, isLoading, updateField, handleSave } = useJourneySettings(journey, onUpdateSuccess);
   
-  const { deleteJourney, leaveJourney, isProcessing } = useJourneyAction(() => {
+  // State để đảm bảo DOM đã sẵn sàng (tránh lỗi Portal)
+  const [mounted, setMounted] = useState(false);
+
+  // [LOGIC MỚI] Callback xử lý sau khi Rời/Xóa thành công
+  const handleLeaveOrDeleteSuccess = () => {
+    // 1. Refresh danh sách hành trình bên ngoài
     onUpdateSuccess();
+    
+    // 2. Đóng modal
     onClose();
-  });
+
+    // 3. Kiểm tra: Nếu đang xem chi tiết hành trình này thì đá về trang chủ
+    const currentJourneyId = searchParams.get('journeyId');
+    if (currentJourneyId === journey?.id) {
+        navigate('/', { replace: true });
+    }
+  };
+
+  // Truyền callback mới vào hook useJourneyAction
+  const { deleteJourney, leaveJourney, isProcessing } = useJourneyAction(handleLeaveOrDeleteSuccess);
 
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen || !journey || !user) return null;
+  // Chỉ cho phép render portal sau khi component đã mount
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
-  // Logic phân quyền: So sánh ID (convert sang Number để chắc chắn)
+  // Nếu chưa mount hoặc các điều kiện chưa đủ, không render gì cả
+  if (!mounted || !isOpen || !journey || !user) return null;
+
+  // Logic phân quyền
   const isOwner = Number(user.id) === Number(journey.creatorId);
 
   const handleCopyTemplateId = () => {
@@ -39,6 +68,10 @@ export const JourneySettingsModal: React.FC<Props> = ({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Kiểm tra chắc chắn document.body tồn tại trước khi tạo Portal
+  const portalTarget = typeof document !== 'undefined' ? document.body : null;
+  if (!portalTarget) return null;
 
   return createPortal(
     <>
@@ -90,7 +123,21 @@ export const JourneySettingsModal: React.FC<Props> = ({
               )}
             </div>
 
-            {/* 2. CHIA SẺ MẪU (VIRAL FEATURES) */}
+            {/* DANH SÁCH YÊU CẦU THAM GIA */}
+            {isOwner && settings.requireApproval && (
+               <PendingRequestsList journeyId={journey.id} />
+            )}
+
+            {/* DANH SÁCH THÀNH VIÊN */}
+            <MemberList 
+                journeyId={journey.id} 
+                currentUserRole={
+                  journey.role || 
+                  (Number(user?.id) === Number(journey.creatorId) ? 'OWNER' : 'MEMBER')
+                } 
+            />
+
+            {/* 2. CHIA SẺ MẪU */}
             <div className="space-y-3 pt-2 border-t border-white/5">
               <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider">Chia sẻ & Viral</h3>
               
@@ -200,6 +247,6 @@ export const JourneySettingsModal: React.FC<Props> = ({
         }}
       />
     </>,
-    document.body
+    portalTarget
   );
 };

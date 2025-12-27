@@ -1,3 +1,4 @@
+// src/modules/journey/components/JourneyListModal.tsx
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +8,7 @@ import { useJoinJourney } from '../hooks/useJoinJourney';
 import { JourneySettingsModal } from './JourneySettingsModal';
 import { InviteMembersModal } from './InviteMembersModal';
 import { CreateJourneyModal } from './CreateJourneyModal';
+import { InvitationList } from './InvitationList'; // [MỚI] Import component lời mời
 import { JourneyResponse, JourneyRole } from '../types';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 
@@ -75,6 +77,10 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {/* List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            
+            {/* [MỚI] Hiển thị danh sách lời mời (nếu có) */}
+            <InvitationList onSuccess={refresh} />
+
             {listLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
             ) : journeys.length === 0 ? (

@@ -1,5 +1,3 @@
-// src/modules/checkin/types.ts
-
 export enum CheckinStatus {
   NORMAL = 'NORMAL',
   LATE = 'LATE',
@@ -23,6 +21,8 @@ export interface Checkin {
   createdAt: string; // ISO String
   reactionCount: number;
   commentCount: number;
+  emotion?: string; // Ví dụ: 'HAPPY', 'TIRED'
+  checkinDate: string; // ISO String
   // Có thể thêm fields khác tùy response backend
 }
 
@@ -32,4 +32,6 @@ export interface CreateCheckinRequest {
   caption?: string;
   emotion?: string; // EXCITED, SAD, etc.
   taskId?: string;
+  statusRequest?: 'NORMAL' | 'FAILED' | 'REST'; // [NEW] Thêm trường này
+  visibility?: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
 }

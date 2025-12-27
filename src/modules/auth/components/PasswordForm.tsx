@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { useAuthFlow } from '../store/AuthFlowContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ArrowLeft, User as UserIcon, RefreshCw } from 'lucide-react'; // Thêm icon RefreshCw
+import { ArrowLeft, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authService } from '../services/auth.service';
 
 export const PasswordForm = () => {
-  // Lấy thêm hàm goToOtp và email từ context
-  const { email, userInfo, resetFlow, login, isLoading, error, goToOtp } = useAuthFlow();
+  const { email, resetFlow, login, isLoading, error, goToOtp } = useAuthFlow();
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,12 +17,9 @@ export const PasswordForm = () => {
     await login(password);
   };
 
-  // Hàm xử lý khi user muốn chuyển sang OTP
   const handleSwitchToOtp = async () => {
     try {
-      // Gửi mã OTP mới cho chắc chắn
       await authService.sendOtp(email);
-      // Chuyển màn hình
       goToOtp(); 
     } catch (e) {
       alert("Không thể gửi mã OTP. Vui lòng thử lại sau.");
@@ -34,46 +31,81 @@ export const PasswordForm = () => {
       initial={{ opacity: 0, x: 20 }} 
       animate={{ opacity: 1, x: 0 }} 
       exit={{ opacity: 0, x: 20 }}
-      className="space-y-6"
+      className="flex flex-col h-full"
     >
-      <button onClick={resetFlow} className="text-muted hover:text-foreground flex items-center text-sm mb-4 transition-colors">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-      </button>
-
-      <div className="flex flex-col items-center space-y-4">
-        <div className="w-20 h-20 rounded-full bg-surface flex items-center justify-center overflow-hidden border-2 border-primary shadow-lg shadow-primary/20">
-          {userInfo?.avatarUrl ? (
-            <img src={userInfo.avatarUrl} alt="User" className="w-full h-full object-cover" />
-          ) : (
-            <UserIcon className="w-8 h-8 text-muted" />
-          )}
-        </div>
-        <div className="text-center">
-          <h3 className="text-xl font-bold text-foreground">{userInfo?.fullname || "Người dùng"}</h3>
-          <p className="text-primary text-sm font-medium">{email}</p>
+      {/* HEADER: Nút quay lại & Tiêu đề */}
+      <div className="mb-6">
+        <button 
+          onClick={resetFlow} 
+          className="text-zinc-500 hover:text-white flex items-center text-sm transition-colors mb-4 group"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> 
+          Quay lại
+        </button>
+        
+        <h2 className="text-2xl font-bold text-white tracking-tight">Nhập mật khẩu</h2>
+        <div className="flex items-center gap-2 mt-2 text-sm text-zinc-400">
+           <span>Đang đăng nhập cho:</span>
+           <span className="text-[#FFF5C0] font-medium bg-[#FFF5C0]/10 px-2 py-0.5 rounded border border-[#FFF5C0]/20">
+             {email}
+           </span>
         </div>
       </div>
 
-      <form onSubmit={handleLogin} className="space-y-4 mt-6">
-        <Input 
-          type="password" 
-          label="Mật khẩu"
-          placeholder="Nhập mật khẩu..." 
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoFocus
-        />
+      <form onSubmit={handleLogin} className="space-y-5 flex-1">
         
-        {error && <p className="text-destructive text-sm text-center font-medium bg-destructive/10 p-2 rounded-lg">{error}</p>}
+        {/* INPUT PASSWORD */}
+        <div className="relative">
+          <Input 
+            type={showPassword ? "text" : "password"} 
+            label="Mật khẩu hiện tại"
+            placeholder="Nhập mật khẩu..." 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+            disabled={isLoading}
+            className="h-12 pr-10" // h-12: Cao 48px
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-[34px] text-zinc-500 hover:text-white transition-colors"
+          >
+            {showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
+          </button>
+        </div>
+        
+        {/* Nút Quên mật khẩu nằm ngay dưới Input cho tiện tay */}
+        <div className="flex justify-end -mt-1">
+            <button 
+              type="button"
+              onClick={() => authService.sendMagicLink(email).then(() => alert('Đã gửi link đặt lại mật khẩu về email!'))}
+              className="text-xs text-zinc-500 hover:text-[#FFF5C0] transition-colors hover:underline"
+            >
+              Quên mật khẩu?
+            </button>
+        </div>
 
-        <div className="space-y-4">
-            {/* Nút Đăng nhập chính */}
-            <Button type="submit" isLoading={isLoading}>Đăng nhập</Button>
+        {error && (
+          <div className="text-red-500 text-sm font-medium bg-red-500/10 p-3 rounded-xl border border-red-500/20 flex items-center justify-center">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-3 pt-2">
+            {/* Nút Đăng nhập: h-12 để BẰNG CHẶN với Input */}
+            <Button type="submit" isLoading={isLoading} className="w-full h-12 text-base font-bold shadow-none">
+              Đăng nhập
+            </Button>
 
             {/* Phân cách */}
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted">Hoặc</span></div>
+            <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-zinc-800" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
+                  <span className="bg-[#050505] px-2 text-zinc-600">Hoặc</span>
+                </div>
             </div>
 
             {/* Nút chuyển sang OTP */}
@@ -81,23 +113,13 @@ export const PasswordForm = () => {
                 type="button" 
                 variant="outline" 
                 onClick={handleSwitchToOtp}
-                className="w-full"
+                className="w-full h-12 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all"
             >
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Đăng nhập bằng mã xác thực (OTP)
+                Đăng nhập bằng mã OTP
             </Button>
         </div>
       </form>
-
-      <div className="text-center">
-        <button 
-          type="button"
-          onClick={() => authService.sendMagicLink(email).then(() => alert('Đã gửi link!'))}
-          className="text-sm text-muted hover:text-primary transition-colors hover:underline"
-        >
-          Quên mật khẩu?
-        </button>
-      </div>
     </motion.div>
   );
 };

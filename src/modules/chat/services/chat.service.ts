@@ -7,8 +7,8 @@ export interface SendMessageRequest {
   content: string;
   type?: 'TEXT' | 'IMAGE';
   metadata?: {
-    replyToPostId?: string; // ID bài check-in
-    replyToImage?: string;  // Ảnh thumbnail bài check-in
+    replyToPostId?: string;
+    replyToImage?: string;
     [key: string]: any;
   }; 
 }
@@ -20,16 +20,15 @@ export interface Message {
   content: string;
   createdAt: string;
   type: 'TEXT' | 'IMAGE';
-  deliveryStatus?: 'SENT' | 'DELIVERED' | 'READ'; // Thêm trạng thái tin nhắn
+  deliveryStatus?: 'SENT' | 'DELIVERED' | 'READ';
   metadata?: any;
-  clientSideId?: string; // ID tạm ở frontend
+  clientSideId?: string;
   isRead?: boolean;
 }
 
 export const chatService = {
   // 1. Gửi tin nhắn 1v1
   sendMessage: async (data: SendMessageRequest): Promise<Message> => {
-    // Backend API: POST /api/v1/chat/send
     const response = await http.post<{ data: Message }>("/chat/send", data);
     return response.data.data;
   },
@@ -46,9 +45,16 @@ export const chatService = {
     return response.data.data;
   },
 
-  // 4. [MỚI] Đánh dấu đã đọc
+  // 4. Đánh dấu đã đọc
   markAsRead: async (conversationId: number) => {
-    // Backend API: POST /api/v1/chat/conversations/{id}/read
     await http.post(`/chat/conversations/${conversationId}/read`);
+  },
+
+  // 5. [THÊM MỚI VÀO ĐÂY] Khởi tạo/Lấy hội thoại với friendId
+  initConversation: async (receiverId: number) => {
+    // API này sẽ trả về thông tin Conversation (id, partner, lastMessage...)
+    // Nếu chưa có thì Backend tự tạo mới rồi trả về.
+    const response = await http.post(`/chat/conversations/init/${receiverId}`);
+    return response.data.data;
   }
 };

@@ -1,8 +1,21 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Sparkles, Flame, CloudRain, MoreHorizontal, Trash2, Edit2, Ban, Flag, CheckCircle } from 'lucide-react';
+import { 
+  Sparkles, 
+  Flame, 
+  MoreHorizontal, 
+  Trash2, 
+  Edit2, 
+  Flag, 
+  CheckCircle, 
+  XCircle,
+  Save,
+  X
+} from 'lucide-react';
 import { useAuth } from '@/modules/auth/store/AuthContext';
-import { blockService } from '@/modules/user/services/block.service';
+import { checkinService } from '@/modules/checkin/services/checkin.service';
+import { ReportModal } from '@/modules/report/components/ReportModal';
+import { ReportTargetType } from '@/modules/report/services/report.service';
 
 export interface PostProps {
   id: string;
@@ -10,99 +23,177 @@ export interface PostProps {
   user: { name: string; avatar: string };
   image: string;
   caption: string;
-  status: 'completed' | 'failed' | 'comeback';
+  status: 'completed' | 'failed' | 'comeback' | 'rest' | 'normal';
   taskName?: string;
   timestamp: string;
+  reactionCount?: number;
+  commentCount?: number;
+  latestReactions?: any[];
 }
 
-export const JourneyPostCard = ({ post, isActive }: { post: PostProps; isActive: boolean }) => {
+interface JourneyPostCardProps {
+  post: PostProps;
+  isActive: boolean;
+  onDelete?: (postId: string) => void;
+  onUpdate?: (postId: string, newCaption: string) => void;
+}
+
+export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyPostCardProps) => {
   const { user: currentUser } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editCaption, setEditCaption] = useState(post.caption);
+  const [isSaving, setIsSaving] = useState(false);
 
   const isOwner = currentUser?.id.toString() === post.userId;
 
-  const handleBlockUser = async () => {
-    if(!post.userId) return;
-    if (confirm(`Chặn ${post.user.name}? Bạn sẽ không thấy bài của họ nữa.`)) {
-      try {
-        await blockService.blockUser(parseInt(post.userId));
-        alert('Đã chặn thành công.');
-        setShowMenu(false);
-      } catch (error) { alert('Lỗi khi chặn.'); }
-    }
-  };
+  const handleReport = () => { setShowReportModal(true); setShowMenu(false); };
 
-  const handleReport = async () => {
-    alert("Đã gửi báo cáo vi phạm.");
+  const handleDelete = async () => {
+    if (confirm("Bạn có chắc muốn xóa khoảnh khắc này?")) {
+      try { await checkinService.deleteCheckin(post.id); if (onDelete) onDelete(post.id); } 
+      catch (error) { console.error(error); }
+    }
     setShowMenu(false);
   };
 
+  const handleEditClick = () => { setEditCaption(post.caption); setIsEditing(true); setShowMenu(false); };
+  
+  const handleSaveEdit = async () => {
+    if (editCaption === post.caption) { setIsEditing(false); return; }
+    try { 
+        setIsSaving(true); 
+        await checkinService.updateCheckin(post.id, editCaption); 
+        if (onUpdate) onUpdate(post.id, editCaption); 
+        setIsEditing(false); 
+    } catch (error) { console.error(error); alert("Lỗi cập nhật"); } finally { setIsSaving(false); }
+  };
+
+  const handleCancelEdit = () => { setEditCaption(post.caption); setIsEditing(false); };
+
+  // STYLE MỚI: LIGHT & AIRY
   const renderStatusBadge = () => {
     switch (post.status) {
-      case 'completed':
-        return <div className="flex items-center gap-1.5 bg-green-500/20 backdrop-blur-md border border-green-400/30 px-3 py-1 rounded-full shadow-lg"><Sparkles className="w-3.5 h-3.5 text-green-300 animate-pulse" /><span className="text-green-100 text-[10px] font-bold uppercase">Complete</span></div>;
-      case 'comeback':
-        return <div className="flex items-center gap-1.5 bg-orange-500/20 backdrop-blur-md border border-orange-400/30 px-3 py-1 rounded-full shadow-lg"><Flame className="w-3.5 h-3.5 text-orange-300 animate-bounce" /><span className="text-orange-100 text-[10px] font-bold uppercase">Comeback</span></div>;
-      case 'failed':
-        return <div className="flex items-center gap-1.5 bg-slate-500/20 backdrop-blur-md border border-slate-400/30 px-3 py-1 rounded-full"><CloudRain className="w-3.5 h-3.5 text-slate-300" /><span className="text-slate-200 text-[10px] font-bold uppercase">Missed</span></div>;
+      case 'completed': 
+        return <Badge icon={Sparkles} iconColor="text-emerald-400" label="Complete" />;
+      case 'comeback': 
+        return <Badge icon={Flame} iconColor="text-orange-400" label="Comeback" />;
+      case 'failed': 
+        return <Badge icon={XCircle} iconColor="text-red-400" label="Missed" />;
       default: return null;
     }
   };
 
   return (
     <div className={cn(
-      "snap-center shrink-0 w-[90vw] md:w-[450px] aspect-square flex flex-col items-center justify-center transition-all duration-500 ease-out select-none relative", 
-      isActive ? "scale-100 opacity-100 blur-0" : "scale-90 opacity-40 blur-[2px] grayscale"
+      "snap-center shrink-0 w-[85vw] md:w-[450px] aspect-square flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] select-none relative group", 
+      isActive 
+        ? "scale-100 opacity-100 translate-y-0 z-10" 
+        : "scale-90 opacity-40 blur-[2px] grayscale-[60%] translate-y-4 z-0"
     )}>
       
-      {/* Khung ảnh bo tròn lớn (rounded-[32px]) để giống Locket */}
-      <div className="relative w-full h-full rounded-[32px] md:rounded-[48px] overflow-hidden bg-zinc-900 border-4 border-white/5 shadow-2xl group">
-        <img src={post.image} className="w-full h-full object-cover" draggable={false} />
+      {/* FRAME */}
+      <div className={cn(
+        "relative w-full h-full rounded-[44px] overflow-hidden bg-[#1c1c1e] transition-all duration-500",
+        isActive ? "shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)]" : "shadow-none"
+      )}>
+        <img src={post.image} className="w-full h-full object-cover" draggable={false} alt="Moment" />
         
-        {/* Badge góc trái */}
-        <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2 opacity-90">
-          {renderStatusBadge()}
-          {post.taskName && (
-            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full">
-              <CheckCircle className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-white text-[10px] font-medium">{post.taskName}</span>
+        {/* --- BADGES (TOP LEFT) - NHẸ NHÀNG --- */}
+        <div className="absolute top-0 left-0 w-full p-5 flex flex-col items-start gap-3 z-10 pointer-events-none">
+            <div className="flex flex-col items-start gap-2 transition-all duration-500 delay-100">
+                {renderStatusBadge()}
+
+                {post.taskName && (
+                <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5 shadow-sm">
+                    <CheckCircle className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-white/90 text-[11px] font-medium tracking-wide shadow-black drop-shadow-sm">{post.taskName}</span>
+                </div>
+                )}
             </div>
-          )}
         </div>
 
-        {/* Menu 3 chấm */}
-        {isActive && (
-          <div className="absolute top-4 right-4 z-20">
+        {/* --- MENU (TOP RIGHT) --- */}
+        {isActive && !isEditing && (
+          <div className="absolute top-5 right-5 z-20 pointer-events-auto">
             <button 
               onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-              className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
+              className="w-9 h-9 flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white/90 hover:text-white transition-all border border-white/5 shadow-sm"
             >
               <MoreHorizontal className="w-5 h-5" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full mt-2 w-40 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 origin-top-right z-30">
-                {isOwner ? (
-                  <>
-                    <button className="w-full text-left px-4 py-3 text-sm text-zinc-300 hover:bg-white/10 flex items-center gap-2"><Edit2 className="w-4 h-4" /> Edit</button>
-                    <button className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 border-t border-white/5"><Trash2 className="w-4 h-4" /> Delete</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={handleReport} className="w-full text-left px-4 py-3 text-sm text-zinc-300 hover:bg-white/10 flex items-center gap-2"><Flag className="w-4 h-4" /> Report</button>
-                    <button onClick={handleBlockUser} className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-white/10 flex items-center gap-2 border-t border-white/5"><Ban className="w-4 h-4" /> Block</button>
-                  </>
-                )}
-              </div>
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-full mt-2 w-40 bg-[#18181b]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 origin-top-right z-30 py-1">
+                  {isOwner ? (
+                    <>
+                      <button onClick={handleEditClick} className="w-full text-left px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 flex items-center gap-2 transition-colors"><Edit2 className="w-4 h-4 text-zinc-400"/> Sửa</button>
+                      <button onClick={handleDelete} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/5 transition-colors"><Trash2 className="w-4 h-4"/> Xóa</button>
+                    </>
+                  ) : (
+                    <button onClick={handleReport} className="w-full text-left px-4 py-2.5 text-sm text-zinc-200 hover:bg-white/5 flex items-center gap-2 transition-colors"><Flag className="w-4 h-4 text-zinc-400"/> Báo cáo</button>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
 
-        <div className="absolute bottom-0 inset-x-0 p-6 pt-24 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex justify-center">
-          <div className="bg-black/30 backdrop-blur-md border border-white/10 px-5 py-2.5 rounded-2xl max-w-[90%] shadow-sm">
-            <p className="text-white text-base font-medium text-center leading-snug drop-shadow-md">{post.caption}</p>
+        {/* --- CAPTION (BOTTOM LEFT) - FROSTED GLASS --- */}
+        <div className="absolute bottom-0 inset-x-0 p-5 flex items-end justify-start pointer-events-none">
+          <div className={cn(
+            "pointer-events-auto transition-all duration-300 ease-out origin-bottom-left",
+            // Style: Nền xám khói nhẹ (Black/40), Blur cực mạnh (XL). Viền trắng mảnh.
+            // Đây là điểm cân bằng: Đủ tối để nổi chữ trắng, nhưng đủ trong để thấy ảnh.
+            "bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg",
+            "rounded-2xl px-4 py-3", 
+            isEditing ? "w-full" : "w-fit max-w-[85%] hover:bg-black/50"
+          )}>
+            
+            {isEditing ? (
+              <div className="flex flex-col gap-2">
+                <textarea 
+                  value={editCaption}
+                  onChange={(e) => setEditCaption(e.target.value)}
+                  className="bg-transparent text-white border-none outline-none text-[14px] font-medium w-full placeholder:text-zinc-400 resize-none min-h-[50px] leading-relaxed"
+                  placeholder="Viết cảm nghĩ..."
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2 border-t border-white/10 pt-2 mt-1">
+                   <button onClick={handleCancelEdit} className="px-3 py-1 text-zinc-300 hover:text-white text-xs font-medium transition-colors">Hủy</button>
+                   <button onClick={handleSaveEdit} disabled={isSaving} className="px-4 py-1 bg-white text-black text-xs font-bold rounded-lg hover:bg-zinc-200 disabled:opacity-50 transition-all">
+                     {isSaving ? "Lưu..." : "Lưu"}
+                   </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                 <p className="text-white text-[14px] font-normal leading-relaxed break-words text-left drop-shadow-sm">
+                   {post.caption || <span className="italic text-white/50 text-sm">Chưa có chú thích</span>}
+                 </p>
+              </div>
+            )}
           </div>
         </div>
+
       </div>
+
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} targetId={post.id} targetType={ReportTargetType.CHECKIN} />
     </div>
   );
 };
+
+// Component Badge MỀM MẠI: Nền trong suốt, viền nhẹ
+const Badge = ({ icon: Icon, iconColor, label }: any) => (
+    <div className={cn(
+        "flex items-center gap-2 px-3.5 py-1.5 rounded-full shadow-sm backdrop-blur-md",
+        // Nền rất mỏng (Black/20), Viền trắng mờ (White/5)
+        "bg-black/20 border border-white/10"
+    )}>
+        <Icon className={cn("w-3.5 h-3.5", iconColor)} />
+        {/* Text trắng hoàn toàn, có bóng nhẹ để dễ đọc */}
+        <span className="text-white text-[11px] font-bold tracking-wide uppercase shadow-black drop-shadow-sm">{label}</span>
+    </div>
+);

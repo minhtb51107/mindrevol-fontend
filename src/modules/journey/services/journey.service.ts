@@ -1,4 +1,5 @@
 // src/modules/journey/services/journey.service.ts
+
 import { http } from "@/lib/http";
 import { 
   CreateJourneyRequest, 
@@ -7,17 +8,28 @@ import {
   UpdateJourneySettingsRequest,
   JourneyWidgetResponse,
   JourneyParticipantResponse,
-  JourneyInvitationResponse
+  JourneyInvitationResponse,
+  JourneyRequestResponse,
+  UserActiveJourneyResponse
 } from "../types";
+import { Checkin } from "@/modules/checkin/types";
 
 // Base URL
 const JOURNEY_URL = "/journeys"; 
 const INVITATION_URL = "/journey-invitations";
 
+// Interface hỗ trợ cho Page response
+interface PageResponse<T> {
+    content: T[];
+    totalPages: number;
+    totalElements: number;
+    size: number;
+    number: number;
+}
+
 export const journeyService = {
   
   // --- NHÓM API CƠ BẢN (CRUD) ---
-
   createJourney: async (data: CreateJourneyRequest): Promise<JourneyResponse> => {
     const response = await http.post<{ data: JourneyResponse }>(JOURNEY_URL, data);
     return response.data.data;
@@ -25,6 +37,18 @@ export const journeyService = {
 
   getMyJourneys: async (): Promise<JourneyResponse[]> => {
     const response = await http.get<{ data: JourneyResponse[] }>(`${JOURNEY_URL}/me`);
+    return response.data.data;
+  },
+
+  // [NEW] Lấy danh sách đang hoạt động (cho Profile Tab 1)
+  getUserActiveJourneys: async (userId: number | string): Promise<UserActiveJourneyResponse[]> => {
+    const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/active`);
+    return response.data.data;
+  },
+
+  // [NEW] Lấy danh sách đã kết thúc (cho Profile Tab 2)
+  getUserFinishedJourneys: async (userId: number | string): Promise<UserActiveJourneyResponse[]> => {
+    const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/finished`);
     return response.data.data;
   },
 
@@ -38,7 +62,6 @@ export const journeyService = {
   },
 
   // --- NHÓM API THÀNH VIÊN & THAM GIA ---
-
   joinJourney: async (data: JoinJourneyRequest): Promise<JourneyResponse> => {
     const response = await http.post<{ data: JourneyResponse }>(`${JOURNEY_URL}/join`, data);
     return response.data.data;
@@ -72,21 +95,15 @@ export const journeyService = {
   },
 
   // --- NHÓM API WIDGET & TIỆN ÍCH ---
-
   getWidgetInfo: async (journeyId: string): Promise<JourneyWidgetResponse> => {
     const response = await http.get<{ data: JourneyWidgetResponse }>(`${JOURNEY_URL}/${journeyId}/widget-info`);
     return response.data.data;
   },
 
-  // [NEW] Lấy danh sách mẫu (Templates)
   getDiscoveryTemplates: async (): Promise<JourneyResponse[]> => {
-    // Nếu backend chưa có API này thì tạm thời trả về mảng rỗng hoặc mock data
-    // const response = await http.get<{ data: JourneyResponse[] }>(`${JOURNEY_URL}/discovery`);
-    // return response.data.data;
-    return []; // Tạm thời trả về rỗng để không lỗi
+    return []; 
   },
 
-  // [NEW] Sao chép hành trình (Fork)
   forkJourney: async (journeyId: string): Promise<JourneyResponse> => {
     const response = await http.post<{ data: JourneyResponse }>(`${JOURNEY_URL}/${journeyId}/fork`);
     return response.data.data;
@@ -97,7 +114,6 @@ export const journeyService = {
   },
 
   // --- NHÓM API INVITATION ---
-
   inviteFriend: async (journeyId: string, friendId: number): Promise<void> => {
     await http.post(`${INVITATION_URL}/invite`, { journeyId, friendId });
   },
@@ -113,5 +129,17 @@ export const journeyService = {
   getMyPendingInvitations: async (): Promise<JourneyInvitationResponse[]> => {
     const response = await http.get<{ data: { content: JourneyInvitationResponse[] } }>(`${INVITATION_URL}/pending`);
     return response.data.data.content;
+  },
+
+  getPendingRequests: async (journeyId: string): Promise<JourneyRequestResponse[]> => {
+    const response = await http.get<{ data: JourneyRequestResponse[] }>(`${JOURNEY_URL}/${journeyId}/requests/pending`);
+    return response.data.data;
+  },
+
+  // --- API LẤY FEED RECAP ---
+  getRecapFeed: async (journeyId: string): Promise<PageResponse<Checkin>> => {
+    // Lưu ý: Đảm bảo backend có endpoint này, hoặc dùng API lấy checkin theo hành trình
+    const response = await http.get<{ data: PageResponse<Checkin> }>(`${JOURNEY_URL}/${journeyId}/recap`); 
+    return response.data.data;
   },
 };

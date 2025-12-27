@@ -1,10 +1,12 @@
 // src/lib/http.ts
 import axios from 'axios';
 
+console.log(">>> VITE_API_URL:", import.meta.env.VITE_API_URL);
+console.log(">>> CURRENT DOMAIN:", import.meta.env.VITE_API_URL || 'http://localhost:8080');
 // 1. Định nghĩa các hằng số URL và EXPORT chúng
 // DOMAIN: Là địa chỉ gốc của server (dùng cho Socket, ảnh...)
 // src/lib/http.ts
-export const DOMAIN = ''; // <--- PHẢI LÀ CHUỖI RỖNG
+export const DOMAIN = import.meta.env.VITE_API_URL || 'http://localhost:8080'; 
 export const API_URL = `${DOMAIN}/api/v1`;
 // ...
 

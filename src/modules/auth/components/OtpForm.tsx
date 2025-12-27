@@ -1,165 +1,121 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useAuthFlow } from '../store/AuthFlowContext';
 import { Button } from '@/components/ui/Button';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const OtpForm = () => {
-  // Lấy hàm goToLogin từ context để chuyển màn hình
-  const { email, userInfo, resetFlow, verifyOtp, resendOtp, isLoading, error, setError, goToLogin } = useAuthFlow();
+  // SỬA LỖI: Thay setStep bằng goToLogin và resetFlow được lấy từ Context
+  const { verifyOtp, isLoading, error, email, goToLogin, resetFlow } = useAuthFlow();
   
-  const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  
-  const [countdown, setCountdown] = useState(30);
 
+  // Auto focus ô đầu tiên
   useEffect(() => {
-    if (inputRefs.current[0]) inputRefs.current[0]?.focus();
-    
-    const timer = setInterval(() => {
-      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
+    if (inputRefs.current[0]) inputRefs.current[0].focus();
   }, []);
 
-  const handleChange = (element: HTMLInputElement, index: number) => {
-    if (isNaN(Number(element.value))) return false;
-
+  const handleChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
-    newOtp[index] = element.value;
+    newOtp[index] = value.slice(-1);
     setOtp(newOtp);
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+  };
 
-    if (element.value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
     }
-
-    if (newOtp.every(val => val !== "") && index === 5) {
-        handleSubmit(newOtp.join(""));
-    }
+    if (e.key === 'Enter' && otp.every(digit => digit !== '')) handleSubmit();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
-    if (e.key === "Backspace") {
-      if (!otp[index] && index > 0) {
-        const newOtp = [...otp];
-        newOtp[index - 1] = "";
-        setOtp(newOtp);
-        inputRefs.current[index - 1]?.focus();
-      }
-    }
+  const handleSubmit = () => {
+    const otpCode = otp.join('');
+    if (otpCode.length === 6) verifyOtp(otpCode);
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').slice(0, 6);
-    if (!/^\d+$/.test(pastedData)) return;
-
-    const newOtp = [...otp];
-    pastedData.split('').forEach((char, i) => {
-      if (i < 6) newOtp[i] = char;
-    });
-    setOtp(newOtp);
-    
-    const nextFocus = Math.min(pastedData.length, 5);
-    inputRefs.current[nextFocus]?.focus();
-
-    if (pastedData.length === 6) {
-        handleSubmit(pastedData);
-    }
-  };
-
-  const handleSubmit = async (code: string) => {
-    await verifyOtp(code);
-  };
-
-  const handleResend = async () => {
-    if (countdown > 0) return;
-    setOtp(new Array(6).fill(""));
-    setError(null);
-    await resendOtp();
-    setCountdown(60); 
-    inputRefs.current[0]?.focus();
-  };
+  const isComplete = otp.every(digit => digit !== '');
 
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }} 
       animate={{ opacity: 1, x: 0 }} 
-      exit={{ opacity: 0, x: 20 }}
-      className="space-y-6"
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col h-full"
     >
-      <button onClick={resetFlow} className="text-muted hover:text-foreground flex items-center text-sm mb-4 transition-colors">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-      </button>
-
-      <div className="text-center space-y-2">
-        <div className="w-16 h-16 rounded-full bg-surface mx-auto flex items-center justify-center border border-border mb-4">
-            {userInfo?.avatarUrl ? (
-                <img src={userInfo.avatarUrl} className="w-full h-full rounded-full object-cover" />
-            ) : (
-                <span className="text-2xl">📧</span>
-            )}
+      <div className="flex-1 space-y-8">
+        <div className="text-center space-y-2">
+          <p className="text-sm text-zinc-400">
+            Mã xác thực 6 số đã được gửi đến:
+          </p>
+          <p className="text-base font-bold text-white tracking-wide">
+            {email || 'your-email@example.com'}
+          </p>
         </div>
-        <h3 className="text-xl font-bold">Nhập mã xác thực</h3>
-        <p className="text-sm text-muted">
-          Chúng tôi đã gửi mã 6 số đến <br/> <span className="font-bold text-foreground">{email}</span>
-        </p>
-      </div>
 
-      <div className="flex justify-center gap-2 my-6">
-        {otp.map((data, index) => (
-          <input
-            key={index}
-            type="text"
-            maxLength={1}
-            // --- ĐÃ SỬA LỖI TYPESCRIPT TẠI ĐÂY ---
-            ref={(el) => { inputRefs.current[index] = el; }} 
-            // -------------------------------------
-            value={data}
-            onChange={e => handleChange(e.target, index)}
-            onKeyDown={e => handleKeyDown(e, index)}
-            onPaste={handlePaste}
-            className="w-10 h-12 md:w-12 md:h-14 border-2 border-border rounded-xl text-center text-xl font-bold bg-surface focus:border-primary focus:bg-background outline-none transition-all caret-primary"
-            disabled={isLoading}
-          />
-        ))}
-      </div>
-
-      {error && (
-        <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium text-center animate-pulse">
-          {error}
+        {/* Input 6 số */}
+        <div className="flex gap-2 justify-center">
+          {otp.map((digit, index) => (
+            <input
+              key={index}
+              ref={el => inputRefs.current[index] = el}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              disabled={isLoading}
+              className={`
+                w-10 h-12 sm:w-12 sm:h-14 
+                text-center text-xl font-bold rounded-xl 
+                bg-[#18181b] border 
+                transition-all duration-200 outline-none
+                ${digit ? 'border-[#FFF5C0] text-[#FFF5C0]' : 'border-zinc-800 text-white'}
+                focus:border-[#FFF5C0] focus:ring-1 focus:ring-[#FFF5C0] focus:bg-zinc-900
+              `}
+            />
+          ))}
         </div>
-      )}
 
-      <div className="flex flex-col gap-3">
+        {error && <p className="text-red-500 text-sm text-center font-medium animate-pulse">{error}</p>}
+
         <Button 
-            onClick={() => handleSubmit(otp.join(""))} 
-            isLoading={isLoading} 
-            disabled={otp.some(v => v === "")}
+          onClick={handleSubmit} 
+          isLoading={isLoading} 
+          disabled={!isComplete}
+          className="w-full h-12 text-base font-bold"
         >
-            Xác nhận
+          Xác thực ngay
         </Button>
 
-        <button 
-            onClick={handleResend}
-            disabled={countdown > 0 || isLoading}
-            className="text-sm text-muted hover:text-primary transition-colors flex items-center justify-center gap-2 py-2"
+        <div className="text-center">
+           <button type="button" className="text-xs text-zinc-500 hover:text-[#FFF5C0] transition-colors underline underline-offset-4">
+             Gửi lại mã
+           </button>
+        </div>
+      </div>
+
+      {/* FOOTER: Dùng mt-auto hoặc margin top lớn để đẩy xuống đáy, tránh đè form */}
+      <div className="mt-8 pt-6 border-t border-zinc-800/50 flex flex-col gap-3">
+        <Button
+          variant="secondary"
+          className="w-full h-12 font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300"
+          // SỬA LỖI: Dùng goToLogin thay vì setStep
+          onClick={goToLogin}
         >
-            <RefreshCw className={`w-4 h-4 ${countdown > 0 ? '' : 'hover:rotate-180 transition-transform'}`} />
-            {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : "Gửi lại mã mới"}
+          Đăng nhập bằng mật khẩu
+        </Button>
+        
+        <button 
+          // SỬA LỖI: Dùng resetFlow để quay lại nhập email
+          onClick={resetFlow}
+          className="text-xs text-zinc-500 hover:text-white transition-colors py-2"
+        >
+          Quay lại nhập Email
         </button>
       </div>
-
-      {/* --- NÚT CHUYỂN QUA MẬT KHẨU --- */}
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-        <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted">Hoặc</span></div>
-      </div>
-
-      <Button variant="outline" onClick={goToLogin}>
-        Đăng nhập bằng mật khẩu
-      </Button>
-      {/* ---------------------------------- */}
     </motion.div>
   );
 };

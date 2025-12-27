@@ -1,6 +1,8 @@
 // src/modules/journey/types.ts
 
-// --- ENUMS (Giữ nguyên các enum cũ và thêm mới) ---
+import { Checkin } from "@/modules/checkin/types";
+
+// --- ENUMS ---
 
 export enum JourneyType {
   HABIT = 'HABIT',
@@ -35,7 +37,6 @@ export enum InteractionType {
   RESTRICTED = 'RESTRICTED'
 }
 
-// [NEW] Mapping từ JourneyInvitationStatus.java
 export enum JourneyInvitationStatus {
   PENDING = 'PENDING',
   ACCEPTED = 'ACCEPTED',
@@ -43,7 +44,6 @@ export enum JourneyInvitationStatus {
   EXPIRED = 'EXPIRED'
 }
 
-// [NEW] Mapping từ WidgetStatus (trong JourneyWidgetResponse.java)
 export enum WidgetStatus {
   ON_TRACK = 'ON_TRACK',
   AT_RISK = 'AT_RISK',
@@ -54,7 +54,6 @@ export enum WidgetStatus {
 
 // --- INTERFACES ---
 
-// 1. Request tạo mới (Giữ nguyên)
 export interface CreateJourneyRequest {
   name: string;
   description: string;
@@ -71,7 +70,6 @@ export interface CreateJourneyRequest {
   }[];
 }
 
-// 2. Response chi tiết hành trình (Giữ nguyên)
 export interface JourneyResponse {
   id: string;
   name: string;
@@ -96,20 +94,16 @@ export interface JourneyResponse {
   participantCount: number;
 }
 
-// 3. [UPDATE] Request cập nhật cài đặt
-// Mapping từ: UpdateJourneySettingsRequest.java
 export interface UpdateJourneySettingsRequest {
   name?: string;
   description?: string;
   theme?: string;
-  hasStreak?: boolean;          // Dùng optional (?) vì bên Java là Boolean object
+  hasStreak?: boolean;
   requiresFreezeTicket?: boolean;
   isHardcore?: boolean;
-  requireApproval?: boolean;    // <--- Đã thêm trường này theo yêu cầu
+  requireApproval?: boolean;
 }
 
-// 4. [NEW] Response cho Widget
-// Mapping từ: JourneyWidgetResponse.java
 export interface JourneyWidgetResponse {
   journeyName: string;
   currentStreak: number;
@@ -121,29 +115,47 @@ export interface JourneyWidgetResponse {
   ownerAvatar?: string;
 }
 
-// 5. [NEW] Response thành viên
-// Mapping từ: JourneyParticipantResponse.java
 export interface JourneyParticipantResponse {
-  userId: number;       // Lưu ý: Java là Long -> TS là number
+  userId: number;
   fullname: string;
   avatarUrl?: string;
   handle: string;
   role: JourneyRole;
 }
 
-// 6. [NEW] Response lời mời
-// Mapping từ: JourneyInvitationResponse.java
 export interface JourneyInvitationResponse {
   id: number;
-  journeyId: string;    // UUID
+  journeyId: string;
   journeyName: string;
   inviterName: string;
   inviterAvatar?: string;
   status: JourneyInvitationStatus;
-  sentAt: string;       // LocalDateTime -> string ISO
+  sentAt: string;
 }
 
-// 7. Request tham gia (Giữ nguyên)
 export interface JoinJourneyRequest {
   inviteCode: string;
 }
+
+export interface JourneyRequestResponse {
+  requestId: string;
+  userId: number;
+  fullname: string;
+  avatarUrl?: string;
+  handle: string;
+  createdAt: string;
+}
+
+export interface UserActiveJourneyResponse {
+  id: string;
+  name: string;
+  description: string;
+  status: JourneyStatus;
+  visibility: JourneyVisibility;
+  startDate: string;
+  totalCheckins: number;
+  checkins: Checkin[];
+}
+
+// Alias để tương thích ngược nếu code cũ dùng "Journey"
+export type Journey = JourneyResponse;

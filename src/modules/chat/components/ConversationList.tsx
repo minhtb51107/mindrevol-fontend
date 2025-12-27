@@ -1,125 +1,111 @@
-// src/modules/chat/components/ConversationList.tsx
-import { useEffect } from 'react';
-import { useChatStore } from '../store/useChatStore';
-import { chatService } from '../services/chat.service';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import { ChevronLeft } from 'lucide-react'; 
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/modules/auth/store/AuthContext';
-import { Search } from 'lucide-react';
-
-// Hàm tự xử lý thời gian (không cần cài date-fns)
-function formatTimeAgo(dateString: string | undefined) {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return 'Vừa xong';
-  const minutes = Math.floor(diffInSeconds / 60);
-  if (minutes < 60) return `${minutes}p`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  
-  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-}
+import { useChatStore } from '../store/useChatStore';
 
 export const ConversationList = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // [FIX] Dùng đúng tên hàm 'openChat' từ store
   const { 
     conversations, 
     activeConversationId, 
-    setConversations, 
-    openChat // Đảm bảo bạn đã update file useChatStore.ts có hàm này
+    openChat // <--- Đổi từ setActiveConversationId thành openChat
   } = useChatStore();
 
-  useEffect(() => {
-    const loadConversations = async () => {
-      try {
-        const res: any = await chatService.getConversations();
-        setConversations(res);
-      } catch (error) {
-        console.error("Failed to load conversations", error);
-      }
-    };
-    if (user) loadConversations();
-  }, [user]);
-
   return (
-    <div className="flex flex-col h-full bg-[#121212] text-white">
-      {/* Header & Search */}
-      <div className="p-4 border-b border-white/10">
-        <h2 className="text-xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-          Tin nhắn
-        </h2>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input 
-            placeholder="Tìm kiếm..." 
-            className="w-full bg-zinc-900 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-blue-500/50 transition-all text-white placeholder:text-zinc-600"
-          />
-        </div>
+    <div className="flex flex-col h-full bg-[#121212] border-r border-white/5 transition-all duration-300 w-[90px] md:w-[350px]">
+      
+      {/* HEADER */}
+      <div className="h-16 shrink-0 flex items-center px-0 md:px-4 border-b border-white/5 justify-center md:justify-start gap-2">
+        <button 
+          onClick={() => navigate('/')} 
+          className="p-2 rounded-full hover:bg-white/10 transition-colors text-zinc-400 hover:text-white"
+          title="Quay lại Trang chủ"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <h2 className="hidden md:block text-lg font-bold text-white">Tin nhắn</h2>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+      {/* DANH SÁCH CHAT */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
         {conversations.length === 0 ? (
-          <div className="text-center text-zinc-500 mt-10 text-sm px-4">
-            Chưa có tin nhắn nào.<br/>Hãy kết bạn để bắt đầu trò chuyện.
-          </div>
+           <div className="text-center text-zinc-500 mt-10 text-xs hidden md:block">Chưa có tin nhắn</div>
         ) : (
           conversations.map((conv) => {
             const isActive = activeConversationId === conv.id;
             const isUnread = (conv.unreadCount || 0) > 0;
 
             return (
-              <div
+              <button
                 key={conv.id}
-                onClick={() => openChat(conv.id)} // Gọi hàm mở Drawer
-                className={`
-                  flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200
-                  ${isActive ? 'bg-white/10' : 'hover:bg-white/5'}
-                `}
+                onClick={() => openChat(Number(conv.id))} // [FIX] Gọi openChat
+                className={cn(
+                  "w-full flex items-center p-2 rounded-2xl transition-all duration-200 group relative",
+                  // Mobile: Căn giữa (Avatar). Desktop: Căn trái.
+                  "justify-center md:justify-start",
+                  isActive ? "bg-white/10" : "hover:bg-white/5"
+                )}
               >
-                {/* Avatar */}
+                {/* AVATAR AREA */}
                 <div className="relative shrink-0">
                   <img 
-                    src={conv.partner.avatarUrl || '/default-avatar.png'} 
+                    src={conv.partner.avatarUrl || `https://ui-avatars.com/api/?name=${conv.partner.fullname}&background=random`} 
                     alt={conv.partner.fullname}
-                    className="w-12 h-12 rounded-full object-cover ring-2 ring-white/5" 
+                    className={cn(
+                      "rounded-full object-cover border-2 transition-all",
+                      // Kích thước Avatar
+                      "w-12 h-12", 
+                      isActive ? "border-white/20" : "border-transparent"
+                    )}
                   />
+                  {/* Online Dot */}
                   {conv.partner.isOnline && (
-                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#121212]"></div>
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#121212] rounded-full"></span>
+                  )}
+                  
+                  {/* Mobile Unread Dot: Chấm đỏ đè lên avatar khi màn hình nhỏ */}
+                  {isUnread && (
+                     <span className="md:hidden absolute top-0 right-0 w-3.5 h-3.5 bg-blue-500 border-2 border-[#121212] rounded-full animate-pulse"></span>
                   )}
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-0.5">
-                    <h3 className={`text-[15px] truncate pr-2 ${isUnread ? 'font-bold text-white' : 'font-medium text-zinc-200'}`}>
+                {/* INFO AREA: Ẩn trên Mobile (hidden), Hiện trên Desktop (md:block) */}
+                <div className="hidden md:block ml-3 flex-1 text-left min-w-0">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className={cn("font-semibold truncate text-sm", isUnread ? "text-white" : "text-zinc-300")}>
                       {conv.partner.fullname}
-                    </h3>
-                    <span className={`text-[11px] shrink-0 ${isUnread ? 'text-blue-400 font-bold' : 'text-zinc-600'}`}>
-                      {formatTimeAgo(conv.lastMessageAt)}
                     </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <p className={`text-sm truncate pr-2 ${isUnread ? 'text-white font-medium' : 'text-zinc-500'}`}>
-                       {conv.lastSenderId === user?.id ? 'Bạn: ' : ''}
-                       {conv.lastMessageContent || 'Bắt đầu trò chuyện'}
-                    </p>
-                    
-                    {/* Badge unread count */}
-                    {isUnread && (
-                      <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/50">
-                        <span className="text-[10px] font-bold text-white">
-                          {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-                        </span>
-                      </div>
+                    {conv.lastMessageAt && (
+                      <span className="text-[10px] text-zinc-500 ml-2 shrink-0">
+                        {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: false, locale: vi }).replace('khoảng ', '')}
+                      </span>
                     )}
                   </div>
+                  
+                  <div className="flex items-center justify-between">
+                      <p className={cn("truncate text-xs max-w-[180px]", isUnread ? "text-white font-medium" : "text-zinc-500")}>
+                      {conv.lastMessageContent 
+                          ? (String(conv.lastSenderId) === String(user?.id) ? `Bạn: ${conv.lastMessageContent}` : conv.lastMessageContent)
+                          : "Bắt đầu cuộc trò chuyện"}
+                      </p>
+                      {/* Desktop Unread Badge */}
+                      {isUnread && (
+                        <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/50 ml-2">
+                           <span className="text-[10px] font-bold text-white">
+                             {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                           </span>
+                        </div>
+                      )}
+                  </div>
                 </div>
-              </div>
+              </button>
             );
           })
         )}

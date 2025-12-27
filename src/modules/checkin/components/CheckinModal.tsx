@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Send, CheckCircle2, XCircle, Smile } from 'lucide-react';
 import { checkinService } from '@/modules/checkin/services/checkin.service';
 import imageCompression from 'browser-image-compression';
-import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'; // Import bộ Picker
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 
 interface CheckinModalProps {
   isOpen: boolean;
@@ -21,11 +21,9 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Đang đăng...');
   
-  // State cho Emoji Picker
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Xử lý click ra ngoài để đóng Picker
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
@@ -48,7 +46,6 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
 
   const onEmojiClick = (emojiData: EmojiClickData) => {
     setCaption((prev) => prev + emojiData.emoji);
-    // Không đóng picker ngay để user chọn tiếp
   };
 
   const handleSubmit = async () => {
@@ -69,7 +66,8 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
         file: fileToUpload,
         journeyId: journeyId,
         caption: caption,
-        emotion: isCompleted ? 'EXCITED' : 'HOPELESS' 
+        emotion: isCompleted ? 'EXCITED' : 'HOPELESS',
+        statusRequest: isCompleted ? 'NORMAL' : 'FAILED' 
       });
       
       onSuccess();
@@ -99,7 +97,10 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
         <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6 relative">
           {/* 1. Preview Ảnh */}
           <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-black border border-white/10 shadow-lg shrink-0">
-            <img src={previewUrl || ''} className="w-full h-full object-cover" alt="preview" />
+            {/* [FIX] Chỉ render thẻ img khi có previewUrl */}
+            {previewUrl && (
+              <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />
+            )}
             <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-xs font-bold text-white border flex items-center gap-2 backdrop-blur-md shadow-lg ${isCompleted ? 'bg-green-500/80 border-green-400' : 'bg-red-500/80 border-red-400'}`}>
               {isCompleted ? <CheckCircle2 className="w-4 h-4"/> : <XCircle className="w-4 h-4"/>}
               <span>{isCompleted ? 'Hoàn thành' : 'Thất bại'}</span>
