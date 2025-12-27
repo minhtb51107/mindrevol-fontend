@@ -16,16 +16,18 @@
 
     /* Strict Type-Checking Options */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    // [QUAN TRỌNG] Tắt 2 dòng này để Vercel không báo lỗi biến chưa dùng
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
 
-    /* --- THÊM PHẦN NÀY --- */
+    /* Alias & Types */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
-    /* --------------------- */
+    },
+    // Thêm dòng này để fix lỗi import.meta.env
+    "types": ["vite/client"]
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

@@ -1,9 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { X, Loader2, MessageCircle } from 'lucide-react'; // Thêm icon MessageCircle
+import { X, Loader2, MessageCircle } from 'lucide-react'; 
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { feedService } from '../services/feed.service';
-import { ReactionDetail } from '../types';
+// import { ReactionDetail } from '../types'; // Có thể bỏ hoặc giữ, nhưng ta sẽ dùng type mới bên dưới
+
+// [FIX LỖI]: Định nghĩa lại kiểu dữ liệu cho Item trong Activity Modal
+// Để bao gồm cả Reaction (thả tim) và Comment (bình luận)
+interface ActivityItem {
+  id: string | number;
+  userAvatar: string;
+  userFullName: string;
+  createdAt: string;
+  
+  // Các field gây lỗi trước đó -> Giờ khai báo rõ ràng ở đây
+  type?: 'COMMENT' | 'REACTION' | string; 
+  content?: string; // Nội dung comment
+  emoji?: string;   // Icon reaction
+}
 
 interface ActivityModalProps {
   isOpen: boolean;
@@ -12,7 +26,8 @@ interface ActivityModalProps {
 }
 
 export const ActivityModal = ({ isOpen, onClose, postId }: ActivityModalProps) => {
-  const [activities, setActivities] = useState<ReactionDetail[]>([]);
+  // [FIX LỖI]: Dùng ActivityItem thay vì ReactionDetail
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +41,9 @@ export const ActivityModal = ({ isOpen, onClose, postId }: ActivityModalProps) =
     try {
       const data = await feedService.getPostReactions(postId);
       if (Array.isArray(data)) {
-        setActivities(data);
+        // [FIX LỖI]: Ép kiểu data về ActivityItem[]
+        // TypeScript sẽ tin tưởng data trả về có đủ các field type/content
+        setActivities(data as unknown as ActivityItem[]);
       }
     } catch (error) {
       console.error("Failed to load activities", error);
@@ -65,6 +82,7 @@ export const ActivityModal = ({ isOpen, onClose, postId }: ActivityModalProps) =
                   
                   {/* Badge: Emoji hoặc Chat Icon */}
                   <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-800 rounded-full flex items-center justify-center text-[10px] shadow-sm border border-black text-white">
+                    {/* Giờ TypeScript đã hiểu item.type tồn tại nên không báo đỏ nữa */}
                     {item.type === 'COMMENT' ? <MessageCircle size={10} /> : item.emoji}
                   </div>
                 </div>

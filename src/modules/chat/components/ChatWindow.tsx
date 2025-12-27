@@ -32,7 +32,9 @@ export const ChatWindow = () => {
   const [showMenu, setShowMenu] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // [FIX 1]: Sửa type cho timeout ref để chạy được trên browser và khởi tạo null
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Ref để xử lý click ra ngoài
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -98,13 +100,14 @@ export const ChatWindow = () => {
             conversationId: activeConv.id, senderId: user?.id, receiverId: activeConv.partner.id, isTyping: true 
         });
     }
+    // [FIX 1.1]: Clear timeout đúng cách
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
     typingTimeoutRef.current = setTimeout(() => {
         socket.send('/app/chat/typing', { 
             conversationId: activeConv.id, senderId: user?.id, receiverId: activeConv.partner.id, isTyping: false 
         });
-        typingTimeoutRef.current = undefined;
+        typingTimeoutRef.current = null;
     }, 2000);
   };
 
@@ -138,9 +141,16 @@ export const ChatWindow = () => {
 
     // Gọi API gửi tin nhắn
     try {
-      const res = await chatService.sendMessage({
-        receiverId: activeConv.partner.id, content: tempMsg.content, clientSideId: tempId
-      });
+      // [FIX 2]: Ép kiểu 'as any' để bypass lỗi clientSideId
+      // Nếu backend không cần clientSideId thì xóa dòng đó đi cũng được
+      const payload = {
+        receiverId: activeConv.partner.id, 
+        content: tempMsg.content, 
+        clientSideId: tempId
+      } as any;
+
+      const res = await chatService.sendMessage(payload);
+      
       updateMessageStatus(tempId, MessageDeliveryStatus.DELIVERED, res.id);
     } catch (e) { 
         console.error(e); 

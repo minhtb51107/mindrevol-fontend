@@ -1,9 +1,9 @@
-// src/modules/journey/components/JourneySettingsModal.tsx
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom'; // [MỚI] Import hooks điều hướng
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X, Save, Loader2, LogOut, Trash2, UserCog, Share2, Copy, Check } from 'lucide-react';
-import { JourneyResponse } from '../types';
+// [FIX 1] Import thêm JourneyRole
+import { JourneyResponse, JourneyRole } from '../types';
 import { useJourneySettings } from '../hooks/useJourneySettings';
 import { useJourneyAction } from '../hooks/useJourneyAction';
 import { TransferOwnershipModal } from './TransferOwnershipModal';
@@ -22,45 +22,34 @@ export const JourneySettingsModal: React.FC<Props> = ({
   isOpen, onClose, journey, onUpdateSuccess 
 }) => {
   const { user } = useAuth();
-  const navigate = useNavigate(); // [MỚI]
-  const [searchParams] = useSearchParams(); // [MỚI]
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const { settings, isLoading, updateField, handleSave } = useJourneySettings(journey, onUpdateSuccess);
   
-  // State để đảm bảo DOM đã sẵn sàng (tránh lỗi Portal)
   const [mounted, setMounted] = useState(false);
 
-  // [LOGIC MỚI] Callback xử lý sau khi Rời/Xóa thành công
   const handleLeaveOrDeleteSuccess = () => {
-    // 1. Refresh danh sách hành trình bên ngoài
     onUpdateSuccess();
-    
-    // 2. Đóng modal
     onClose();
-
-    // 3. Kiểm tra: Nếu đang xem chi tiết hành trình này thì đá về trang chủ
     const currentJourneyId = searchParams.get('journeyId');
     if (currentJourneyId === journey?.id) {
         navigate('/', { replace: true });
     }
   };
 
-  // Truyền callback mới vào hook useJourneyAction
   const { deleteJourney, leaveJourney, isProcessing } = useJourneyAction(handleLeaveOrDeleteSuccess);
 
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Chỉ cho phép render portal sau khi component đã mount
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
 
-  // Nếu chưa mount hoặc các điều kiện chưa đủ, không render gì cả
   if (!mounted || !isOpen || !journey || !user) return null;
 
-  // Logic phân quyền
   const isOwner = Number(user.id) === Number(journey.creatorId);
 
   const handleCopyTemplateId = () => {
@@ -69,7 +58,6 @@ export const JourneySettingsModal: React.FC<Props> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Kiểm tra chắc chắn document.body tồn tại trước khi tạo Portal
   const portalTarget = typeof document !== 'undefined' ? document.body : null;
   if (!portalTarget) return null;
 
@@ -129,11 +117,12 @@ export const JourneySettingsModal: React.FC<Props> = ({
             )}
 
             {/* DANH SÁCH THÀNH VIÊN */}
+            {/* [FIX 2]: Ép kiểu string sang JourneyRole */}
             <MemberList 
                 journeyId={journey.id} 
                 currentUserRole={
                   journey.role || 
-                  (Number(user?.id) === Number(journey.creatorId) ? 'OWNER' : 'MEMBER')
+                  (Number(user?.id) === Number(journey.creatorId) ? ('OWNER' as JourneyRole) : ('MEMBER' as JourneyRole))
                 } 
             />
 

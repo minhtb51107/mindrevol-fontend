@@ -123,7 +123,7 @@ const HomePage = () => {
 
   const userAvatar = useMemo(() => {
       if (!user) return '';
-      return (user as any).avatar || (user as any).avatarUrl || `https://ui-avatars.com/api/?name=${user.name}`;
+      return (user as any).avatar || (user as any).avatarUrl || `https://ui-avatars.com/api/?name=${user.fullname}`;
   }, [user]);
 
   // 1. INIT DATA & SYNC URL

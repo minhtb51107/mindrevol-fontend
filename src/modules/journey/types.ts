@@ -92,6 +92,7 @@ export interface JourneyResponse {
   creatorAvatar: string;
   role?: JourneyRole;
   participantCount: number;
+  creatorId: string;
 }
 
 export interface UpdateJourneySettingsRequest {

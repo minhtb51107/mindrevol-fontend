@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 
 export const OtpForm = () => {
-  // SỬA LỖI: Thay setStep bằng goToLogin và resetFlow được lấy từ Context
   const { verifyOtp, isLoading, error, email, goToLogin, resetFlow } = useAuthFlow();
   
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -59,7 +58,8 @@ export const OtpForm = () => {
           {otp.map((digit, index) => (
             <input
               key={index}
-              ref={el => inputRefs.current[index] = el}
+              // [FIX LỖI]: Thêm dấu { } để hàm không return giá trị
+              ref={(el) => { inputRefs.current[index] = el; }}
               type="text"
               inputMode="numeric"
               maxLength={1}
@@ -97,19 +97,16 @@ export const OtpForm = () => {
         </div>
       </div>
 
-      {/* FOOTER: Dùng mt-auto hoặc margin top lớn để đẩy xuống đáy, tránh đè form */}
       <div className="mt-8 pt-6 border-t border-zinc-800/50 flex flex-col gap-3">
         <Button
           variant="secondary"
           className="w-full h-12 font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300"
-          // SỬA LỖI: Dùng goToLogin thay vì setStep
           onClick={goToLogin}
         >
           Đăng nhập bằng mật khẩu
         </Button>
         
         <button 
-          // SỬA LỖI: Dùng resetFlow để quay lại nhập email
           onClick={resetFlow}
           className="text-xs text-zinc-500 hover:text-white transition-colors py-2"
         >

@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { motion } from 'framer-motion';
 
-// Định nghĩa mảng giá trị
+// 1. Định nghĩa mảng giá trị chuẩn
 const GENDER_VALUES = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'] as const;
 
+// 2. Schema nội bộ: Xử lý gender như string để HTML Select và Zod Resolver không đánh nhau
 const schema = z.object({
   fullname: z.string().min(2, "Tên phải có ít nhất 2 ký tự"),
   dateOfBirth: z.string().refine((date) => {
@@ -17,15 +18,19 @@ const schema = z.object({
     return age >= 13;
   }, "Bạn phải trên 13 tuổi để tham gia"),
   
-  // [FIX LỖI 1]: Dùng required_error thay vì errorMap để an toàn hơn
-  gender: z.enum(GENDER_VALUES, {
-    required_error: "Vui lòng chọn giới tính",
-    invalid_type_error: "Vui lòng chọn giới tính"
+  gender: z.string().refine((val) => GENDER_VALUES.includes(val as any), {
+    message: "Vui lòng chọn giới tính"
   })
 });
 
-// [FIX LỖI 2]: Tạo type từ schema để đảm bảo khớp 100% với form
-export type StepFormValues = z.infer<typeof schema>;
+// 3. Type nội bộ (Dành cho useForm trong file này)
+type InternalFormValues = z.infer<typeof schema>;
+
+// 4. [QUAN TRỌNG] Type xuất khẩu (Dành cho RegisterWizard)
+// Ép kiểu gender thành ENUM xịn để khớp với Store
+export type StepFormValues = Omit<InternalFormValues, 'gender'> & {
+  gender: typeof GENDER_VALUES[number];
+};
 
 interface Props {
   onNext: (data: StepFormValues) => void;
@@ -33,10 +38,17 @@ interface Props {
 }
 
 export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
-  // Truyền StepFormValues vào useForm
-  const { register, handleSubmit, formState: { errors } } = useForm<StepFormValues>({
+  // Dùng InternalFormValues cho form để khớp với resolver
+  const { register, handleSubmit, formState: { errors } } = useForm<InternalFormValues>({
     resolver: zodResolver(schema)
   });
+
+  // Hàm xử lý submit trung gian
+  const onSubmit = (data: InternalFormValues) => {
+    // Ép kiểu an toàn trước khi gửi ra ngoài
+    // Vì schema đã validate val nằm trong GENDER_VALUES rồi, nên ép kiểu này an toàn 100%
+    onNext(data as unknown as StepFormValues);
+  };
 
   return (
     <motion.div 
@@ -48,7 +60,7 @@ export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
         <p className="text-muted text-sm">Hãy cho mọi người biết thêm về bạn.</p>
       </div>
 
-      <form onSubmit={handleSubmit((d) => onNext(d))} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Tên */}
         <Input 
           label="Tên hiển thị"

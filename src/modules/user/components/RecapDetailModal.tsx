@@ -13,9 +13,13 @@ export const RecapDetailModal: React.FC<Props> = ({ journeyId, onClose }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Gọi API lấy feed recap (đã implement ở backend turn trước)
+        // Gọi API lấy feed recap
         journeyService.getRecapFeed(journeyId)
-            .then(res => setCheckins(res.data.content))
+            .then(res => {
+                // [FIX LỖI]: res chính là PageResponse, lấy trực tiếp content
+                // Thay vì res.data.content -> dùng res.content
+                setCheckins(res.content); 
+            })
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
     }, [journeyId]);
@@ -33,14 +37,15 @@ export const RecapDetailModal: React.FC<Props> = ({ journeyId, onClose }) => {
                 ) : (
                     <div className="grid grid-cols-3 gap-1">
                         {checkins.map(checkin => (
-                            <div key={checkin.id} className="relative aspect-square bg-zinc-800">
+                            <div key={checkin.id} className="relative aspect-square bg-zinc-800 group cursor-pointer">
                                 <img 
                                     src={checkin.thumbnailUrl || checkin.imageUrl} 
                                     className="w-full h-full object-cover" 
                                     loading="lazy"
+                                    alt="memory"
                                 />
-                                {/* Overlay hiện số like/cmt khi hover (hoặc luôn hiện mờ) */}
-                                <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white font-bold">
+                                {/* Overlay hiện số like/cmt khi hover */}
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white font-bold">
                                     <span className="flex items-center gap-1"><Heart className="w-4 h-4 fill-white"/> {checkin.reactionCount}</span>
                                 </div>
                             </div>
