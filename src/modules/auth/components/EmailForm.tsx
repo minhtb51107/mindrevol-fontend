@@ -57,7 +57,7 @@ const handleTikTokLogin = async () => {
     // [TEST]: Gán cứng giá trị để loại trừ mọi lỗi do biến môi trường
     // Nếu đoạn này chạy được, lỗi nằm ở file .env của bạn
     const HARDCODED_CLIENT_KEY = "sbawuq6944l3tftyri"; 
-    const HARDCODED_REDIRECT_URI = "http://localhost:5173/auth/callback/tiktok";
+    const HARDCODED_REDIRECT_URI = "https://mindrevol.vercel.app/auth/callback/tiktok";
 
     console.log("URL đang gửi đi TikTok:", { 
         key: HARDCODED_CLIENT_KEY, 
