@@ -1,17 +1,9 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { motion } from 'framer-motion';
 import { AtSign } from 'lucide-react';
-
-const schema = z.object({
-  handle: z.string()
-    .min(3, "Handle tối thiểu 3 ký tự")
-    .regex(/^[a-zA-Z0-9._]+$/, "Chỉ chứa chữ, số, dấu chấm và gạch dưới")
-});
+import { useStepHandle } from '../../hooks/useRegisterSteps'; // Import Hook
 
 interface Props {
   onFinish: (handle: string) => void;
@@ -20,9 +12,8 @@ interface Props {
 }
 
 export const StepHandle: React.FC<Props> = ({ onFinish, onBack, isLoading }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(schema)
-  });
+  const { form, onSubmit } = useStepHandle(onFinish);
+  const { register, formState: { errors } } = form;
 
   return (
     <motion.div 
@@ -34,16 +25,16 @@ export const StepHandle: React.FC<Props> = ({ onFinish, onBack, isLoading }) => 
         <p className="text-muted text-sm">Chọn một ID độc nhất (Handle) để bạn bè tìm thấy bạn.</p>
       </div>
 
-      <form onSubmit={handleSubmit((d: any) => onFinish(d.handle))} className="space-y-6">
+      <form onSubmit={onSubmit} className="space-y-6">
         <div className="relative">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted">
             <AtSign className="w-5 h-5" />
           </div>
           <Input 
-            className="pl-12" // Padding left để né icon @
+            className="pl-12"
             placeholder="username"
             {...register('handle')} 
-            error={errors.handle?.message?.toString()} 
+            error={errors.handle?.message} 
             autoFocus
           />
         </div>

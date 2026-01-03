@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, Check, Link as LinkIcon, Copy } from 'lucide-react';
-import { useInviteMembers } from '../hooks/useInviteMembers';
+import { X, Search, UserPlus, Loader2, Check } from 'lucide-react';
+import { journeyService } from '../services/journey.service';
+import { toast } from 'react-hot-toast';
+import { UserSummary } from '../types';
 
 interface Props {
   isOpen: boolean;
@@ -11,90 +13,132 @@ interface Props {
 }
 
 export const InviteMembersModal: React.FC<Props> = ({ isOpen, onClose, journeyId, inviteCode }) => {
-  const { friends, isLoading, invitedIds, inviteUser } = useInviteMembers(journeyId);
-  const [copied, setCopied] = useState(false);
+  const [friends, setFriends] = useState<UserSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [inviteLoading, setInviteLoading] = useState<string | null>(null);
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (isOpen && journeyId) {
+      loadInvitableFriends();
+    }
+  }, [isOpen, journeyId]);
+
+  const loadInvitableFriends = async () => {
+    setLoading(true);
+    try {
+      // Gọi API mới: Backend đã tự lọc những người đã tham gia
+      const data = await journeyService.getInvitableFriends(journeyId);
+      setFriends(data);
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể tải danh sách bạn bè");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInvite = async (friendId: string) => {
+    setInviteLoading(friendId);
+    try {
+      await journeyService.inviteFriend(journeyId, friendId);
+      toast.success("Đã gửi lời mời!");
+      setInvitedIds(prev => new Set(prev).add(friendId));
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Lỗi khi mời bạn bè");
+    } finally {
+      setInviteLoading(null);
+    }
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(inviteCode);
+    toast.success("Đã sao chép mã mời!");
+  };
 
   if (!isOpen) return null;
 
-  // Tạo link mời
-  const inviteLink = `${window.location.origin}/join?code=${inviteCode}`;
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // Search local trên danh sách đã được backend trả về
+  const filteredFriends = friends.filter(friend => {
+    const search = searchTerm.toLowerCase();
+    const name = friend.fullname ? friend.fullname.toLowerCase() : '';
+    const handle = friend.handle ? friend.handle.toLowerCase() : '';
+    return name.includes(search) || handle.includes(search);
+  });
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md bg-[#18181b] border border-white/10 rounded-2xl flex flex-col max-h-[80vh]">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4 animate-in fade-in zoom-in-95">
+      <div className="w-full max-w-md bg-[#18181b] border border-white/10 rounded-2xl flex flex-col max-h-[85vh]">
         
-        <div className="p-6 border-b border-white/5">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-white">Mời thành viên</h2>
-            <button onClick={onClose}><X className="text-zinc-400 hover:text-white" /></button>
+        {/* Header */}
+        <div className="p-6 border-b border-white/5 flex justify-between items-center">
+          <div>
+            <h3 className="text-xl font-bold text-white">Mời bạn bè</h3>
+            <p className="text-xs text-zinc-500 mt-1">Mã tham gia: <span onClick={handleCopyCode} className="text-blue-400 font-mono cursor-pointer hover:underline">{inviteCode}</span></p>
           </div>
-          
-          <div className="mt-4 space-y-3">
-             {/* Box 1: Mã Code */}
-            <div className="p-3 bg-zinc-900 rounded-lg flex justify-between items-center border border-white/5">
-                <div>
-                    <p className="text-[10px] text-zinc-500 uppercase font-bold">Mã hành trình</p>
-                    <p className="text-xl font-mono text-blue-400 font-bold tracking-widest">{inviteCode}</p>
-                </div>
-            </div>
+          <button onClick={onClose}><X className="text-zinc-400 hover:text-white" /></button>
+        </div>
 
-            {/* Box 2: Link */}
-            <button 
-                onClick={handleCopyLink}
-                className="w-full flex items-center justify-between p-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-all group"
-            >
-                <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="p-2 bg-blue-500/20 rounded-full text-blue-400">
-                        <LinkIcon className="w-4 h-4" />
-                    </div>
-                    <div className="text-left overflow-hidden">
-                        <p className="text-xs text-blue-200 font-medium truncate w-full">Sao chép liên kết tham gia</p>
-                        <p className="text-[10px] text-blue-500/60 truncate">{inviteLink}</p>
-                    </div>
-                </div>
-                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />}
-            </button>
+        {/* Search */}
+        <div className="p-4 pb-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm bạn bè..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-zinc-900 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm text-white focus:border-blue-500 outline-none"
+            />
           </div>
         </div>
 
-        {/* Danh sách bạn bè */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {isLoading ? (
-            <p className="text-center text-zinc-500 py-4 text-sm">Đang tải danh sách bạn bè...</p>
-          ) : friends?.length === 0 ? (
-            <p className="text-center text-zinc-500 py-4 text-sm">Bạn chưa có bạn bè nào để mời.</p>
+        {/* List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+          {loading ? (
+            <div className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-500"/></div>
+          ) : filteredFriends.length === 0 ? (
+            <div className="text-center py-8 text-zinc-500 text-sm">
+              {searchTerm ? "Không tìm thấy kết quả." : "Bạn chưa có bạn bè nào để mời (hoặc họ đã tham gia rồi)."}
+            </div>
           ) : (
-            friends?.map((friend: any) => (
-              <div key={friend.id} className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 overflow-hidden">
-                     {friend.friend?.avatarUrl ? <img src={friend.friend.avatarUrl} className="w-full h-full object-cover"/> : (friend.friend?.fullname?.[0] || 'U')}
+            filteredFriends.map(friend => {
+              const isInvited = invitedIds.has(friend.id);
+              const avatarSrc = friend.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.fullname)}&background=random&color=fff`;
+              
+              return (
+                <div key={friend.id} className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl border border-white/5 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={avatarSrc} 
+                      className="w-10 h-10 rounded-full bg-zinc-800 object-cover" 
+                      alt={friend.fullname}
+                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.fullname)}`; }}
+                    />
+                    <div>
+                      <p className="text-white font-medium text-sm">{friend.fullname}</p>
+                      <p className="text-xs text-zinc-500">@{friend.handle}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-white font-medium text-sm">{friend.friend?.fullname}</h4>
-                    <p className="text-xs text-zinc-500">@{friend.friend?.handle}</p>
-                  </div>
+                  
+                  {isInvited ? (
+                    <button disabled className="px-3 py-1.5 bg-green-500/10 text-green-500 text-xs rounded-lg flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Đã mời
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleInvite(friend.id)}
+                      disabled={!!inviteLoading}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+                    >
+                      {inviteLoading === friend.id ? <Loader2 className="w-3 h-3 animate-spin"/> : <UserPlus className="w-3 h-3" />}
+                      Mời
+                    </button>
+                  )}
                 </div>
-                
-                <button
-                  onClick={() => inviteUser(friend.friend?.id)}
-                  disabled={invitedIds.includes(friend.friend?.id)}
-                  className={`p-2 rounded-full transition-all ${
-                    invitedIds.includes(friend.friend?.id) 
-                      ? 'bg-green-500/20 text-green-500 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-                  }`}
-                >
-                  {invitedIds.includes(friend.friend?.id) ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                </button>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

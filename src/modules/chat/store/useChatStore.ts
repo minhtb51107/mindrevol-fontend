@@ -1,25 +1,24 @@
-// src/modules/chat/store/useChatStore.ts
 import { create } from 'zustand';
-import { Conversation, Message, MessageDeliveryStatus } from '../types';
+import { Conversation, Message } from '../types';
+import { chatService } from '../services/chat.service';
 
 interface ChatState {
   conversations: Conversation[];
-  activeConversationId: number | null; // Nếu có ID => Drawer mở, Null => Drawer đóng
-  messages: Record<number, Message[]>; // Cache tin nhắn
-  isSidebarOpen: boolean; // Mobile toggle
+  activeConversationId: any; // [FIX] Dùng any để nhận UUID string
+  messages: Record<string, Message[]>; // [FIX] Key là string ID
+  isSidebarOpen: boolean;
 
   // Actions
   setConversations: (list: Conversation[]) => void;
-  openChat: (conversationId: number) => void; // Mở chat với 1 người/nhóm
-  closeChat: () => void; // Đóng chat
-  
-  setMessages: (convId: number, msgs: Message[]) => void;
-  addMessage: (msg: Message) => void; 
-  updateMessageStatus: (clientSideId: string, status: MessageDeliveryStatus, realId?: number) => void;
-  markAsRead: (convId: number) => void;
-  setTyping: (convId: number, isTyping: boolean) => void;
+  openChat: (conversationId: any) => Promise<void>; // [FIX] Param any
+  closeChat: () => void;
   setSidebarOpen: (isOpen: boolean) => void;
-  updateOnlineStatus: (userId: number, isOnline: boolean) => void;
+  
+  setMessages: (convId: any, msgs: Message[]) => void;
+  addMessage: (msg: Message) => void; 
+  markAsRead: (convId: any) => void;
+  
+  updateMessageStatus: (clientSideId: string, status: string, realId?: any) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -29,28 +28,43 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isSidebarOpen: true,
 
   setConversations: (list) => set({ conversations: list }),
-  
-  // LOGIC MỚI: Mở chat drawer
-  openChat: (id) => set({ activeConversationId: id }),
-  
-  // LOGIC MỚI: Đóng chat drawer
+
+  openChat: async (id) => {
+    // 1. Optimistic Update
+    set((state) => ({
+      activeConversationId: id,
+      conversations: state.conversations.map((c) => 
+        // [FIX] So sánh chuỗi
+        String(c.id) === String(id) ? { ...c, unreadCount: 0 } : c
+      ),
+    }));
+
+    // 2. Gọi API
+    try {
+      if(id) await chatService.markAsRead(id);
+    } catch (error) {
+      console.error("Lỗi khi đánh dấu đã đọc:", error);
+    }
+  },
+
   closeChat: () => set({ activeConversationId: null }),
+  setSidebarOpen: (isOpen) => set({ isSidebarOpen: isOpen }),
 
   setMessages: (convId, msgs) => set((state) => ({
     messages: { ...state.messages, [convId]: msgs }
   })),
 
   addMessage: (msg) => set((state) => {
-    // 1. Thêm tin nhắn vào list
+    // 1. Thêm tin nhắn
     const currentMsgs = state.messages[msg.conversationId] || [];
-    // Check trùng (đề phòng socket và API response đua nhau)
-    if (currentMsgs.some(m => (m.id === msg.id && msg.id) || (m.clientSideId === msg.clientSideId))) {
+    // Check trùng
+    if (currentMsgs.some(m => (m.id === msg.id && msg.id) || (m.clientSideId === msg.clientSideId && msg.clientSideId))) {
       return state;
     }
-    const newMsgs = [...currentMsgs, msg]; // Append xuống cuối
+    const newMsgs = [...currentMsgs, msg];
 
-    // 2. Update Conversation List (đưa lên đầu)
-    const convIndex = state.conversations.findIndex(c => c.id === msg.conversationId);
+    // 2. Đẩy hội thoại lên đầu
+    const convIndex = state.conversations.findIndex(c => String(c.id) === String(msg.conversationId));
     let newConversations = [...state.conversations];
 
     if (convIndex > -1) {
@@ -59,12 +73,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       updatedConv.lastMessageAt = new Date().toISOString(); 
       updatedConv.lastSenderId = msg.senderId;
       
-      // Nếu không phải đang chat -> Tăng unread
-      if (state.activeConversationId !== msg.conversationId) {
-         updatedConv.unreadCount += 1;
+      if (String(state.activeConversationId) !== String(msg.conversationId)) {
+         updatedConv.unreadCount = (updatedConv.unreadCount || 0) + 1;
       }
 
-      // Xóa vị trí cũ, đưa lên đầu
       newConversations.splice(convIndex, 1);
       newConversations.unshift(updatedConv);
     } 
@@ -75,39 +87,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     };
   }),
 
+  markAsRead: (convId) => set((state) => {
+    const newConvs = state.conversations.map(c => 
+      String(c.id) === String(convId) ? { ...c, unreadCount: 0 } : c
+    );
+    return { conversations: newConvs };
+  }),
+
   updateMessageStatus: (clientSideId, status, realId) => set((state) => {
     const newMessages = { ...state.messages };
     for (const convId in newMessages) {
       newMessages[convId] = newMessages[convId].map(m => {
         if (m.clientSideId === clientSideId) {
-          return { ...m, deliveryStatus: status, id: realId || m.id };
+          return { ...m, id: realId || m.id, status: status }; // status isn't in Message type usually but implied for UI
         }
         return m;
       });
     }
     return { messages: newMessages };
   }),
-
-  markAsRead: (convId) => set((state) => {
-    const newConvs = state.conversations.map(c => 
-      c.id === convId ? { ...c, unreadCount: 0 } : c
-    );
-    return { conversations: newConvs };
-  }),
-
-  setTyping: (convId, isTyping) => set((state) => ({
-    conversations: state.conversations.map(c => 
-      c.id === convId ? { ...c, isTyping } : c
-    )
-  })),
-
-  setSidebarOpen: (isOpen) => set({ isSidebarOpen: isOpen }),
-
-  updateOnlineStatus: (userId, isOnline) => set((state) => ({
-    conversations: state.conversations.map(c => 
-      c.partner.id === userId 
-        ? { ...c, partner: { ...c.partner, isOnline } } 
-        : c
-    )
-  }))
 }));

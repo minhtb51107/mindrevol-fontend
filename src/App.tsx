@@ -6,12 +6,9 @@ import { Loader2 } from 'lucide-react';
 
 import AuthPage from '@/modules/auth/pages/AuthPage';
 import HomePage from '@/modules/feed/pages/HomePage';
-import { ActivatePage } from '@/modules/auth/pages/ActivatePage';
 import { TikTokCallback } from '@/modules/auth/pages/TikTokCallback';
 import { JoinLinkPage } from '@/modules/journey/pages/JoinLinkPage';
 import ProfilePage from './modules/user/pages/ProfilePage';
-
-// [FIX]: Import default (Bỏ dấu ngoặc nhọn)
 import ChatPage from '@/modules/chat/pages/ChatPage'; 
 
 function App() {
@@ -27,8 +24,6 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/activate" element={<ActivatePage onBackToLogin={() => window.location.href = '/'} />} />
-      
       <Route path="/tiktok-callback" element={
         <AuthFlowProvider>
           <TikTokCallback />
@@ -46,8 +41,18 @@ function App() {
       <Route path="/chat" element={
         isAuthenticated ? <ChatPage /> : <Navigate to="/" replace />
       } />
+
+      <Route path="/chat/:conversationId" element={
+        isAuthenticated ? <ChatPage /> : <Navigate to="/" replace />
+      } />
       
+      {/* Route xem profile của chính mình */}
       <Route path="/profile" element={
+        isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
+      } />
+
+      {/* [MỚI] Route xem profile người khác */}
+      <Route path="/profile/:userId" element={
         isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
       } />
 

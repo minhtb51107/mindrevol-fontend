@@ -1,23 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { X, Loader2, MessageCircle } from 'lucide-react'; 
+import React from 'react';
+import { X, Loader2, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { feedService } from '../services/feed.service';
-// import { ReactionDetail } from '../types'; // Có thể bỏ hoặc giữ, nhưng ta sẽ dùng type mới bên dưới
-
-// [FIX LỖI]: Định nghĩa lại kiểu dữ liệu cho Item trong Activity Modal
-// Để bao gồm cả Reaction (thả tim) và Comment (bình luận)
-interface ActivityItem {
-  id: string | number;
-  userAvatar: string;
-  userFullName: string;
-  createdAt: string;
-  
-  // Các field gây lỗi trước đó -> Giờ khai báo rõ ràng ở đây
-  type?: 'COMMENT' | 'REACTION' | string; 
-  content?: string; // Nội dung comment
-  emoji?: string;   // Icon reaction
-}
+import { usePostActivities } from '../hooks/usePostActivities';
 
 interface ActivityModalProps {
   isOpen: boolean;
@@ -25,90 +10,107 @@ interface ActivityModalProps {
   postId: string;
 }
 
+// [FIX] Cập nhật tham số nhận vào là string | undefined | null
+const parseContent = (content?: string | null) => {
+  // Nếu content là null/undefined/rỗng thì trả về chuỗi rỗng
+  if (!content) return "";
+  
+  try {
+    if (content.trim().startsWith('{') && content.trim().endsWith('}')) {
+      const parsed = JSON.parse(content);
+      return parsed.content || content;
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return content;
+};
+
 export const ActivityModal = ({ isOpen, onClose, postId }: ActivityModalProps) => {
-  // [FIX LỖI]: Dùng ActivityItem thay vì ReactionDetail
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (isOpen && postId) {
-      fetchActivities();
-    }
-  }, [isOpen, postId]);
-
-  const fetchActivities = async () => {
-    setIsLoading(true);
-    try {
-      const data = await feedService.getPostReactions(postId);
-      if (Array.isArray(data)) {
-        // [FIX LỖI]: Ép kiểu data về ActivityItem[]
-        // TypeScript sẽ tin tưởng data trả về có đủ các field type/content
-        setActivities(data as unknown as ActivityItem[]);
-      }
-    } catch (error) {
-      console.error("Failed to load activities", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { activities, isLoading } = usePostActivities(postId, isOpen);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      <div className="relative w-full max-w-md bg-[#1a1a1a] md:rounded-2xl rounded-t-2xl border border-white/10 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300 flex flex-col max-h-[70vh]">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 bg-[#1a1a1a]/50 backdrop-blur-md sticky top-0 z-10">
-          <h3 className="text-white font-bold text-lg">Hoạt động</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+      {/* Modal Content */}
+      <div className="relative w-full max-w-md bg-[#1a1a1a] md:rounded-2xl rounded-t-3xl border-t md:border border-white/10 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300 flex flex-col max-h-[85vh]">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#1a1a1a]/80 backdrop-blur-xl sticky top-0 z-10">
+          <h3 className="text-white font-bold text-lg tracking-tight">Hoạt động mới</h3>
+          <button 
+            onClick={onClose} 
+            className="p-2 -mr-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px]">
+        {/* List */}
+        <div className="flex-1 overflow-y-auto p-0 min-h-[300px]">
           {isLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
           ) : activities.length > 0 ? (
-            activities.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                  <img 
-                    src={item.userAvatar || `https://ui-avatars.com/api/?name=${item.userFullName}&background=random`} 
-                    alt={item.userFullName} 
-                    className="w-10 h-10 rounded-full object-cover border border-white/10" 
-                  />
-                  
-                  {/* Badge: Emoji hoặc Chat Icon */}
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-800 rounded-full flex items-center justify-center text-[10px] shadow-sm border border-black text-white">
-                    {/* Giờ TypeScript đã hiểu item.type tồn tại nên không báo đỏ nữa */}
-                    {item.type === 'COMMENT' ? <MessageCircle size={10} /> : item.emoji}
+            <div className="flex flex-col">
+                {activities.map((item) => (
+                  <div key={item.id} className="flex gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                    
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <img 
+                        src={item.userAvatar || `https://ui-avatars.com/api/?name=${item.userFullName}&background=random`} 
+                        alt={item.userFullName} 
+                        className="w-10 h-10 rounded-full object-cover border border-white/10 shadow-sm" 
+                      />
+                      
+                      {/* Icon loại hoạt động */}
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-800 rounded-full flex items-center justify-center shadow-md border border-[#1a1a1a] text-white">
+                        {item.type === 'COMMENT' ? <MessageCircle size={10} className="text-blue-400 fill-blue-400/20" /> : <span className="text-[10px]">{item.emoji}</span>}
+                      </div>
+                    </div>
+                    
+                    {/* Content Area */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      
+                      {/* Name & Time */}
+                      <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-white truncate mr-2">
+                            {item.userFullName}
+                          </span>
+                          <span className="text-[11px] text-zinc-500 font-medium whitespace-nowrap">
+                            {item.createdAt ? formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: vi }) : ''}
+                          </span>
+                      </div>
+                      
+                      {/* Body Text / Reaction Big */}
+                      <div className="text-[15px] leading-relaxed break-words text-zinc-200">
+                        {item.type === 'COMMENT' ? (
+                            // Gọi hàm parseContent, giờ nó đã chấp nhận undefined
+                            <span>{parseContent(item.content)}</span>
+                        ) : (
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-zinc-400 text-sm">đã thả cảm xúc</span>
+                                <span className="text-2xl animate-in zoom-in duration-300 origin-left">{item.emoji}</span>
+                            </div>
+                        )}
+                      </div>
+
+                    </div>
                   </div>
-                </div>
-                
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between">
-                     <div className="text-sm font-semibold text-white truncate">{item.userFullName}</div>
-                     <span className="text-[10px] text-zinc-500 whitespace-nowrap ml-2">
-                        {item.createdAt ? formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: vi }) : ''}
-                     </span>
-                  </div>
-                  
-                  {/* Nội dung Activity */}
-                  <div className="text-xs text-zinc-400 truncate">
-                    {item.type === 'COMMENT' ? (
-                        <span className="text-white">"{item.content}"</span>
-                    ) : (
-                        <span>đã thả cảm xúc {item.emoji}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
+                ))}
+            </div>
           ) : (
-            <div className="text-center text-zinc-500 py-10 text-sm">Chưa có tương tác nào.</div>
+            <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+               <div className="w-16 h-16 bg-zinc-800/50 rounded-full flex items-center justify-center mb-4">
+                  <MessageCircle className="w-8 h-8 text-zinc-600" />
+               </div>
+               <p className="text-zinc-400 font-medium">Chưa có hoạt động nào</p>
+               <p className="text-zinc-600 text-sm mt-1">Hãy là người đầu tiên tương tác!</p>
+            </div>
           )}
         </div>
       </div>

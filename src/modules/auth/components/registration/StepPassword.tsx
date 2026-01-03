@@ -1,27 +1,16 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { motion } from 'framer-motion';
-
-const schema = z.object({
-  password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Mật khẩu nhập lại không khớp",
-  path: ["confirmPassword"],
-});
+import { useStepPassword } from '../../hooks/useRegisterSteps'; // Import Hook
 
 interface Props {
   onNext: (password: string) => void;
 }
 
 export const StepPassword: React.FC<Props> = ({ onNext }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(schema)
-  });
+  const { form, onSubmit } = useStepPassword(onNext);
+  const { register, formState: { errors } } = form;
 
   return (
     <motion.div 
@@ -35,19 +24,19 @@ export const StepPassword: React.FC<Props> = ({ onNext }) => {
         <p className="text-muted text-sm">Tạo một mật khẩu mạnh để bảo vệ hành trình của bạn.</p>
       </div>
 
-      <form onSubmit={handleSubmit((d) => onNext(d.password))} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4">
         <Input 
           type="password" 
           label="Mật khẩu"
           {...register('password')} 
-          error={errors.password?.message?.toString()} 
+          error={errors.password?.message} 
           autoFocus
         />
         <Input 
           type="password" 
           label="Nhập lại mật khẩu"
           {...register('confirmPassword')} 
-          error={errors.confirmPassword?.message?.toString()} 
+          error={errors.confirmPassword?.message} 
         />
         <Button type="submit">Tiếp theo</Button>
       </form>

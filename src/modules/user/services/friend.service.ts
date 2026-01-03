@@ -1,7 +1,7 @@
 import { http } from '@/lib/http';
 
 export interface Friend {
-  id: number;
+  id: any; 
   fullname: string;
   avatarUrl: string;
   handle: string;
@@ -9,61 +9,70 @@ export interface Friend {
 }
 
 export interface FriendshipResponse {
-  id: number; // ID của mối quan hệ (dùng để accept/decline)
+  id: any; 
   friend: Friend;
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'BLOCKED';
   isRequester: boolean;
   createdAt: string;
 }
 
-// Interface cho kết quả tìm kiếm user
 export interface UserSummary {
-  id: number;
+  id: any;
   fullname: string;
   handle: string;
   avatarUrl: string;
-  // Trạng thái quan hệ với user này để hiển thị nút bấm phù hợp
   friendshipStatus: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'BLOCKED' | 'NONE';
 }
 
+interface PageParams {
+  page?: number;
+  size?: number;
+}
+
 class FriendService {
-  // 1. Lấy danh sách bạn bè
-  async getMyFriends(): Promise<FriendshipResponse[]> {
-    const res = await http.get<any>('/friends'); 
-    // Backend trả về Page, ta lấy content
+  
+  async getMyFriends(params?: PageParams): Promise<FriendshipResponse[]> {
+    const res = await http.get<any>('/friends', { params }); 
     return res.data?.data?.content || [];
   }
 
-  // 2. Lấy danh sách lời mời kết bạn đang chờ (Incoming)
-  async getIncomingRequests(): Promise<FriendshipResponse[]> {
-    const res = await http.get<any>('/friends/requests/incoming');
+  // [THÊM MỚI] Hàm này cần thiết cho Modal bạn bè khi xem profile người khác
+  async getUserFriends(userId: string, params?: PageParams): Promise<FriendshipResponse[]> {
+     // Lưu ý: Đảm bảo Backend có API này (ví dụ: GET /api/v1/friends/user/{userId})
+     // Nếu backend chưa có, bạn có thể tạm thời gọi API public khác hoặc trả về mảng rỗng để không lỗi
+     try {
+         const res = await http.get<any>(`/friends/user/${userId}`, { params }); 
+         return res.data?.data?.content || [];
+     } catch (e) {
+         console.warn("API lấy bạn bè người khác chưa sẵn sàng:", e);
+         return [];
+     }
+  }
+
+  async getIncomingRequests(params?: PageParams): Promise<FriendshipResponse[]> {
+    const res = await http.get<any>('/friends/requests/incoming', { params });
     return res.data?.data?.content || [];
   }
 
-  // 3. Tìm kiếm người dùng (MỚI)
   async searchUsers(query: string): Promise<UserSummary[]> {
-    // API tìm kiếm user. Lưu ý: query param là 'q' hoặc 'query' tùy backend bạn cài
     const res = await http.get<any>('/users/search', { params: { query } });
     return res.data?.data || [];
   }
 
-  // 4. Gửi lời mời kết bạn
-  async sendFriendRequest(targetUserId: number): Promise<void> {
+  // [HÀM ĐÚNG TÊN] Được sử dụng trong ProfilePage
+  async sendFriendRequest(targetUserId: any): Promise<void> {
     await http.post('/friends/request', { targetUserId });
   }
 
-  // 5. Chấp nhận lời mời
-  async acceptRequest(friendshipId: number): Promise<void> {
+  async acceptRequest(friendshipId: any): Promise<void> {
     await http.post(`/friends/accept/${friendshipId}`);
   }
 
-  // 6. Từ chối lời mời
-  async declineRequest(friendshipId: number): Promise<void> {
+  async declineRequest(friendshipId: any): Promise<void> {
     await http.post(`/friends/decline/${friendshipId}`);
   }
 
-  // 7. Hủy kết bạn
-  async unfriend(targetUserId: number): Promise<void> {
+  async unfriend(targetUserId: any): Promise<void> {
     await http.delete(`/friends/${targetUserId}`);
   }
 }

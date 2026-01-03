@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { Search, Edit } from 'lucide-react';
 import { Conversation } from '../types';
 import { cn } from '@/lib/utils';
+// Giả sử bạn có hàm format time, nếu chưa có thì dùng tạm string template
+import { formatDistanceToNow } from 'date-fns'; 
+import { vi } from 'date-fns/locale';
 
 interface ChatListProps {
   conversations: Conversation[];
   activeConvId: number | null;
   onSelect: (convId: number) => void;
-  onlineUsers: number[]; // Danh sách ID user đang online
+  // Đã xóa onlineUsers
 }
 
-export const ChatList: React.FC<ChatListProps> = ({ conversations, activeConvId, onSelect, onlineUsers }) => {
+export const ChatList: React.FC<ChatListProps> = ({ conversations, activeConvId, onSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Lọc hội thoại theo tên
   const filteredConvs = conversations.filter(c => 
     c.partner.fullname.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -23,8 +25,11 @@ export const ChatList: React.FC<ChatListProps> = ({ conversations, activeConvId,
       {/* 1. Header & Search */}
       <div className="p-4 pb-2">
         <div className="flex justify-between items-center mb-4 px-2">
-          <h2 className="text-xl font-bold text-white">Đoạn chat</h2>
-          <button className="text-white hover:bg-white/10 p-2 rounded-full"><Edit className="w-5 h-5"/></button>
+          <h2 className="text-xl font-bold text-white">Tin nhắn</h2>
+          {/* Nút Edit này có thể dùng để tạo chat mới sau này */}
+          <button className="text-white hover:bg-white/10 p-2 rounded-full">
+            <Edit className="w-5 h-5"/>
+          </button>
         </div>
         
         {/* Search Bar */}
@@ -33,63 +38,63 @@ export const ChatList: React.FC<ChatListProps> = ({ conversations, activeConvId,
           <input 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm kiếm..." 
-            className="w-full bg-[#262626] rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20"
+            placeholder="Tìm bạn bè..." 
+            className="w-full bg-[#262626] rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
           />
         </div>
       </div>
 
-      {/* 2. Active Friends (Instagram Style) */}
-      <div className="px-4 py-2 overflow-x-auto no-scrollbar flex gap-4 border-b border-white/5">
-        {conversations.filter(c => c.partner.isOnline).map(c => (
-          <div key={c.partner.id} className="flex flex-col items-center gap-1 min-w-[60px] cursor-pointer" onClick={() => onSelect(c.id)}>
-            <div className="relative">
-              <img src={c.partner.avatarUrl} className="w-12 h-12 rounded-full object-cover border border-white/10" />
-              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black"></div>
-            </div>
-            <span className="text-[10px] text-zinc-400 truncate w-14 text-center">
-              {c.partner.fullname.split(' ').pop()}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* 2. Conversation List (Tối giản) */}
+      <div className="flex-1 overflow-y-auto mt-2 custom-scrollbar">
+        {filteredConvs.length === 0 ? (
+           <div className="text-center text-zinc-600 mt-10 text-sm">Không tìm thấy cuộc trò chuyện</div>
+        ) : (
+          filteredConvs.map(conv => (
+            <div 
+              key={conv.id}
+              onClick={() => onSelect(conv.id)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-white/5",
+                activeConvId === conv.id ? "bg-white/10" : ""
+              )}
+            >
+              {/* Avatar: Chỉ hiện ảnh, KHÔNG hiện chấm xanh */}
+              <div className="relative shrink-0">
+                  <img 
+                    src={conv.partner.avatarUrl || "/default-avatar.png"} 
+                    className="w-12 h-12 rounded-full object-cover bg-zinc-800" 
+                    alt={conv.partner.fullname}
+                  />
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-baseline mb-0.5">
+                    <h4 className={cn("text-sm truncate pr-2", conv.unreadCount > 0 ? "font-bold text-white" : "font-medium text-zinc-200")}>
+                      {conv.partner.fullname}
+                    </h4>
+                    {/* Time */}
+                    {conv.lastMessageAt && (
+                        <span className="text-[10px] text-zinc-600 shrink-0">
+                            {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: false, locale: vi }).replace('khoảng ', '')}
+                        </span>
+                    )}
+                </div>
 
-      {/* 3. Conversation List */}
-      <div className="flex-1 overflow-y-auto mt-2">
-        {filteredConvs.map(conv => (
-          <div 
-            key={conv.id}
-            onClick={() => onSelect(conv.id)}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-white/5",
-              activeConvId === conv.id ? "bg-white/10" : ""
-            )}
-          >
-            <div className="relative shrink-0">
-                <img src={conv.partner.avatarUrl} className="w-12 h-12 rounded-full object-cover" />
-                {conv.partner.isOnline && (
-                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black"></div>
-                )}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <h4 className={cn("text-sm truncate", conv.unreadCount > 0 ? "font-bold text-white" : "font-normal text-zinc-200")}>
-                {conv.partner.fullname}
-              </h4>
-              <div className="flex items-center gap-1">
-                <p className={cn("text-xs truncate max-w-[180px]", conv.unreadCount > 0 ? "text-white font-bold" : "text-zinc-500")}>
-                  {conv.lastSenderId === 1 ? "Bạn: " : ""}{conv.lastMessageContent} {/* ID=1 là ví dụ, thay bằng user.id */}
-                </p>
-                <span className="text-zinc-600 text-[10px]">• 15p</span>
+                <div className="flex items-center justify-between gap-2">
+                  <p className={cn("text-xs truncate", conv.unreadCount > 0 ? "text-white font-semibold" : "text-zinc-500")}>
+                    {conv.lastSenderId === 1 && "Bạn: "} {/* Note: Cần lấy currentUserId thật thay vì hardcode 1 */}
+                    {conv.lastMessageContent || "Bắt đầu trò chuyện"} 
+                  </p>
+                  
+                  {/* Badge Unread */}
+                  {conv.unreadCount > 0 && (
+                      <div className="w-2.5 h-2.5 bg-blue-500 rounded-full shrink-0 animate-pulse"></div>
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* Badge Unread */}
-            {conv.unreadCount > 0 && (
-                <div className="w-2.5 h-2.5 bg-blue-500 rounded-full shrink-0"></div>
-            )}
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

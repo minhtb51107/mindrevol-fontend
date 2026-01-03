@@ -1,13 +1,12 @@
 // src/modules/feed/types.ts
 
-// Enum tương ứng với InteractionType.java bên Backend
+// 1. Enums
 export enum InteractionType {
-  PRIVATE_REPLY = 'PRIVATE_REPLY', // Chat 1-1 kiểu Locket
-  GROUP_DISCUSS = 'GROUP_DISCUSS', // Comment công khai kiểu Facebook
-  RESTRICTED = 'RESTRICTED'        // Chỉ xem, không tương tác
+  PRIVATE_REPLY = 'PRIVATE_REPLY',
+  GROUP_DISCUSS = 'GROUP_DISCUSS',
+  RESTRICTED = 'RESTRICTED'
 }
 
-// Enum tương ứng với Emotion.java
 export enum Emotion {
   EXCITED = 'EXCITED',
   NORMAL = 'NORMAL',
@@ -15,7 +14,6 @@ export enum Emotion {
   HOPELESS = 'HOPELESS'
 }
 
-// Enum trạng thái Checkin
 export enum CheckinStatus {
   NORMAL = 'NORMAL',
   FAILED = 'FAILED',
@@ -25,41 +23,84 @@ export enum CheckinStatus {
   REJECTED = 'REJECTED'
 }
 
-// Interface chính mapping với CheckinResponse.java
-// LƯU Ý: Backend cần đảm bảo trả về interactionType (hoặc ta lấy từ Journey cha)
-export interface JourneyPost {
-  id: string; // UUID
-  imageUrl: string;
-  thumbnailUrl: string;
-  emotion: Emotion;
-  status: CheckinStatus;
-  caption: string;
-  createdAt: string; // ISO String
-
-  // Thông tin người đăng (User)
-  userId: number;
-  userAvatar: string;
-  userFullName: string;
-
-  // Thông tin Journey (Cần thiết để xử lý logic tương tác)
-  journeyId: string;
-  journeyName?: string;
-  interactionType: InteractionType; 
-
-  // Thông tin thống kê (nếu có)
-  reactionCount?: number;
-  commentCount?: number;
-  isLiked?: boolean; // User hiện tại đã like chưa?
-
-  latestReactions: ReactionDetail[]; 
-}
-
+// 2. Data Models (API Response)
 export interface ReactionDetail {
-  id: string; // UUID reaction id
-  userId: number; // Backend trả về userId là Long (number)
+  id: string;
+  userId: number;
   userFullName: string;
   userAvatar: string;
   emoji: string;
   mediaUrl?: string;
   createdAt: string;
+}
+
+export interface JourneyPost {
+  id: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  emotion: Emotion;
+  status: CheckinStatus;
+  caption: string;
+  createdAt: string;
+  userId: number;
+  userAvatar: string;
+  userFullName: string;
+  journeyId: string;
+  journeyName?: string;
+  interactionType: InteractionType;
+  
+  // Dữ liệu ngữ cảnh
+  activityName?: string;
+  locationName?: string;
+  taskTitle?: string;
+
+  reactionCount?: number;
+  commentCount?: number;
+  isLiked?: boolean;
+  latestReactions: ReactionDetail[];
+}
+
+// Alias cho Service
+export type Checkin = JourneyPost;
+
+// 3. Request Models
+export interface CreateCheckinRequest {
+  file: File;
+  journeyId: string;
+  caption?: string;
+  statusRequest?: string; 
+  visibility?: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
+  emotion?: Emotion;
+  activityType?: string;  
+  activityName?: string;
+  locationName?: string;
+  tags?: string[];
+}
+
+// 4. UI Props (Dữ liệu truyền vào Component)
+// QUAN TRỌNG: Interface này được export để các component khác import
+export interface PostProps {
+  id: string;
+  userId: string; 
+  user: { 
+    name: string; 
+    avatar: string 
+  };
+  image: string;
+  caption: string;
+  
+  // Logic hiển thị
+  status: 'completed' | 'failed' | 'comeback' | 'rest' | 'normal'; 
+  emotion: Emotion;           
+  interactionType: InteractionType; 
+  
+  // Các trường hiển thị nhãn
+  activityName?: string; 
+  locationName?: string;
+  taskName?: string; 
+  
+  timestamp: string;
+  reactionCount: number;
+  commentCount: number;
+  latestReactions: ReactionDetail[];
 }

@@ -1,77 +1,59 @@
+// src/modules/checkin/services/checkin.service.ts
 import { http } from '@/lib/http';
-import { Checkin, CreateCheckinRequest } from '../types';
-
-export interface Comment {
-  id: string;
-  userId: string;
-  userFullName: string;
-  userAvatar: string;
-  content: string;
-  createdAt: string;
-}
+import { Checkin, CreateCheckinRequest } from '@/modules/feed/types'; 
 
 class CheckinService {
-  // [FIX] Sửa dòng này: Bỏ "/api/v1" đi, chỉ để "/checkins"
-  // Vì http instance trong @/lib/http đã có sẵn baseURL là /api/v1 rồi
   private readonly BASE_URL = '/checkins'; 
 
-  async getFeed(page = 0, limit = 20): Promise<Checkin[]> {
-    const res = await http.get<{ data: any }>(`${this.BASE_URL}/feed`, { params: { page, limit } });
-    return res.data.data;
-  }
-
+  // 1. Lấy Feed
   async getJourneyFeed(journeyId: string, page = 0, limit = 20): Promise<Checkin[]> {
-    const res = await http.get<{ data: { content: Checkin[] } }>(`${this.BASE_URL}/journey/${journeyId}`, { params: { page, limit } });
-    return res.data.data.content;
+    const res = await http.get<{ data: any }>(`${this.BASE_URL}/journey/${journeyId}`, { params: { page, limit } });
+    const responseData = res.data.data;
+    if (Array.isArray(responseData)) return responseData;
+    if (responseData && responseData.content) return responseData.content;
+    return [];
   }
 
+  // 2. Tạo Check-in
   async createCheckin(req: CreateCheckinRequest): Promise<Checkin> {
     const formData = new FormData();
     formData.append('file', req.file);
     formData.append('journeyId', req.journeyId);
     
     if (req.caption) formData.append('caption', req.caption);
-    if (req.emotion) formData.append('emotion', req.emotion);
-    if (req.taskId) formData.append('taskId', req.taskId);
-    
-    // Gửi statusRequest để Backend biết là FAILED hay NORMAL
-    if (req.statusRequest) {
-        formData.append('statusRequest', req.statusRequest);
-    }
-    
+    if (req.statusRequest) formData.append('statusRequest', req.statusRequest);
     if (req.visibility) formData.append('visibility', req.visibility);
+
+    // Append Context fields
+    if (req.emotion) formData.append('emotion', req.emotion);
+    if (req.activityType) formData.append('activityType', req.activityType);
+    if (req.activityName) formData.append('activityName', req.activityName);
+    if (req.locationName) formData.append('locationName', req.locationName);
     
+    // Xử lý Tags
+    if (req.tags && req.tags.length > 0) {
+        req.tags.forEach(tag => formData.append('tags', tag));
+    }
+
     const res = await http.post<{ data: Checkin }>(this.BASE_URL, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data.data;
   }
 
-  async toggleReaction(checkinId: string, type: 'HEART' | 'CLAP' | 'FIRE' | string): Promise<void> {
-    await http.post(`${this.BASE_URL}/reaction`, { checkinId, type });
+  // 3. Xóa Check-in
+  async deleteCheckin(checkinId: string) {
+      return await http.delete(`${this.BASE_URL}/${checkinId}`);
   }
 
-  async postComment(checkinId: string, content: string): Promise<Comment> {
-    const res = await http.post<{ data: Comment }>(`${this.BASE_URL}/${checkinId}/comments`, { content });
-    return res.data.data;
+  // 4. Cập nhật Caption
+  async updateCheckin(checkinId: string, caption: string) {
+      return await http.put(`${this.BASE_URL}/${checkinId}`, { caption });
   }
 
-  async getComments(checkinId: string, page = 0): Promise<Comment[]> {
-    const res = await http.get<{ data: { content: Comment[] } }>(`${this.BASE_URL}/${checkinId}/comments`, {
-      params: { page, size: 50, sort: 'createdAt,asc' }
-    });
-    return res.data.data.content;
-  }
-
-  // [MỚI] Xóa bài
-  async deleteCheckin(checkinId: string): Promise<void> {
-    await http.delete(`${this.BASE_URL}/${checkinId}`);
-  }
-
-  // [MỚI] Sửa caption
-  async updateCheckin(checkinId: string, caption: string): Promise<void> {
-    // Backend cần có API PATCH /checkins/{id} nhận body { caption: "..." }
-    await http.patch(`${this.BASE_URL}/${checkinId}`, { caption });
+  // 5. Comment
+  async postComment(checkinId: string, content: string) {
+     return http.post(`${this.BASE_URL}/${checkinId}/comments`, { content }).then(res => res.data.data);
   }
 }
 

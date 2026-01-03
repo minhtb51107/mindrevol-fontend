@@ -1,6 +1,4 @@
-// src/modules/journey/services/journey.service.ts
-
-import { http } from "@/lib/http";
+import { http } from '@/lib/http';
 import { 
   CreateJourneyRequest, 
   JourneyResponse, 
@@ -10,15 +8,21 @@ import {
   JourneyParticipantResponse,
   JourneyInvitationResponse,
   JourneyRequestResponse,
-  UserActiveJourneyResponse
-} from "../types";
+  UserActiveJourneyResponse,
+  UserSummary
+} from '../types';
 import { Checkin } from "@/modules/checkin/types";
 
-// Base URL
 const JOURNEY_URL = "/journeys"; 
 const INVITATION_URL = "/journey-invitations";
 
-// Interface hỗ trợ cho Page response
+// [MỚI] Interface cho alert response
+export interface JourneyAlertResponse {
+  journeyPendingInvitations: number;
+  waitingApprovalRequests: number;
+  journeyIdsWithRequests: string[];
+}
+
 interface PageResponse<T> {
     content: T[];
     totalPages: number;
@@ -28,8 +32,12 @@ interface PageResponse<T> {
 }
 
 export const journeyService = {
-  
-  // --- NHÓM API CƠ BẢN (CRUD) ---
+  // [MỚI] Gọi API alerts
+  getAlerts: async (): Promise<JourneyAlertResponse> => {
+    const response = await http.get<{ data: JourneyAlertResponse }>(`${JOURNEY_URL}/alerts`);
+    return response.data.data;
+  },
+
   createJourney: async (data: CreateJourneyRequest): Promise<JourneyResponse> => {
     const response = await http.post<{ data: JourneyResponse }>(JOURNEY_URL, data);
     return response.data.data;
@@ -40,14 +48,12 @@ export const journeyService = {
     return response.data.data;
   },
 
-  // [NEW] Lấy danh sách đang hoạt động (cho Profile Tab 1)
-  getUserActiveJourneys: async (userId: number | string): Promise<UserActiveJourneyResponse[]> => {
+  getUserActiveJourneys: async (userId: string): Promise<UserActiveJourneyResponse[]> => {
     const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/active`);
     return response.data.data;
   },
 
-  // [NEW] Lấy danh sách đã kết thúc (cho Profile Tab 2)
-  getUserFinishedJourneys: async (userId: number | string): Promise<UserActiveJourneyResponse[]> => {
+  getUserFinishedJourneys: async (userId: string): Promise<UserActiveJourneyResponse[]> => {
     const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/finished`);
     return response.data.data;
   },
@@ -61,9 +67,8 @@ export const journeyService = {
     await http.delete(`${JOURNEY_URL}/${journeyId}`);
   },
 
-  // --- NHÓM API THÀNH VIÊN & THAM GIA ---
   joinJourney: async (data: JoinJourneyRequest): Promise<JourneyResponse> => {
-    const response = await http.post<{ data: JourneyResponse }>(`${JOURNEY_URL}/join`, data);
+    const response = await http.post<{ data: JourneyResponse }>(`${JOURNEY_URL}/join/${data.inviteCode}`);
     return response.data.data;
   },
 
@@ -71,7 +76,7 @@ export const journeyService = {
     await http.delete(`${JOURNEY_URL}/${journeyId}/leave`);
   },
 
-  kickMember: async (journeyId: string, memberId: number): Promise<void> => {
+  kickMember: async (journeyId: string, memberId: string): Promise<void> => {
     await http.delete(`${JOURNEY_URL}/${journeyId}/members/${memberId}`);
   },
 
@@ -80,21 +85,20 @@ export const journeyService = {
     return response.data.data;
   },
 
-  transferOwnership: async (journeyId: string, newOwnerId: number): Promise<void> => {
+  transferOwnership: async (journeyId: string, newOwnerId: string): Promise<void> => {
     await http.post(`${JOURNEY_URL}/${journeyId}/transfer-ownership`, null, {
       params: { newOwnerId }
     });
   },
 
-  approveRequest: async (requestId: string): Promise<void> => {
-    await http.post(`${JOURNEY_URL}/requests/${requestId}/approve`);
+  approveRequest: async (journeyId: string, requestId: string): Promise<void> => {
+    await http.post(`${JOURNEY_URL}/${journeyId}/requests/${requestId}/approve`);
   },
 
-  rejectRequest: async (requestId: string): Promise<void> => {
-    await http.post(`${JOURNEY_URL}/requests/${requestId}/reject`);
+  rejectRequest: async (journeyId: string, requestId: string): Promise<void> => {
+    await http.post(`${JOURNEY_URL}/${journeyId}/requests/${requestId}/reject`);
   },
 
-  // --- NHÓM API WIDGET & TIỆN ÍCH ---
   getWidgetInfo: async (journeyId: string): Promise<JourneyWidgetResponse> => {
     const response = await http.get<{ data: JourneyWidgetResponse }>(`${JOURNEY_URL}/${journeyId}/widget-info`);
     return response.data.data;
@@ -109,12 +113,11 @@ export const journeyService = {
     return response.data.data;
   },
 
-  nudgeMember: async (journeyId: string, memberId: number): Promise<void> => {
+  nudgeMember: async (journeyId: string, memberId: string): Promise<void> => {
     await http.post(`${JOURNEY_URL}/${journeyId}/members/${memberId}/nudge`);
   },
 
-  // --- NHÓM API INVITATION ---
-  inviteFriend: async (journeyId: string, friendId: number): Promise<void> => {
+  inviteFriend: async (journeyId: string, friendId: string): Promise<void> => {
     await http.post(`${INVITATION_URL}/invite`, { journeyId, friendId });
   },
 
@@ -136,10 +139,13 @@ export const journeyService = {
     return response.data.data;
   },
 
-  // --- API LẤY FEED RECAP ---
   getRecapFeed: async (journeyId: string): Promise<PageResponse<Checkin>> => {
-    // Lưu ý: Đảm bảo backend có endpoint này, hoặc dùng API lấy checkin theo hành trình
     const response = await http.get<{ data: PageResponse<Checkin> }>(`${JOURNEY_URL}/${journeyId}/recap`); 
+    return response.data.data;
+  },
+
+  getInvitableFriends: async (journeyId: string): Promise<UserSummary[]> => {
+    const response = await http.get<{ data: UserSummary[] }>(`${JOURNEY_URL}/${journeyId}/friends-invitable`);
     return response.data.data;
   },
 };

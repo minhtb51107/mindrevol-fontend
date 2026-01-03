@@ -1,8 +1,45 @@
+// src/modules/feed/components/CheckinModal.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Send, CheckCircle2, XCircle, Smile } from 'lucide-react';
+import { X, Loader2, Send, MapPin, Smile } from 'lucide-react';
 import { checkinService } from '@/modules/checkin/services/checkin.service';
 import imageCompression from 'browser-image-compression';
-import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
+import EmojiPicker, { Theme } from 'emoji-picker-react';
+import { Emotion } from '@/modules/feed/types';
+
+// Định nghĩa ActivityType nội bộ
+enum UIActivityType {
+  LEARNING = 'LEARNING',
+  WORKING = 'WORKING',
+  EXERCISING = 'EXERCISING',
+  CHILLING = 'CHILLING',
+  EATING = 'EATING',
+  DATING = 'DATING',
+  GAMING = 'GAMING',
+  TRAVELING = 'TRAVELING',
+  READING = 'READING',
+  CREATING = 'CREATING',
+  CUSTOM = 'CUSTOM'
+}
+
+// --- CONFIG PRESETS ---
+const ACTIVITY_PRESETS = [
+  { type: UIActivityType.LEARNING, label: 'Học bài', emoji: '📚', color: 'bg-blue-600' },
+  { type: UIActivityType.WORKING, label: 'Làm việc', emoji: '💼', color: 'bg-slate-600' },
+  { type: UIActivityType.EXERCISING, label: 'Tập gym', emoji: '💪', color: 'bg-orange-600' },
+  { type: UIActivityType.CHILLING, label: 'Chill', emoji: '🌿', color: 'bg-emerald-600' },
+  { type: UIActivityType.EATING, label: 'Ăn uống', emoji: '🍜', color: 'bg-yellow-600' },
+  { type: UIActivityType.DATING, label: 'Hẹn hò', emoji: '💕', color: 'bg-pink-600' },
+  { type: UIActivityType.GAMING, label: 'Game', emoji: '🎮', color: 'bg-purple-600' },
+  { type: UIActivityType.TRAVELING, label: 'Du lịch', emoji: '✈️', color: 'bg-sky-500' },
+  { type: UIActivityType.READING, label: 'Đọc sách', emoji: '📖', color: 'bg-amber-700' },
+  { type: UIActivityType.CREATING, label: 'Sáng tạo', emoji: '🎨', color: 'bg-rose-500' },
+];
+
+// Helper: Map Emoji sang Emotion Enum
+const mapEmojiToEmotion = (emoji: string): Emotion => {
+  // Mapping đơn giản dựa trên emoji input, bạn có thể mở rộng logic
+  return Emotion.NORMAL; 
+};
 
 interface CheckinModalProps {
   isOpen: boolean;
@@ -15,25 +52,25 @@ interface CheckinModalProps {
 export const CheckinModal: React.FC<CheckinModalProps> = ({ 
   isOpen, onClose, file, journeyId, onSuccess 
 }) => {
+  // --- STATES ---
   const [caption, setCaption] = useState('');
-  const [isCompleted, setIsCompleted] = useState(true);
+  const [location, setLocation] = useState('');
+  const [selectedActivity, setSelectedActivity] = useState(ACTIVITY_PRESETS[0]);
+  const [customContext, setCustomContext] = useState('');
+  const [moodEmoji, setMoodEmoji] = useState('✨');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState('Đang đăng...');
-  
-  const [showPicker, setShowPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Drag Scroll Refs
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setShowPicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
+  // --- EFFECTS ---
   useEffect(() => {
     if (file) {
       const url = URL.createObjectURL(file);
@@ -42,130 +79,179 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
     }
   }, [file]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (!isOpen || !file) return null;
 
-  const onEmojiClick = (emojiData: EmojiClickData) => {
-    setCaption((prev) => prev + emojiData.emoji);
+  // --- HANDLERS ---
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+  const handleMouseLeave = () => setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    scrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-      setStatusMessage("Đang tối ưu ảnh...");
       
       const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, fileType: 'image/jpeg' };
       let fileToUpload = file;
       if (file.size > 1024 * 1024) {
-        try {
-          fileToUpload = await imageCompression(file, options);
-        } catch (e) { console.warn("Nén thất bại", e); }
+        try { fileToUpload = await imageCompression(file, options); } catch (e) { console.warn(e); }
       }
 
-      setStatusMessage("Đang gửi...");
+      const isCustom = !!customContext;
+      const finalEmotion = mapEmojiToEmotion(moodEmoji);
+
       await checkinService.createCheckin({
         file: fileToUpload,
         journeyId: journeyId,
         caption: caption,
-        emotion: isCompleted ? 'EXCITED' : 'HOPELESS',
-        statusRequest: isCompleted ? 'NORMAL' : 'FAILED' 
+        emotion: finalEmotion,
+        activityType: isCustom ? UIActivityType.CUSTOM : selectedActivity.type,
+        activityName: isCustom ? customContext : selectedActivity.label,
+        locationName: location,
+        statusRequest: 'NORMAL'
       });
       
       onSuccess();
       onClose();
-      setCaption('');
-      setIsCompleted(true);
-      setShowPicker(false);
     } catch (error: any) {
-      alert(error.response?.data?.message || "Lỗi khi đăng bài");
+      console.error(error);
+      alert("Lỗi khi đăng bài");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // --- RENDER ---
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-[#18181b] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-300">
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
+
+      <div className="relative w-full max-w-[440px] max-h-[100dvh] overflow-y-auto no-scrollbar sm:max-h-[92vh] flex flex-col sm:rounded-[40px] bg-[#121212] shadow-2xl ring-1 ring-white/10 z-10 transition-all duration-300">
         
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/5">
-          <h3 className="text-white font-bold text-lg">Check-in</h3>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 transition-colors">
-            <X className="w-6 h-6" />
+        {/* Close Button */}
+        <div className="absolute top-0 left-0 w-full p-5 z-20 flex justify-end pointer-events-none">
+          <button onClick={onClose} className="pointer-events-auto p-2 bg-black/30 backdrop-blur-md rounded-full text-white/80 border border-white/10 hover:bg-white/10 transition-all">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6 relative">
-          {/* 1. Preview Ảnh */}
-          <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-black border border-white/10 shadow-lg shrink-0">
-            {/* [FIX] Chỉ render thẻ img khi có previewUrl */}
-            {previewUrl && (
-              <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />
-            )}
-            <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-xs font-bold text-white border flex items-center gap-2 backdrop-blur-md shadow-lg ${isCompleted ? 'bg-green-500/80 border-green-400' : 'bg-red-500/80 border-red-400'}`}>
-              {isCompleted ? <CheckCircle2 className="w-4 h-4"/> : <XCircle className="w-4 h-4"/>}
-              <span>{isCompleted ? 'Hoàn thành' : 'Thất bại'}</span>
+        {/* --- CONTENT --- */}
+        <div className="flex flex-col p-3 sm:p-4 gap-4">
+            
+            {/* 1. IMAGE PREVIEW (STYLE GIỐNG JOURNEY POST CARD) */}
+            <div className="relative w-full aspect-square rounded-[40px] overflow-hidden bg-[#1c1c1e] border border-white/10 shadow-2xl shrink-0 group">
+                {previewUrl && <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />}
+                
+                {/* Gradient nhẹ phía trên để Badge rõ hơn */}
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+
+                {/* A. BADGES (GÓC TRÊN TRÁI) */}
+                <div className="absolute top-5 left-5 flex flex-col items-start gap-2 z-10 pointer-events-none">
+                    
+                    {/* Badge Chính: Emoji + Tên Hoạt động */}
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-lg transition-all backdrop-blur-md border bg-zinc-900/90 border-white/10 shadow-black/20">
+                        <span className="text-[18px] leading-none filter drop-shadow-sm">{moodEmoji}</span>
+                        <span className="text-[14px] font-bold tracking-wide text-white drop-shadow-sm max-w-[200px] truncate">
+                            {customContext || selectedActivity.label}
+                        </span>
+                    </div>
+
+                    {/* Badge Phụ: Location */}
+                    {location && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 border border-white/10 shadow-md backdrop-blur-sm ml-1">
+                           <MapPin className="w-3.5 h-3.5 text-red-500" />
+                           <span className="text-zinc-200 text-[11px] font-medium truncate max-w-[180px]">{location}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* B. CAPTION PREVIEW (GÓC DƯỚI) - Hiển thị Realtime những gì đang nhập */}
+                <div className="absolute bottom-0 inset-x-0 p-5 flex items-end justify-start pointer-events-none">
+                    <div className="bg-zinc-950/90 border border-white/10 shadow-2xl backdrop-blur-sm rounded-2xl px-4 py-3 w-fit max-w-[95%]">
+                        <p className="text-zinc-100 text-[14px] font-medium leading-relaxed break-words text-left">
+                           {caption || <span className="italic text-zinc-500 text-[13px]">Ghi chú...</span>}
+                        </p>
+                    </div>
+                </div>
             </div>
-          </div>
 
-          {/* 2. Toggle Status */}
-          <div className="flex bg-zinc-900 p-1 rounded-xl border border-white/10 shrink-0">
-            <button 
-              onClick={() => setIsCompleted(true)}
-              className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${isCompleted ? 'bg-green-600 text-white shadow-md' : 'text-zinc-500 hover:text-white'}`}
-            >
-              <CheckCircle2 className="w-4 h-4" /> Hoàn thành
-            </button>
-            <button 
-              onClick={() => setIsCompleted(false)}
-              className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${!isCompleted ? 'bg-red-600 text-white shadow-md' : 'text-zinc-500 hover:text-white'}`}
-            >
-              <XCircle className="w-4 h-4" /> Thất bại
-            </button>
-          </div>
+            {/* 2. CONTROLS (INPUTS BÊN DƯỚI) */}
+            <div className="flex flex-col gap-4">
+                <div className="relative space-y-2">
+                   <div className="flex justify-between items-center px-2">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Cảm xúc & Hoạt động</span>
+                      <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-xs bg-white/5 hover:bg-white/10 text-zinc-300 px-2.5 py-1 rounded-lg transition-colors border border-white/5 flex items-center gap-1">
+                         <Smile className="w-3.5 h-3.5" /><span>Đổi Mood</span>
+                      </button>
+                   </div>
 
-          {/* 3. Caption & Emoji Trigger */}
-          <div className="relative shrink-0">
-            <textarea
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder={isCompleted ? "Tuyệt vời! Cảm giác thế nào? 🔥" : "Không sao cả. Tại sao hôm nay chưa tốt? 😭"}
-              className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-4 pr-12 text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 resize-none min-h-[100px]"
-            />
-            {/* Nút mở Emoji Picker */}
-            <button 
-              onClick={() => setShowPicker(!showPicker)}
-              className={`absolute bottom-3 right-3 p-2 rounded-full transition-colors ${showPicker ? 'text-yellow-400 bg-white/10' : 'text-zinc-400 hover:text-yellow-400 hover:bg-white/5'}`}
-            >
-              <Smile className="w-6 h-6" />
-            </button>
+                   {showEmojiPicker && (
+                      <div className="absolute bottom-full right-0 mb-2 z-50" ref={pickerRef}>
+                         <div className="shadow-2xl rounded-2xl overflow-hidden border border-white/10">
+                           <EmojiPicker onEmojiClick={(d) => { setMoodEmoji(d.emoji); setShowEmojiPicker(false); }} theme={Theme.DARK} width={280} height={320} previewConfig={{ showPreview: false }} />
+                         </div>
+                      </div>
+                   )}
 
-            {/* BẢNG EMOJI PICKER (Hiển thị nổi) */}
-            {showPicker && (
-              <div className="absolute bottom-full right-0 mb-2 z-50 shadow-2xl rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200" ref={pickerRef}>
-                <EmojiPicker 
-                  onEmojiClick={onEmojiClick}
-                  theme={Theme.DARK}
-                  width={300}
-                  height={400}
-                  lazyLoadEmojis={true}
-                  searchDisabled={false}
-                  skinTonesDisabled
-                />
-              </div>
-            )}
-          </div>
-        </div>
+                   <div ref={scrollRef} className="flex gap-3 overflow-x-auto py-1 no-scrollbar cursor-grab active:cursor-grabbing select-none"
+                      onMouseDown={handleMouseDown} onMouseLeave={handleMouseLeave} onMouseUp={handleMouseUp} onMouseMove={handleMouseMove}
+                   >
+                      {ACTIVITY_PRESETS.map((item) => {
+                         const isActive = !customContext && selectedActivity.type === item.type;
+                         return (
+                            <div key={item.type} onClick={() => { setSelectedActivity(item); setCustomContext(''); }}
+                               className={`group flex flex-col items-center gap-1.5 shrink-0 transition-all duration-200 cursor-pointer ${isActive ? 'opacity-100 scale-100' : 'opacity-60 hover:opacity-100'}`}>
+                               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-md border border-white/5 transition-all ${isActive ? item.color + ' ring-2 ring-white/20' : 'bg-zinc-800 group-hover:bg-zinc-700'}`}>
+                                  {item.emoji}
+                               </div>
+                               <span className="text-[10px] font-medium text-zinc-400 group-hover:text-white transition-colors">{item.label}</span>
+                            </div>
+                         );
+                      })}
+                   </div>
+                </div>
 
-        {/* Footer */}
-        <div className="p-5 border-t border-white/5 bg-[#18181b] z-10">
-          <button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`w-full font-bold text-base h-12 rounded-full flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg ${isCompleted ? 'bg-white text-black hover:bg-zinc-200' : 'bg-red-600 text-white hover:bg-red-500'}`}
-          >
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-            <span>{isSubmitting ? statusMessage : 'Đăng bài'}</span>
-          </button>
+                <div className="flex flex-col gap-3">
+                   <div className="grid grid-cols-2 gap-3">
+                       <div className="bg-zinc-800/50 border border-white/5 focus-within:border-blue-500/50 focus-within:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all">
+                          <input value={customContext} onChange={e => setCustomContext(e.target.value)} placeholder="Hoạt động khác..." className="w-full bg-transparent text-xs font-medium text-white placeholder:text-zinc-600 focus:outline-none"/>
+                       </div>
+                       <div className="bg-zinc-800/50 border border-white/5 focus-within:border-blue-500/50 focus-within:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                          <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Địa điểm..." className="w-full bg-transparent text-xs font-medium text-white placeholder:text-zinc-600 focus:outline-none"/>
+                       </div>
+                   </div>
+                   <div className="flex items-center gap-3">
+                       <div className="flex-1 bg-zinc-800/50 border border-white/5 focus-within:border-white/20 focus-within:bg-zinc-800 rounded-2xl px-4 py-3 transition-all">
+                          <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Ghi chú..." rows={1} className="w-full bg-transparent text-sm text-white placeholder:text-zinc-600 focus:outline-none resize-none align-middle" style={{ minHeight: '24px', maxHeight: '60px' }}/>
+                       </div>
+                       <button onClick={handleSubmit} disabled={isSubmitting} className="h-12 w-12 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:bg-zinc-200 active:scale-90 transition-all disabled:opacity-50 disabled:shadow-none shrink-0">
+                           {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
+                       </button>
+                   </div>
+                </div>
+            </div>
         </div>
       </div>
     </div>

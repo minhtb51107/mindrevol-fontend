@@ -1,41 +1,44 @@
-import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
 import { journeyService } from '../services/journey.service';
 import { JourneyInvitationResponse } from '../types';
+import { toast } from 'react-hot-toast';
 
-export const useJourneyInvitations = (onActionSuccess?: () => void) => {
+// [FIX] Nhận thêm callback onSuccess
+export const useJourneyInvitations = (onSuccess?: () => void) => {
   const [invitations, setInvitations] = useState<JourneyInvitationResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
 
-  const fetchInvitations = useCallback(async () => {
+  useEffect(() => {
+    loadInvitations();
+  }, []);
+
+  const loadInvitations = async () => {
+    setIsLoading(true);
     try {
       const data = await journeyService.getMyPendingInvitations();
       setInvitations(data);
     } catch (error) {
-      console.error("Failed to load invitations", error);
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchInvitations();
-  }, [fetchInvitations]);
+  };
 
   const handleAccept = async (invitationId: number) => {
     setProcessingId(invitationId);
     try {
       await journeyService.acceptInvitation(invitationId);
-      toast.success("Đã chấp nhận lời mời! 🚀");
+      toast.success("Đã tham gia hành trình!");
       
-      // Xóa lời mời khỏi danh sách local
-      setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      // Xóa item khỏi danh sách local ngay lập tức (Optimistic update)
+      setInvitations(prev => prev.filter(i => i.id !== invitationId));
       
-      // Gọi callback để refresh danh sách hành trình chính bên ngoài
-      if (onActionSuccess) onActionSuccess();
+      // [FIX] Gọi callback để báo cho component cha biết mà cập nhật chấm đỏ
+      if (onSuccess) onSuccess(); 
+
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
+      toast.error(error.response?.data?.message || "Lỗi khi chấp nhận");
     } finally {
       setProcessingId(null);
     }
@@ -45,10 +48,15 @@ export const useJourneyInvitations = (onActionSuccess?: () => void) => {
     setProcessingId(invitationId);
     try {
       await journeyService.rejectInvitation(invitationId);
-      toast.success("Đã từ chối lời mời.");
-      setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-    } catch (error) {
-      toast.error("Có lỗi xảy ra");
+      toast.success("Đã từ chối lời mời");
+      
+      setInvitations(prev => prev.filter(i => i.id !== invitationId));
+      
+      // [FIX] Gọi callback cập nhật chấm đỏ
+      if (onSuccess) onSuccess();
+
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Lỗi khi từ chối");
     } finally {
       setProcessingId(null);
     }
@@ -60,6 +68,6 @@ export const useJourneyInvitations = (onActionSuccess?: () => void) => {
     processingId,
     handleAccept,
     handleReject,
-    refresh: fetchInvitations
+    refresh: loadInvitations
   };
 };

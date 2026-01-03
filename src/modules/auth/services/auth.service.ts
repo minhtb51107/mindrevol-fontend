@@ -1,37 +1,5 @@
 import { http } from '@/lib/http';
-
-// --- DTOs ---
-export interface UserSummary {
-  id: number;
-  handle: string;
-  fullname: string;
-  avatarUrl: string;
-  isOnline: boolean;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
-}
-
-export interface RegisterPayload {
-  email: string;
-  password?: string;
-  fullname?: string;
-  handle?: string;
-  dateOfBirth?: string;
-  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
-  agreedToTerms?: boolean;
-}
-
-export interface ApiResponse<T> {
-  status: number;
-  message: string;
-  errorCode?: string;
-  data: T;
-  timestamp: string;
-}
+import { UserSummary, AuthResponse, RegisterPayload, ApiResponse } from '../types'; // Import mới
 
 export const authService = {
   // 1. Kiểm tra Email

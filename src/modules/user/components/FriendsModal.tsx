@@ -1,18 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, UserCheck, MessageCircle, Loader2, Search, UserPlus, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, MessageCircle, Loader2, Search, UserPlus } from 'lucide-react';
 import { friendService, FriendshipResponse, UserSummary } from '../services/friend.service';
 import { Input } from '@/components/ui/Input';
+import { useAuth } from '@/modules/auth/store/AuthContext';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  userId?: string; // [MỚI] ID của người cần xem danh sách bạn (undefined = xem chính mình)
 }
 
-export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  // State quản lý Tab đang active
-  const [activeTab, setActiveTab] = useState<'FIND' | 'REQUESTS' | 'FRIENDS'>('FIND');
-  
+export const FriendsModal: React.FC<Props> = ({ isOpen, onClose, userId }) => {
+  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+
+  // Xác định xem có phải đang xem chính mình không
+  const isMe = !userId || userId === currentUser?.id;
+
+  // Nếu là người khác -> Mặc định tab FRIENDS. Nếu là mình -> Mặc định tab FIND
+  const [activeTab, setActiveTab] = useState<'FIND' | 'REQUESTS' | 'FRIENDS'>('FRIENDS');
+
   // Dữ liệu
   const [friends, setFriends] = useState<FriendshipResponse[]>([]);
   const [requests, setRequests] = useState<FriendshipResponse[]>([]);
@@ -22,14 +31,20 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Reset khi mở modal
+  // Reset state khi mở modal
   useEffect(() => {
     if (isOpen) {
-      if (activeTab !== 'FIND') fetchData();
+      if (!isMe) {
+        setActiveTab('FRIENDS'); // Người khác chỉ có tab Friends
+      } else {
+         // Nếu là mình có thể default về FIND hoặc FRIENDS tùy ý
+         // Giữ nguyên logic cũ hoặc set về FRIENDS
+      }
+      fetchData();
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen, activeTab, userId]);
 
-  // Logic tìm kiếm (Debounce: đợi người dùng ngừng gõ 500ms mới gọi API)
+  // Logic tìm kiếm (Debounce)
   useEffect(() => {
     if (activeTab === 'FIND' && searchQuery.trim().length > 1) {
       const timer = setTimeout(() => handleSearch(), 500);
@@ -41,11 +56,18 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setIsLoading(true);
     try {
       if (activeTab === 'FRIENDS') {
-        const data = await friendService.getMyFriends();
-        setFriends(data);
-      } else if (activeTab === 'REQUESTS') {
+        let data;
+        if (isMe) {
+            data = await friendService.getMyFriends();
+        } else if (userId) {
+            // [QUAN TRỌNG] Gọi API lấy bạn của người khác
+            // Đảm bảo bạn đã update friend.service.ts có hàm getUserFriends như bước trước
+            data = await friendService.getUserFriends(userId);
+        }
+        setFriends(data || []);
+      } else if (activeTab === 'REQUESTS' && isMe) {
         const data = await friendService.getIncomingRequests();
-        setRequests(data);
+        setRequests(data || []);
       }
     } catch (error) {
       console.error(error);
@@ -66,35 +88,39 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSendRequest = async (userId: number) => {
+  const handleSendRequest = async (targetId: any) => {
     try {
-      await friendService.sendFriendRequest(userId);
-      // Cập nhật UI ngay lập tức: đổi trạng thái user đó thành PENDING
+      await friendService.sendFriendRequest(targetId);
       setSearchResults(prev => prev.map(u => 
-        u.id === userId ? { ...u, friendshipStatus: 'PENDING' } : u
+        u.id === targetId ? { ...u, friendshipStatus: 'PENDING' } : u
       ));
     } catch (error) {
       alert("Lỗi khi gửi lời mời.");
     }
   };
 
-  const handleAccept = async (friendshipId: number) => {
+  const handleAccept = async (friendshipId: any) => {
     try {
       await friendService.acceptRequest(friendshipId);
       setRequests(prev => prev.filter(r => r.id !== friendshipId));
-      // Có thể hiển thị thông báo nhỏ hoặc reload list bạn bè
+      fetchData(); // Reload lại list friend nếu cần
     } catch (error) {
       alert("Lỗi xử lý");
     }
   };
 
-  const handleDecline = async (friendshipId: number) => {
+  const handleDecline = async (friendshipId: any) => {
     try {
       await friendService.declineRequest(friendshipId);
       setRequests(prev => prev.filter(r => r.id !== friendshipId));
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleNavigateToProfile = (friendId: string) => {
+    onClose(); // Đóng modal trước
+    navigate(`/profile/${friendId}`); // Chuyển trang
   };
 
   if (!isOpen) return null;
@@ -105,38 +131,42 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10">
-          <h2 className="text-lg font-bold text-white">Bạn Bè & Kết Nối</h2>
+          <h2 className="text-lg font-bold text-white">
+            {isMe ? "Bạn Bè & Kết Nối" : "Danh sách bạn bè"}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
             <X className="w-5 h-5 text-zinc-400" />
           </button>
         </div>
 
-        {/* Tabs Navigation */}
-        <div className="flex border-b border-white/10">
-          <TabButton 
-            active={activeTab === 'FIND'} 
-            onClick={() => setActiveTab('FIND')} 
-            label="Tìm bạn" 
-            icon={<Search className="w-4 h-4" />}
-          />
-          <TabButton 
-            active={activeTab === 'REQUESTS'} 
-            onClick={() => setActiveTab('REQUESTS')} 
-            label="Lời mời" 
-            count={requests.length}
-          />
-          <TabButton 
-            active={activeTab === 'FRIENDS'} 
-            onClick={() => setActiveTab('FRIENDS')} 
-            label="Bạn bè" 
-          />
-        </div>
+        {/* Tabs Navigation - CHỈ HIỆN KHI LÀ MÌNH (isMe) */}
+        {isMe && (
+            <div className="flex border-b border-white/10">
+            <TabButton 
+                active={activeTab === 'FIND'} 
+                onClick={() => setActiveTab('FIND')} 
+                label="Tìm bạn" 
+                icon={<Search className="w-4 h-4" />}
+            />
+            <TabButton 
+                active={activeTab === 'REQUESTS'} 
+                onClick={() => setActiveTab('REQUESTS')} 
+                label="Lời mời" 
+                count={requests.length}
+            />
+            <TabButton 
+                active={activeTab === 'FRIENDS'} 
+                onClick={() => setActiveTab('FRIENDS')} 
+                label="Bạn bè" 
+            />
+            </div>
+        )}
 
         {/* Body Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
           
-          {/* --- TAB 1: TÌM KIẾM --- */}
-          {activeTab === 'FIND' && (
+          {/* --- TAB 1: TÌM KIẾM (Chỉ hiện khi isMe) --- */}
+          {activeTab === 'FIND' && isMe && (
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
@@ -159,6 +189,7 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         <img 
                           src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.fullname}`} 
                           className="w-10 h-10 rounded-full bg-zinc-800 object-cover"
+                          alt="avatar"
                         />
                         <div>
                           <p className="font-bold text-white text-sm">{user.fullname}</p>
@@ -166,7 +197,6 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         </div>
                       </div>
                       
-                      {/* Nút hành động thông minh dựa trên trạng thái */}
                       {user.friendshipStatus === 'NONE' ? (
                         <button 
                           onClick={() => handleSendRequest(user.id)}
@@ -197,14 +227,14 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* --- TAB 2: LỜI MỜI --- */}
-          {activeTab === 'REQUESTS' && (
+          {/* --- TAB 2: LỜI MỜI (Chỉ hiện khi isMe) --- */}
+          {activeTab === 'REQUESTS' && isMe && (
             isLoading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-500" /></div> :
             requests.length === 0 ? <div className="text-center text-zinc-500 py-10">Không có lời mời nào.</div> :
             requests.map(req => (
               <div key={req.id} className="flex items-center justify-between bg-zinc-900/50 p-3 rounded-xl border border-white/5">
                 <div className="flex items-center gap-3">
-                  <img src={req.friend.avatarUrl || `https://ui-avatars.com/api/?name=${req.friend.fullname}`} className="w-10 h-10 rounded-full bg-zinc-800 object-cover"/>
+                  <img src={req.friend.avatarUrl || `https://ui-avatars.com/api/?name=${req.friend.fullname}`} className="w-10 h-10 rounded-full bg-zinc-800 object-cover" alt="avatar"/>
                   <div>
                     <p className="font-bold text-white text-sm">{req.friend.fullname}</p>
                     <p className="text-xs text-zinc-500">@{req.friend.handle}</p>
@@ -222,15 +252,19 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             ))
           )}
 
-          {/* --- TAB 3: DANH SÁCH BẠN BÈ --- */}
+          {/* --- TAB 3: DANH SÁCH BẠN BÈ (Chung cho cả 2) --- */}
           {activeTab === 'FRIENDS' && (
             isLoading ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-500" /></div> :
-            friends.length === 0 ? <div className="text-center text-zinc-500 py-10">Chưa có bạn bè. Hãy qua tab "Tìm bạn" nhé!</div> :
+            friends.length === 0 ? <div className="text-center text-zinc-500 py-10">{isMe ? "Chưa có bạn bè. Hãy qua tab 'Tìm bạn' nhé!" : "Người dùng này chưa có bạn bè."}</div> :
             friends.map(f => (
               <div key={f.id} className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors group">
-                <div className="flex items-center gap-3">
+                {/* Bấm vào item thì chuyển trang */}
+                <div 
+                    className="flex items-center gap-3 cursor-pointer flex-1"
+                    onClick={() => handleNavigateToProfile(f.friend.id)}
+                >
                   <div className="relative">
-                    <img src={f.friend.avatarUrl || `https://ui-avatars.com/api/?name=${f.friend.fullname}`} className="w-10 h-10 rounded-full bg-zinc-800 object-cover"/>
+                    <img src={f.friend.avatarUrl || `https://ui-avatars.com/api/?name=${f.friend.fullname}`} className="w-10 h-10 rounded-full bg-zinc-800 object-cover" alt="avatar"/>
                     {f.friend.isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#18181b]"></div>}
                   </div>
                   <div>
@@ -238,9 +272,16 @@ export const FriendsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     <p className="text-xs text-zinc-500">@{f.friend.handle}</p>
                   </div>
                 </div>
-                <button className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
-                  <MessageCircle className="w-5 h-5" />
-                </button>
+                
+                {/* Chỉ hiện nút chat nếu là list của MÌNH */}
+                {isMe && (
+                    <button 
+                        onClick={() => navigate(`/chat/${f.friend.id}`)}
+                        className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors"
+                    >
+                        <MessageCircle className="w-5 h-5" />
+                    </button>
+                )}
               </div>
             ))
           )}

@@ -1,108 +1,205 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { ChevronLeft } from 'lucide-react'; 
+import { ChevronLeft, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { useChatStore } from '../store/useChatStore';
+import { friendService, FriendshipResponse } from '@/modules/user/services/friend.service';
+import { chatService } from '../services/chat.service';
 
 export const ConversationList = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // [FIX] Dùng đúng tên hàm 'openChat' từ store
   const { 
     conversations, 
     activeConversationId, 
-    openChat // <--- Đổi từ setActiveConversationId thành openChat
+    openChat 
   } = useChatStore();
 
+  const [friendships, setFriendships] = useState<FriendshipResponse[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 1. Load danh sách bạn bè
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        // friendService.getMyFriends đã được xác nhận tồn tại trong file bạn gửi
+        const list = await friendService.getMyFriends({ page: 0, size: 100 });
+        setFriendships(list);
+      } catch (error) {
+        console.error("Failed to fetch friends", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchFriends();
+  }, []);
+
+  // 2. Merge logic
+  const displayList = useMemo(() => {
+    if (!friendships || friendships.length === 0) return [];
+
+    let merged = friendships.map(friendshipItem => {
+      const friendUser = friendshipItem.friend; 
+      
+      const existingConv = conversations.find(
+        c => String(c.partner.id) === String(friendUser.id)
+      );
+
+      return {
+        userId: friendUser.id,
+        userInfo: friendUser,
+        conversationId: existingConv ? existingConv.id : null,
+        lastMessage: existingConv?.lastMessageContent || "Bắt đầu trò chuyện",
+        lastMessageAt: existingConv?.lastMessageAt,
+        unreadCount: existingConv?.unreadCount || 0,
+        isSelfSender: existingConv ? String(existingConv.lastSenderId) === String(user?.id) : false
+      };
+    });
+
+    merged.sort((a, b) => {
+        const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        return timeB - timeA; 
+    });
+
+    if (searchTerm.trim()) {
+        merged = merged.filter(item => 
+            item.userInfo.fullname.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+    return merged;
+  }, [friendships, conversations, searchTerm, user?.id]);
+
+  // 3. Handle Click
+  const handleItemClick = async (item: any) => {
+    if (item.conversationId) {
+      openChat(item.conversationId); 
+    } else {
+      try {
+        // chatService.getOrCreateConversation đã được xác nhận tồn tại
+        const newConv = await chatService.getOrCreateConversation(item.userId);
+        
+        // Cập nhật store ngay lập tức thay vì reload trang
+        // Giả sử API trả về Conversation object, ta có thể mở luôn
+        if (newConv && newConv.id) {
+           openChat(newConv.id);
+           // Có thể cần fetch lại list conversations nếu muốn đồng bộ hoàn hảo
+           // window.location.reload(); // Hoặc giữ reload nếu an toàn hơn
+        } else {
+           window.location.reload();
+        }
+      } catch (error) {
+        console.error("Cannot create chat", error);
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-[#121212] border-r border-white/5 transition-all duration-300 w-[90px] md:w-[350px]">
+    // [FIX]: w-full cho mobile, md:w-[350px] cho desktop
+    <div className="flex flex-col h-full w-full md:w-[350px]">
       
       {/* HEADER */}
-      <div className="h-16 shrink-0 flex items-center px-0 md:px-4 border-b border-white/5 justify-center md:justify-start gap-2">
-        <button 
-          onClick={() => navigate('/')} 
-          className="p-2 rounded-full hover:bg-white/10 transition-colors text-zinc-400 hover:text-white"
-          title="Quay lại Trang chủ"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <h2 className="hidden md:block text-lg font-bold text-white">Tin nhắn</h2>
+      <div className="h-16 shrink-0 flex items-center px-4 border-b border-white/5 justify-between gap-2">
+        <div className="flex items-center gap-2">
+            <button 
+            onClick={() => navigate('/')} 
+            className="p-2 rounded-full hover:bg-white/10 transition-colors text-zinc-400 hover:text-white"
+            title="Quay lại Trang chủ"
+            >
+            <ChevronLeft className="w-6 h-6" />
+            </button>
+            <h2 className="text-lg font-bold text-white">Đoạn chat</h2>
+        </div>
       </div>
 
-      {/* DANH SÁCH CHAT */}
+      {/* SEARCH */}
+      <div className="px-3 py-2">
+          <div className="relative bg-white/5 rounded-xl">
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+             <input 
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               placeholder="Tìm kiếm bạn bè..."
+               className="w-full bg-transparent border-none py-2 pl-9 pr-4 text-sm text-white focus:ring-0 placeholder:text-zinc-600"
+             />
+          </div>
+      </div>
+
+      {/* LIST */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
-        {conversations.length === 0 ? (
-           <div className="text-center text-zinc-500 mt-10 text-xs hidden md:block">Chưa có tin nhắn</div>
+        {isLoading ? (
+             <div className="text-center text-zinc-600 text-xs mt-10">Đang tải danh sách...</div>
+        ) : displayList.length === 0 ? (
+           <div className="text-center text-zinc-500 mt-10 text-xs">
+             Chưa có bạn bè nào.<br/>Hãy kết bạn để bắt đầu trò chuyện.
+           </div>
         ) : (
-          conversations.map((conv) => {
-            const isActive = activeConversationId === conv.id;
-            const isUnread = (conv.unreadCount || 0) > 0;
+            displayList.map((item) => {
+            const isActive = String(activeConversationId) === String(item.conversationId);
+            const isUnread = item.unreadCount > 0;
+            
+            let messagePreview = item.lastMessage;
+            if (item.conversationId && item.isSelfSender && item.lastMessageAt) {
+                messagePreview = `Bạn: ${item.lastMessage}`;
+            }
 
             return (
               <button
-                key={conv.id}
-                onClick={() => openChat(Number(conv.id))} // [FIX] Gọi openChat
+                key={item.userId}
+                onClick={() => handleItemClick(item)}
                 className={cn(
-                  "w-full flex items-center p-2 rounded-2xl transition-all duration-200 group relative",
-                  // Mobile: Căn giữa (Avatar). Desktop: Căn trái.
-                  "justify-center md:justify-start",
+                  "w-full flex items-center p-3 rounded-2xl transition-all duration-200 group relative",
+                  "justify-start", // Luôn căn trái để hiện avatar + tên
                   isActive ? "bg-white/10" : "hover:bg-white/5"
                 )}
               >
-                {/* AVATAR AREA */}
+                {/* AVATAR */}
                 <div className="relative shrink-0">
                   <img 
-                    src={conv.partner.avatarUrl || `https://ui-avatars.com/api/?name=${conv.partner.fullname}&background=random`} 
-                    alt={conv.partner.fullname}
+                    src={item.userInfo.avatarUrl || `https://ui-avatars.com/api/?name=${item.userInfo.fullname}&background=random`} 
+                    alt={item.userInfo.fullname}
                     className={cn(
-                      "rounded-full object-cover border-2 transition-all",
-                      // Kích thước Avatar
-                      "w-12 h-12", 
+                      "rounded-full object-cover border-2 transition-all w-12 h-12", 
                       isActive ? "border-white/20" : "border-transparent"
                     )}
                   />
-                  {/* Online Dot */}
-                  {conv.partner.isOnline && (
-                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#121212] rounded-full"></span>
+                  {item.userInfo.isOnline && (
+                     <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#121212] rounded-full"></span>
                   )}
-                  
-                  {/* Mobile Unread Dot: Chấm đỏ đè lên avatar khi màn hình nhỏ */}
                   {isUnread && (
-                     <span className="md:hidden absolute top-0 right-0 w-3.5 h-3.5 bg-blue-500 border-2 border-[#121212] rounded-full animate-pulse"></span>
+                     <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-blue-500 border-2 border-[#121212] rounded-full animate-pulse"></span>
                   )}
                 </div>
 
-                {/* INFO AREA: Ẩn trên Mobile (hidden), Hiện trên Desktop (md:block) */}
-                <div className="hidden md:block ml-3 flex-1 text-left min-w-0">
+                {/* INFO */}
+                <div className="block ml-3 flex-1 text-left min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
                     <span className={cn("font-semibold truncate text-sm", isUnread ? "text-white" : "text-zinc-300")}>
-                      {conv.partner.fullname}
+                      {item.userInfo.fullname}
                     </span>
-                    {conv.lastMessageAt && (
+                    {item.lastMessageAt && (
                       <span className="text-[10px] text-zinc-500 ml-2 shrink-0">
-                        {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: false, locale: vi }).replace('khoảng ', '')}
+                        {formatDistanceToNow(new Date(item.lastMessageAt), { addSuffix: false, locale: vi }).replace('khoảng ', '')}
                       </span>
                     )}
                   </div>
                   
                   <div className="flex items-center justify-between">
                       <p className={cn("truncate text-xs max-w-[180px]", isUnread ? "text-white font-medium" : "text-zinc-500")}>
-                      {conv.lastMessageContent 
-                          ? (String(conv.lastSenderId) === String(user?.id) ? `Bạn: ${conv.lastMessageContent}` : conv.lastMessageContent)
-                          : "Bắt đầu cuộc trò chuyện"}
+                        {messagePreview}
                       </p>
-                      {/* Desktop Unread Badge */}
-                      {isUnread && (
+                      {isUnread ? (
                         <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/50 ml-2">
                            <span className="text-[10px] font-bold text-white">
-                             {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                             {item.unreadCount > 9 ? '9+' : item.unreadCount}
                            </span>
                         </div>
-                      )}
+                      ) : null}
                   </div>
                 </div>
               </button>

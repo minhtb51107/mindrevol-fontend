@@ -1,47 +1,33 @@
-// src/modules/chat/types.ts
-
 export enum MessageType {
   TEXT = 'TEXT',
   IMAGE = 'IMAGE',
-  VOICE = 'VOICE',
-  REACTION = 'REACTION'
-}
-
-export enum MessageDeliveryStatus {
-  SENT = 'SENT',       // Đã gửi lên server
-  DELIVERED = 'DELIVERED', // Đã nhận
-  SEEN = 'SEEN'        // Đã xem
 }
 
 export interface UserSummary {
-  id: number;
+  id: string; // [FIX] Đổi number -> string (để khớp với UUID backend)
   fullname: string;
   handle: string;
   avatarUrl: string;
-  isOnline: boolean;
+  isOnline?: boolean; // Nên thêm lại để hỗ trợ hiển thị chấm xanh
 }
 
 export interface Message {
-  id: number;
-  conversationId: number;
-  senderId: number;
+  id: string; // [FIX] number -> string
+  conversationId: string; // [FIX] number -> string
+  senderId: string; // [FIX] number -> string
   content: string;
   type: MessageType;
-  metadata?: any; // Chứa reply info, ảnh locket...
-  clientSideId?: string; // Để khớp Optimistic UI
-  deliveryStatus: MessageDeliveryStatus;
+  metadata?: any;
+  clientSideId?: string;
   createdAt: string;
 }
 
 export interface Conversation {
-  id: number;
+  id: string; // [FIX] number -> string
   partner: UserSummary;
   lastMessageContent: string;
   lastMessageAt: string;
-  lastSenderId: number;
+  lastSenderId: string; // [FIX] number -> string
   unreadCount: number;
   status: 'ACTIVE' | 'ARCHIVED' | 'BLOCKED';
-  
-  // State nội bộ FE (không phải từ DB)
-  isTyping?: boolean; 
 }

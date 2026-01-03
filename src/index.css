@@ -69,3 +69,14 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
+@layer utilities {
+  /* Ẩn thanh cuộn cho Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Ẩn thanh cuộn cho IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}

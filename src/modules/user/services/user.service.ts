@@ -3,27 +3,36 @@ import { JourneyResponse } from '@/modules/journey/types';
 
 // 1. Interface đầy đủ cho Profile User
 export interface UserProfile {
-  id: number;
-  email: string;
+  id: string; // Đổi sang string cho thống nhất với UUID backend
+  email?: string; // Có thể ẩn nếu là public profile
   handle: string;
   fullname: string;
   avatarUrl: string;
   bio?: string;
+  coverUrl?: string;
   role?: string;
-  friendshipStatus?: string;
-  friendCount?: number;
+  
+  // Stats
+  friendCount: number;
+  journeyCount?: number;
+
+  // [MỚI] Trạng thái quan hệ (Dùng cho UI xem profile người khác)
+  friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  isBlockedByMe?: boolean;
+  isBlockedByThem?: boolean;
+  isMe?: boolean;
 }
 
 // 2. Interface rút gọn cho Search/List
 export interface UserSummary {
-  id: number;
+  id: string;
   fullname: string;
   handle: string;
   avatarUrl: string;
   friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'RECEIVED';
 }
 
-// 3. Interface cho Settings (Mới)
+// 3. Interface cho Settings
 export interface NotificationSettings {
   emailDailyReminder: boolean;
   emailUpdates: boolean;
@@ -40,17 +49,15 @@ export interface LinkedAccount {
   connected: boolean;
 }
 
-// [MỚI] Interface cho Update Profile
 export interface UpdateProfileData {
   fullname?: string;
   handle?: string;
   bio?: string;
-  dateOfBirth?: string; // Format YYYY-MM-DD
+  dateOfBirth?: string;
   gender?: 'MALE' | 'FEMALE' | 'OTHER';
-  avatar?: File; // File ảnh upload
+  avatar?: File; 
 }
 
-// [MỚI] Interface cho Password
 export interface ChangePasswordData {
   oldPassword?: string;
   newPassword?: string;
@@ -64,6 +71,12 @@ class UserService {
     return response.data.data;
   }
 
+  // [MỚI] Lấy profile người khác theo ID
+  async getUserProfile(userId: string): Promise<UserProfile> {
+    const response = await http.get<{ data: UserProfile }>(`/users/${userId}/profile`);
+    return response.data.data;
+  }
+
   async searchUsers(query: string): Promise<UserSummary[]> {
     if (!query) return [];
     const res = await http.get<{ data: UserSummary[] }>(`/users/search`, { 
@@ -72,20 +85,12 @@ class UserService {
     return res.data.data;
   }
 
-  async sendFriendRequest(userId: number): Promise<void> {
-    await http.post(`/friends/request/${userId}`);
-  }
-
-  async acceptFriendRequest(friendshipId: number): Promise<void> {
-    await http.post(`/friends/accept/${friendshipId}`);
-  }
-
-  async getUserRecaps(userId: number): Promise<JourneyResponse[]> {
+  async getUserRecaps(userId: string): Promise<JourneyResponse[]> {
     const response = await http.get<{ data: JourneyResponse[] }>(`/users/${userId}/recaps`);
     return response.data.data;
   }
 
-  // --- [MỚI] PROFILE UPDATE ---
+  // --- PROFILE UPDATE ---
   async updateProfile(data: UpdateProfileData): Promise<UserProfile> {
     const formData = new FormData();
     if (data.fullname) formData.append('fullname', data.fullname);
@@ -93,7 +98,7 @@ class UserService {
     if (data.bio) formData.append('bio', data.bio);
     if (data.dateOfBirth) formData.append('dateOfBirth', data.dateOfBirth);
     if (data.gender) formData.append('gender', data.gender);
-    if (data.avatar) formData.append('file', data.avatar); // Backend nhận @RequestParam("file")
+    if (data.avatar) formData.append('file', data.avatar); 
 
     const response = await http.put<{ data: UserProfile }>('/users/me', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -101,7 +106,7 @@ class UserService {
     return response.data.data;
   }
 
-  // --- [MỚI] SECURITY ---
+  // --- SECURITY ---
   async hasPassword(): Promise<boolean> {
     const res = await http.get<{ data: boolean }>('/auth/has-password');
     return res.data.data;
@@ -115,8 +120,7 @@ class UserService {
     await http.post('/auth/change-password', data);
   }
 
-  // --- SETTINGS API (MỚI) ---
-  
+  // --- SETTINGS API ---
   async getNotificationSettings(): Promise<NotificationSettings> {
     const response = await http.get<{ data: NotificationSettings }>('/users/settings/notifications');
     return response.data.data;
@@ -127,8 +131,7 @@ class UserService {
     return response.data.data;
   }
 
-  // --- SOCIAL ACCOUNTS (MỚI) ---
-  
+  // --- SOCIAL ACCOUNTS ---
   async getLinkedAccounts(): Promise<LinkedAccount[]> {
     const response = await http.get<{ data: LinkedAccount[] }>('/users/me/social-accounts');
     return response.data.data;
@@ -138,8 +141,7 @@ class UserService {
     await http.delete(`/users/me/social-accounts/${provider}`);
   }
 
-  // --- SYSTEM / FEEDBACK (MỚI) ---
-  
+  // --- SYSTEM / FEEDBACK ---
   async getSystemConfigs(): Promise<Record<string, string>> {
     const response = await http.get<{ data: Record<string, string> }>('/system/configs');
     return response.data.data;

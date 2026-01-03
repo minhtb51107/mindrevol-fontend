@@ -1,32 +1,21 @@
 import { http } from '@/lib/http';
-
-export interface BlockedUser {
-  id: number;
-  userId: number;
-  blockedUserId: number;
-  blockedUser: {
-    id: number;
-    fullname: string;
-    handle: string;
-    avatarUrl: string;
-  };
-  createdAt: string;
-}
+import { UserSummary } from './user.service'; // Tái sử dụng interface UserSummary
 
 class BlockService {
   
-  // CẬP NHẬT ĐƯỜNG DẪN TẠI ĐÂY
-  async getBlockList(): Promise<BlockedUser[]> {
-    // Đổi thành /users/me/blocks
-    const response = await http.get<{ data: BlockedUser[] }>('/users/me/blocks');
+  // Lấy danh sách chặn (Backend trả về List<UserSummaryResponse>)
+  async getBlockList(): Promise<UserSummary[]> {
+    const response = await http.get<{ data: UserSummary[] }>('/users/me/blocks');
     return response.data.data;
   }
 
-  async blockUser(userId: number): Promise<void> {
+  // Chặn người dùng (ID string)
+  async blockUser(userId: string): Promise<void> {
     await http.post(`/users/blocks/${userId}`);
   }
 
-  async unblockUser(userId: number): Promise<void> {
+  // Bỏ chặn (ID string)
+  async unblockUser(userId: string): Promise<void> {
     await http.delete(`/users/blocks/${userId}`);
   }
 }

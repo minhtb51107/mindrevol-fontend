@@ -1,30 +1,26 @@
-import React, { useState } from 'react';
-import { useAuthFlow } from '../store/AuthFlowContext';
+import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ArrowLeft, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { authService } from '../services/auth.service';
+import { usePasswordForm } from '../hooks/usePasswordForm'; // Import Hook
 
 export const PasswordForm = () => {
-  const { email, resetFlow, login, isLoading, error, goToOtp } = useAuthFlow();
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Destructuring tất cả logic từ hook
+  const { 
+    form, 
+    email, 
+    isLoading, 
+    error, 
+    showPassword, 
+    toggleShowPassword, 
+    onSubmit, 
+    handleBack, 
+    handleSwitchToOtp, 
+    handleForgotPassword 
+  } = usePasswordForm();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!password) return;
-    await login(password);
-  };
-
-  const handleSwitchToOtp = async () => {
-    try {
-      await authService.sendOtp(email);
-      goToOtp(); 
-    } catch (e) {
-      alert("Không thể gửi mã OTP. Vui lòng thử lại sau.");
-    }
-  };
+  const { register } = form; // Lấy hàm register để gắn vào Input
 
   return (
     <motion.div 
@@ -36,8 +32,9 @@ export const PasswordForm = () => {
       {/* HEADER: Nút quay lại & Tiêu đề */}
       <div className="mb-6">
         <button 
-          onClick={resetFlow} 
+          onClick={handleBack} 
           className="text-zinc-500 hover:text-white flex items-center text-sm transition-colors mb-4 group"
+          type="button"
         >
           <ArrowLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> 
           Quay lại
@@ -52,40 +49,40 @@ export const PasswordForm = () => {
         </div>
       </div>
 
-      <form onSubmit={handleLogin} className="space-y-5 flex-1">
+      <form onSubmit={onSubmit} className="space-y-5 flex-1">
         
         {/* INPUT PASSWORD */}
         <div className="relative">
           <Input 
+            {...register("password")}
             type={showPassword ? "text" : "password"} 
             label="Mật khẩu hiện tại"
             placeholder="Nhập mật khẩu..." 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             autoFocus
             disabled={isLoading}
-            className="h-12 pr-10" // h-12: Cao 48px
+            className="h-12 pr-10" 
           />
           <button
             type="button"
-            onClick={() => setShowPassword(!showPassword)}
+            onClick={toggleShowPassword}
             className="absolute right-3 top-[34px] text-zinc-500 hover:text-white transition-colors"
           >
             {showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
           </button>
         </div>
         
-        {/* Nút Quên mật khẩu nằm ngay dưới Input cho tiện tay */}
+        {/* Nút Quên mật khẩu */}
         <div className="flex justify-end -mt-1">
             <button 
               type="button"
-              onClick={() => authService.sendMagicLink(email).then(() => alert('Đã gửi link đặt lại mật khẩu về email!'))}
+              onClick={handleForgotPassword}
               className="text-xs text-zinc-500 hover:text-[#FFF5C0] transition-colors hover:underline"
             >
               Quên mật khẩu?
             </button>
         </div>
 
+        {/* Hiển thị lỗi */}
         {error && (
           <div className="text-red-500 text-sm font-medium bg-red-500/10 p-3 rounded-xl border border-red-500/20 flex items-center justify-center">
             {error}
@@ -93,7 +90,7 @@ export const PasswordForm = () => {
         )}
 
         <div className="space-y-3 pt-2">
-            {/* Nút Đăng nhập: h-12 để BẰNG CHẶN với Input */}
+            {/* Nút Đăng nhập */}
             <Button type="submit" isLoading={isLoading} className="w-full h-12 text-base font-bold shadow-none">
               Đăng nhập
             </Button>

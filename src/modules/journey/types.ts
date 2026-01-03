@@ -3,7 +3,7 @@
 import { Checkin } from "@/modules/checkin/types";
 
 // --- ENUMS ---
-
+// (Giữ nguyên các Enum như cũ)
 export enum JourneyType {
   HABIT = 'HABIT',
   ROADMAP = 'ROADMAP',
@@ -14,6 +14,9 @@ export enum JourneyType {
 
 export enum JourneyStatus {
   ACTIVE = 'ACTIVE',
+  // [FIX] Thêm ONGOING/UPCOMING để khớp với Backend nếu Backend trả về các string này
+  ONGOING = 'ONGOING', 
+  UPCOMING = 'UPCOMING',
   COMPLETED = 'COMPLETED',
   ARCHIVED = 'ARCHIVED',
   DROPPED = 'DROPPED'
@@ -23,12 +26,14 @@ export enum JourneyRole {
   OWNER = 'OWNER',
   ADMIN = 'ADMIN',
   MEMBER = 'MEMBER',
-  VIEWER = 'VIEWER'
+  VIEWER = 'VIEWER',
+  PENDING = 'PENDING' 
 }
 
 export enum JourneyVisibility {
   PUBLIC = 'PUBLIC',
-  PRIVATE = 'PRIVATE'
+  PRIVATE = 'PRIVATE',
+  FRIENDS_ONLY = 'FRIENDS_ONLY' // [FIX] Thêm giá trị này nếu Backend có dùng
 }
 
 export enum InteractionType {
@@ -52,6 +57,15 @@ export enum WidgetStatus {
   OFF_TRACK = 'OFF_TRACK'
 }
 
+// --- SHARED INTERFACES ---
+
+export interface UserSummary {
+  id: string; 
+  fullname: string;
+  avatarUrl: string | null;
+  handle: string;
+}
+
 // --- INTERFACES ---
 
 export interface CreateJourneyRequest {
@@ -62,37 +76,13 @@ export interface CreateJourneyRequest {
   endDate: string;
   theme?: string;
   visibility: JourneyVisibility;
-  interactionType: InteractionType;
+  interactionType?: InteractionType;
   roadmapTasks?: {
     dayNo: number;
     title: string;
     description?: string;
   }[];
-}
-
-export interface JourneyResponse {
-  id: string;
-  name: string;
-  description: string;
-  type: JourneyType;
-  status: JourneyStatus;
-  startDate: string;
-  endDate: string;
-  theme: string;
-  inviteCode: string;
-  requireApproval: boolean;
-  settingHasStreak: boolean;
-  settingReqFreezeTicket: boolean;
-  settingIsHardcore: boolean;
-  visibility: JourneyVisibility;
-  interactionType: InteractionType;
-  createdAt: string;
-  createdBy: string;
-  creatorName: string;
-  creatorAvatar: string;
-  role?: JourneyRole;
-  participantCount: number;
-  creatorId: string;
+  requireApproval?: boolean;
 }
 
 export interface UpdateJourneySettingsRequest {
@@ -103,6 +93,42 @@ export interface UpdateJourneySettingsRequest {
   requiresFreezeTicket?: boolean;
   isHardcore?: boolean;
   requireApproval?: boolean;
+  visibility?: JourneyVisibility; 
+}
+
+// [QUAN TRỌNG] Thêm hasNewUpdates vào đây để dùng ở HomePage
+export interface JourneyResponse {
+  id: string;
+  name: string;
+  description: string;
+  type: JourneyType;
+  status: JourneyStatus | string; // [FIX] Cho phép string
+  startDate: string;
+  endDate: string;
+  theme: string;
+  inviteCode: string;
+  requireApproval: boolean;
+  settingHasStreak: boolean;
+  settingReqFreezeTicket: boolean;
+  settingIsHardcore: boolean;
+  visibility: JourneyVisibility | string; // [FIX] Cho phép string
+  interactionType: InteractionType;
+  createdAt: string;
+  createdBy: string;
+  creatorName: string;
+  creatorAvatar: string;
+  role?: JourneyRole;
+  participantCount: number;
+  creatorId: string;
+  
+  hasNewUpdates?: boolean; // [MỚI]
+
+  currentUserStatus?: {
+    role: string; 
+    currentStreak: number;
+    totalCheckins: number;
+    hasCheckedInToday: boolean;
+  };
 }
 
 export interface JourneyWidgetResponse {
@@ -117,11 +143,13 @@ export interface JourneyWidgetResponse {
 }
 
 export interface JourneyParticipantResponse {
-  userId: number;
-  fullname: string;
-  avatarUrl?: string;
-  handle: string;
+  id: string; 
+  user: UserSummary;
   role: JourneyRole;
+  joinedAt: string;
+  currentStreak: number;
+  totalCheckins: number;
+  lastCheckinAt: string | null;
 }
 
 export interface JourneyInvitationResponse {
@@ -134,29 +162,44 @@ export interface JourneyInvitationResponse {
   sentAt: string;
 }
 
+export interface JourneyAlertResponse {
+  journeyPendingInvitations: number;
+  waitingApprovalRequests: number;
+  journeyIdsWithRequests: string[];
+}
+
 export interface JoinJourneyRequest {
   inviteCode: string;
 }
 
+export interface InviteFriendRequest {
+  journeyId: string;
+  friendId: string;
+}
+
 export interface JourneyRequestResponse {
-  requestId: string;
-  userId: number;
+  id: string; 
+  userId: string;
   fullname: string;
   avatarUrl?: string;
   handle: string;
-  createdAt: string;
+  requestedAt: string;
+  status: string;
 }
 
+// [CẬP NHẬT CHÍNH] Đồng bộ với DTO Backend
 export interface UserActiveJourneyResponse {
   id: string;
   name: string;
   description: string;
-  status: JourneyStatus;
-  visibility: JourneyVisibility;
+  // [FIX] Cho phép string để tránh lỗi enum mapping từ JSON
+  status: JourneyStatus | string; 
+  visibility: JourneyVisibility | string;
   startDate: string;
+  endDate?: string; // [MỚI] Thêm để check
   totalCheckins: number;
   checkins: Checkin[];
+  hasNewUpdates?: boolean; // [MỚI]
 }
 
-// Alias để tương thích ngược nếu code cũ dùng "Journey"
 export type Journey = JourneyResponse;

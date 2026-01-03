@@ -5,13 +5,15 @@ import { friendService } from '@/modules/user/services/friend.service';
 export const useInviteMembers = (journeyId: string) => {
   const [friends, setFriends] = useState<any[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
-  const [invitedIds, setInvitedIds] = useState<number[]>([]);
+  
+  // [FIX] Đổi kiểu state từ number[] sang string[] vì ID là UUID string
+  const [invitedIds, setInvitedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const loadFriends = async () => {
       try {
         const res: any = await friendService.getMyFriends();
-        // SỬA LỖI: Kiểm tra xem res là mảng hay là object Page chứa content
+        // Kiểm tra cấu trúc trả về
         if (Array.isArray(res)) {
             setFriends(res);
         } else if (res && res.content && Array.isArray(res.content)) {
@@ -29,7 +31,8 @@ export const useInviteMembers = (journeyId: string) => {
     loadFriends();
   }, []);
 
-  const inviteUser = async (friendId: number) => {
+  // [FIX] Đổi tham số đầu vào từ number sang string
+  const inviteUser = async (friendId: string) => {
     try {
       await journeyService.inviteFriend(journeyId, friendId);
       setInvitedIds(prev => [...prev, friendId]);

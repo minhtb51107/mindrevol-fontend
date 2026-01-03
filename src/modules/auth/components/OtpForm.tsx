@@ -1,40 +1,24 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { useAuthFlow } from '../store/AuthFlowContext';
+import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
+import { useOtpForm } from '../hooks/useOtpForm'; // Import Hook mới
 
 export const OtpForm = () => {
-  const { verifyOtp, isLoading, error, email, goToLogin, resetFlow } = useAuthFlow();
-  
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  // Auto focus ô đầu tiên
-  useEffect(() => {
-    if (inputRefs.current[0]) inputRefs.current[0].focus();
-  }, []);
-
-  const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 5) inputRefs.current[index + 1]?.focus();
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-    if (e.key === 'Enter' && otp.every(digit => digit !== '')) handleSubmit();
-  };
-
-  const handleSubmit = () => {
-    const otpCode = otp.join('');
-    if (otpCode.length === 6) verifyOtp(otpCode);
-  };
-
-  const isComplete = otp.every(digit => digit !== '');
+  const {
+    otp,
+    inputRefs,
+    email,
+    isLoading,
+    error,
+    isComplete,
+    countdown,
+    handleChange,
+    handleKeyDown,
+    handleSubmit,
+    handleResend,
+    goToLogin,
+    resetFlow
+  } = useOtpForm();
 
   return (
     <motion.div 
@@ -44,6 +28,7 @@ export const OtpForm = () => {
       className="flex flex-col h-full"
     >
       <div className="flex-1 space-y-8">
+        {/* Header Text */}
         <div className="text-center space-y-2">
           <p className="text-sm text-zinc-400">
             Mã xác thực 6 số đã được gửi đến:
@@ -58,7 +43,6 @@ export const OtpForm = () => {
           {otp.map((digit, index) => (
             <input
               key={index}
-              // [FIX LỖI]: Thêm dấu { } để hàm không return giá trị
               ref={(el) => { inputRefs.current[index] = el; }}
               type="text"
               inputMode="numeric"
@@ -79,8 +63,14 @@ export const OtpForm = () => {
           ))}
         </div>
 
-        {error && <p className="text-red-500 text-sm text-center font-medium animate-pulse">{error}</p>}
+        {/* Hiển thị lỗi */}
+        {error && (
+            <p className="text-red-500 text-sm text-center font-medium animate-pulse">
+                {error}
+            </p>
+        )}
 
+        {/* Nút Xác thực */}
         <Button 
           onClick={handleSubmit} 
           isLoading={isLoading} 
@@ -90,13 +80,24 @@ export const OtpForm = () => {
           Xác thực ngay
         </Button>
 
+        {/* Nút Gửi lại mã (Có logic đếm ngược) */}
         <div className="text-center">
-           <button type="button" className="text-xs text-zinc-500 hover:text-[#FFF5C0] transition-colors underline underline-offset-4">
-             Gửi lại mã
+           <button 
+             type="button" 
+             onClick={handleResend}
+             disabled={countdown > 0 || isLoading}
+             className={`text-xs transition-colors underline underline-offset-4 ${
+                countdown > 0 
+                    ? 'text-zinc-600 cursor-not-allowed' 
+                    : 'text-zinc-500 hover:text-[#FFF5C0]'
+             }`}
+           >
+             {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã'}
            </button>
         </div>
       </div>
 
+      {/* Footer Buttons */}
       <div className="mt-8 pt-6 border-t border-zinc-800/50 flex flex-col gap-3">
         <Button
           variant="secondary"

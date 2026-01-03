@@ -13,7 +13,7 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
-  const [searchParams] = useSearchParams(); // [FIX] Lấy params từ URL
+  const [searchParams] = useSearchParams();
   
   // State quản lý Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -23,7 +23,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [checkinFile, setCheckinFile] = useState<File | null>(null);
   const [defaultJourneyId, setDefaultJourneyId] = useState<string | null>(null);
 
-  // Lấy journeyId từ URL, nếu không có thì dùng default
   const urlJourneyId = searchParams.get('journeyId');
   const activeJourneyId = urlJourneyId || defaultJourneyId;
 
@@ -49,9 +48,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#121212] text-white font-sans selection:bg-purple-500/30 overflow-hidden relative">
+    // [FIX 1]: h-[100dvh] để fix lỗi Safari, flex-col cho mobile
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-[#121212] text-white font-sans overflow-hidden relative">
       
-      {/* Sidebar: Truyền thêm props onJourneyClick */}
+      {/* Sidebar */}
       {!isChatPage && (
         <Sidebar 
             onCheckinClick={handleCheckinClick} 
@@ -59,31 +59,32 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         />
       )}
 
+      {/* [FIX 2]: Main Content
+          - XÓA overflow-y-auto: Để HomePage tự quản lý scroll (ngăn việc kéo cả trang).
+          - XÓA pb-32: Để HomePage tự padding bottom (tránh khoảng trắng thừa hoặc thiếu).
+          - min-w-0: Fix lỗi flexbox child quá rộng.
+      */}
       <main className={cn(
-        "flex-1 w-full h-full relative overflow-y-auto no-scrollbar",
-        isChatPage ? "pb-0" : "pb-32"
+        "flex-1 relative flex flex-col min-w-0 overflow-hidden", 
+        // Nếu là trang Chat thì giữ nguyên logic cũ nếu cần, các trang khác để full height
+        isChatPage ? "" : "" 
       )}>
         {children || <Outlet />}
       </main>
 
       {/* --- MODALS TOÀN CỤC --- */}
       
-      {/* 1. Modal Tạo Hành Trình */}
       <CreateJourneyModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
-        // [FIX] Reload trang khi tạo xong để cập nhật Homepage
         onSuccess={() => window.location.reload()} 
       />
 
-      {/* 2. Modal Danh Sách Hành Trình */}
       <JourneyListModal 
         isOpen={isJourneyListOpen}
         onClose={() => setIsJourneyListOpen(false)}
       />
 
-      {/* 3. Modal Check-in */}
-      {/* [FIX] Sử dụng activeJourneyId (Ưu tiên URL) */}
       {activeJourneyId && (
           <CheckinModal 
             isOpen={isCheckinModalOpen} 
