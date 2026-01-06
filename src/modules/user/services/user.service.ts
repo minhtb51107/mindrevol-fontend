@@ -3,8 +3,8 @@ import { JourneyResponse } from '@/modules/journey/types';
 
 // 1. Interface đầy đủ cho Profile User
 export interface UserProfile {
-  id: string; // Đổi sang string cho thống nhất với UUID backend
-  email?: string; // Có thể ẩn nếu là public profile
+  id: string;
+  email?: string;
   handle: string;
   fullname: string;
   avatarUrl: string;
@@ -16,7 +16,7 @@ export interface UserProfile {
   friendCount: number;
   journeyCount?: number;
 
-  // [MỚI] Trạng thái quan hệ (Dùng cho UI xem profile người khác)
+  // Trạng thái quan hệ (Dùng cho UI xem profile người khác)
   friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'DECLINED';
   isBlockedByMe?: boolean;
   isBlockedByThem?: boolean;
@@ -58,9 +58,10 @@ export interface UpdateProfileData {
   avatar?: File; 
 }
 
-export interface ChangePasswordData {
-  oldPassword?: string;
-  newPassword?: string;
+// [MỚI] Interface cho request đổi pass qua OTP
+export interface UpdatePasswordOtpRequest {
+  otp: string;
+  newPassword: string;
 }
 
 class UserService {
@@ -71,7 +72,7 @@ class UserService {
     return response.data.data;
   }
 
-  // [MỚI] Lấy profile người khác theo ID
+  // Lấy profile người khác theo ID
   async getUserProfile(userId: string): Promise<UserProfile> {
     const response = await http.get<{ data: UserProfile }>(`/users/${userId}/profile`);
     return response.data.data;
@@ -106,18 +107,17 @@ class UserService {
     return response.data.data;
   }
 
-  // --- SECURITY ---
-  async hasPassword(): Promise<boolean> {
-    const res = await http.get<{ data: boolean }>('/auth/has-password');
-    return res.data.data;
+  // --- SECURITY (OTP FLOW) ---
+  
+  // [MỚI] Gửi OTP xác thực (dùng chung cho việc đặt/đổi mật khẩu)
+  async sendOtp(email: string): Promise<void> {
+    // Tận dụng API gửi OTP login của Auth Controller
+    await http.post('/auth/otp/send', { email });
   }
 
-  async createPassword(newPassword: string): Promise<void> {
-    await http.post('/auth/create-password', { newPassword });
-  }
-
-  async changePassword(data: ChangePasswordData): Promise<void> {
-    await http.post('/auth/change-password', data);
+  // [MỚI] Cập nhật mật khẩu bằng OTP
+  async updatePasswordWithOtp(data: UpdatePasswordOtpRequest): Promise<void> {
+    await http.post('/auth/update-password-otp', data);
   }
 
   // --- SETTINGS API ---

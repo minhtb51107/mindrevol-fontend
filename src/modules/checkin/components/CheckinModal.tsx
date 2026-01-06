@@ -1,10 +1,10 @@
-// src/modules/feed/components/CheckinModal.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Send, MapPin, Smile } from 'lucide-react';
 import { checkinService } from '@/modules/checkin/services/checkin.service';
 import imageCompression from 'browser-image-compression';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { Emotion } from '@/modules/feed/types';
+import { trackEvent } from '@/lib/analytics'; // [Analytics] Import
 
 // Định nghĩa ActivityType nội bộ
 enum UIActivityType {
@@ -120,16 +120,27 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
 
       const isCustom = !!customContext;
       const finalEmotion = mapEmojiToEmotion(moodEmoji);
+      const finalActivityType = isCustom ? UIActivityType.CUSTOM : selectedActivity.type;
 
       await checkinService.createCheckin({
         file: fileToUpload,
         journeyId: journeyId,
         caption: caption,
         emotion: finalEmotion,
-        activityType: isCustom ? UIActivityType.CUSTOM : selectedActivity.type,
+        activityType: finalActivityType,
         activityName: isCustom ? customContext : selectedActivity.label,
         locationName: location,
         statusRequest: 'NORMAL'
+      });
+      
+      // [Analytics] Đo lường: Retention & Feature Usage
+      trackEvent('checkin_completed', {
+        journey_id: journeyId,
+        has_photo: true,
+        word_count: caption.trim().split(/\s+/).length, // Độ dài caption
+        emotion_emoji: moodEmoji,
+        activity_type: finalActivityType,
+        has_location: !!location
       });
       
       onSuccess();
@@ -159,17 +170,15 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
         {/* --- CONTENT --- */}
         <div className="flex flex-col p-3 sm:p-4 gap-4">
             
-            {/* 1. IMAGE PREVIEW (STYLE GIỐNG JOURNEY POST CARD) */}
+            {/* 1. IMAGE PREVIEW */}
             <div className="relative w-full aspect-square rounded-[40px] overflow-hidden bg-[#1c1c1e] border border-white/10 shadow-2xl shrink-0 group">
                 {previewUrl && <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />}
                 
-                {/* Gradient nhẹ phía trên để Badge rõ hơn */}
                 <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
-                {/* A. BADGES (GÓC TRÊN TRÁI) */}
+                {/* A. BADGES */}
                 <div className="absolute top-5 left-5 flex flex-col items-start gap-2 z-10 pointer-events-none">
                     
-                    {/* Badge Chính: Emoji + Tên Hoạt động */}
                     <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-lg transition-all backdrop-blur-md border bg-zinc-900/90 border-white/10 shadow-black/20">
                         <span className="text-[18px] leading-none filter drop-shadow-sm">{moodEmoji}</span>
                         <span className="text-[14px] font-bold tracking-wide text-white drop-shadow-sm max-w-[200px] truncate">
@@ -177,7 +186,6 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
                         </span>
                     </div>
 
-                    {/* Badge Phụ: Location */}
                     {location && (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 border border-white/10 shadow-md backdrop-blur-sm ml-1">
                            <MapPin className="w-3.5 h-3.5 text-red-500" />
@@ -186,7 +194,7 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
                     )}
                 </div>
 
-                {/* B. CAPTION PREVIEW (GÓC DƯỚI) - Hiển thị Realtime những gì đang nhập */}
+                {/* B. CAPTION PREVIEW */}
                 <div className="absolute bottom-0 inset-x-0 p-5 flex items-end justify-start pointer-events-none">
                     <div className="bg-zinc-950/90 border border-white/10 shadow-2xl backdrop-blur-sm rounded-2xl px-4 py-3 w-fit max-w-[95%]">
                         <p className="text-zinc-100 text-[14px] font-medium leading-relaxed break-words text-left">
@@ -196,7 +204,7 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
                 </div>
             </div>
 
-            {/* 2. CONTROLS (INPUTS BÊN DƯỚI) */}
+            {/* 2. CONTROLS */}
             <div className="flex flex-col gap-4">
                 <div className="relative space-y-2">
                    <div className="flex justify-between items-center px-2">
@@ -208,9 +216,9 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
 
                    {showEmojiPicker && (
                       <div className="absolute bottom-full right-0 mb-2 z-50" ref={pickerRef}>
-                         <div className="shadow-2xl rounded-2xl overflow-hidden border border-white/10">
-                           <EmojiPicker onEmojiClick={(d) => { setMoodEmoji(d.emoji); setShowEmojiPicker(false); }} theme={Theme.DARK} width={280} height={320} previewConfig={{ showPreview: false }} />
-                         </div>
+                          <div className="shadow-2xl rounded-2xl overflow-hidden border border-white/10">
+                            <EmojiPicker onEmojiClick={(d) => { setMoodEmoji(d.emoji); setShowEmojiPicker(false); }} theme={Theme.DARK} width={280} height={320} previewConfig={{ showPreview: false }} />
+                          </div>
                       </div>
                    )}
 

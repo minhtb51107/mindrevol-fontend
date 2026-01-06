@@ -24,6 +24,7 @@
     "emoji-picker-react": "^4.16.1",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.556.0",
+    "posthog-js": "^1.314.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.68.0",

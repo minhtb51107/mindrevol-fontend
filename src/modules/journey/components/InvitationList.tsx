@@ -1,21 +1,44 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useJourneyInvitations } from '../hooks/useJourneyInvitations';
 import { Loader2, Check, X } from 'lucide-react';
+import { JourneyStatus } from '../types';
 
-// [FIX] Định nghĩa prop onSuccess
 interface Props {
   onSuccess?: () => void;
 }
 
 export const InvitationList: React.FC<Props> = ({ onSuccess }) => {
-  // [FIX] Truyền onSuccess vào hook
   const { invitations, isLoading, processingId, handleAccept, handleReject } = useJourneyInvitations(onSuccess);
+
+  // [LOGIC MỚI] Lọc bỏ lời mời không hợp lệ
+  const validInvitations = useMemo(() => {
+    return invitations.filter(inv => {
+        // 1. Loại bỏ nếu trạng thái lời mời là EXPIRED
+        if (inv.status === 'EXPIRED') return false;
+
+        // 2. Loại bỏ nếu hành trình đã kết thúc (dựa trên journeyStatus)
+        if (inv.journeyStatus) {
+            const endedStatuses = [
+                JourneyStatus.COMPLETED,
+                JourneyStatus.ARCHIVED,
+                JourneyStatus.DROPPED
+            ] as string[];
+            
+            // Nếu status nằm trong danh sách kết thúc -> Ẩn
+            if (endedStatuses.includes(inv.journeyStatus)) {
+                return false;
+            }
+        }
+        return true;
+    });
+  }, [invitations]);
 
   if (isLoading) {
     return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>;
   }
 
-  if (invitations.length === 0) {
+  // Dùng danh sách đã lọc để kiểm tra độ dài
+  if (validInvitations.length === 0) {
     return (
       <div className="text-center py-10">
         <p className="text-zinc-500 text-sm">Không có lời mời nào.</p>
@@ -25,7 +48,8 @@ export const InvitationList: React.FC<Props> = ({ onSuccess }) => {
 
   return (
     <div className="space-y-3">
-      {invitations.map((invitation) => (
+      {/* Render danh sách validInvitations */}
+      {validInvitations.map((invitation) => (
         <div key={invitation.id} className="bg-zinc-900 border border-white/5 rounded-xl p-4 flex items-center justify-between group hover:border-white/10 transition-all">
           <div className="flex items-center gap-3">
             {/* Avatar người mời */}

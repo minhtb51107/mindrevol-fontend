@@ -69,11 +69,11 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <div className="mb-4">
             <p className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Hỗ trợ</p>
             <div className="space-y-1">
-              <MenuItem 
+              {/* <MenuItem 
                 icon={<MessageSquare className="w-5 h-5 text-yellow-400" />} 
                 label="Gửi ý kiến phản hồi" 
                 onClick={() => setShowFeedbackInput(!showFeedbackInput)}
-              />
+              /> */}
               
               {showFeedbackInput && (
                   <div className="px-4 py-2 space-y-2 bg-zinc-900/50 mx-2 rounded-xl mb-2 border border-white/5">

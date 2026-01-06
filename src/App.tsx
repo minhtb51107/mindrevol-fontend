@@ -10,6 +10,8 @@ import { TikTokCallback } from '@/modules/auth/pages/TikTokCallback';
 import { JoinLinkPage } from '@/modules/journey/pages/JoinLinkPage';
 import ProfilePage from './modules/user/pages/ProfilePage';
 import ChatPage from '@/modules/chat/pages/ChatPage'; 
+import Terms from '@/pages/Terms';     // [MỚI] Import trang Điều khoản
+import Privacy from '@/pages/Privacy'; // [MỚI] Import trang Riêng tư
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -24,12 +26,17 @@ function App() {
 
   return (
     <Routes>
+      {/* --- CÁC TRANG CÔNG KHAI (KHÔNG CẦN LOGIN) --- */}
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      
       <Route path="/tiktok-callback" element={
         <AuthFlowProvider>
           <TikTokCallback />
         </AuthFlowProvider>
       } />
 
+      {/* --- CÁC TRANG YÊU CẦU ĐĂNG NHẬP --- */}
       <Route path="/join/:code" element={
         isAuthenticated ? <JoinLinkPage /> : <Navigate to="/" replace state={{ fromJoin: true }} />
       } />
@@ -51,11 +58,12 @@ function App() {
         isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
       } />
 
-      {/* [MỚI] Route xem profile người khác */}
+      {/* Route xem profile người khác */}
       <Route path="/profile/:userId" element={
         isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
       } />
 
+      {/* Fallback route: Nếu không khớp route nào thì về trang chủ */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

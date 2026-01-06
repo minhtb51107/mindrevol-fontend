@@ -4,10 +4,14 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from '@/modules/auth/store/AuthContext'
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { BrowserRouter } from 'react-router-dom'; // Added BrowserRouter here
+import { BrowserRouter } from 'react-router-dom';
+import { initAnalytics } from '@/lib/analytics'; // <--- [THÊM] Import
 
 // Read from .env
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// [THÊM] Khởi động Analytics
+initAnalytics();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

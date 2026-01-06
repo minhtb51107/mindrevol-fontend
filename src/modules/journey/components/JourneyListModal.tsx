@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Plus, Settings, UserPlus, Loader2, Search, Bell, Layout } from 'lucide-react';
@@ -9,9 +9,9 @@ import { JourneySettingsModal } from './JourneySettingsModal';
 import { InviteMembersModal } from './InviteMembersModal';
 import { CreateJourneyModal } from './CreateJourneyModal';
 import { InvitationList } from './InvitationList';
-import { JourneyResponse } from '../types';
+import { JourneyResponse, JourneyStatus } from '../types';
 import { useAuth } from '@/modules/auth/store/AuthContext';
-import { toast } from 'react-hot-toast'; // [MỚI] Thêm toast để thông báo
+import { toast } from 'react-hot-toast'; 
 
 interface Props {
   isOpen: boolean;
@@ -32,12 +32,21 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [modalType, setModalType] = useState<'SETTINGS' | 'INVITE' | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // [LOGIC MỚI] Giới hạn hành trình
+  // [LOGIC MỚI] Chỉ lấy danh sách hành trình ĐANG HOẠT ĐỘNG
+  const activeJourneys = useMemo(() => {
+    if (!journeys) return [];
+    // Chỉ giữ lại các trạng thái active/ongoing/upcoming
+    return journeys.filter(j => 
+      [JourneyStatus.ACTIVE, JourneyStatus.ONGOING, JourneyStatus.UPCOMING].includes(j.status as JourneyStatus)
+    );
+  }, [journeys]);
+
+  // Giới hạn hành trình (Tính trên số lượng đang hoạt động)
   const MAX_JOURNEYS = 5;
-  const currentCount = journeys.length;
+  const currentCount = activeJourneys.length;
   const isLimitReached = currentCount >= MAX_JOURNEYS;
 
-  // Alert State (Notifications)
+  // Alert State
   const [alerts, setAlerts] = useState({
     invitations: 0,
     requests: 0,
@@ -75,10 +84,9 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
     navigate(`/?journeyId=${journeyId}`);
   };
 
-  // [MỚI] Hàm xử lý khi bấm nút tạo/join mà bị giới hạn
   const handleActionWhenLimitReached = () => {
     if (isLimitReached) {
-        toast.error(`Bạn đã đạt giới hạn ${MAX_JOURNEYS} hành trình. Hãy rời hoặc xóa bớt để tiếp tục.`);
+        toast.error(`Bạn đã đạt giới hạn ${MAX_JOURNEYS} hành trình đang hoạt động.`);
         return true;
     }
     return false;
@@ -92,7 +100,6 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
           {/* Header */}
           <div className="p-6 pb-0 space-y-4 shrink-0">
             <div className="flex items-center justify-between">
-              {/* [SỬA] Hiển thị bộ đếm số lượng */}
               <div className="flex items-baseline gap-2">
                 <h2 className="text-xl font-bold text-white">Hành trình</h2>
                 <span className={`text-sm font-medium ${isLimitReached ? 'text-red-500' : 'text-zinc-500'}`}>
@@ -107,7 +114,7 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         setIsCreateOpen(true);
                     }
                   }}
-                  disabled={isLimitReached} // [SỬA] Disable nếu full
+                  disabled={isLimitReached} 
                   className={`p-2 rounded-full text-white transition-colors ${
                     isLimitReached 
                         ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' 
@@ -130,7 +137,7 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <input 
                   type="text" 
                   placeholder={isLimitReached ? "Đã đạt giới hạn tham gia" : "Nhập mã tham gia..."}
-                  disabled={isLimitReached} // [SỬA] Disable input
+                  disabled={isLimitReached} 
                   className={`w-full bg-zinc-900 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm text-white outline-none uppercase ${
                     isLimitReached ? 'opacity-50 cursor-not-allowed' : 'focus:border-blue-500'
                   }`}
@@ -144,7 +151,7 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         handleJoin();
                     }
                 }}
-                disabled={!inviteCode || joinLoading || isLimitReached} // [SỬA] Disable button
+                disabled={!inviteCode || joinLoading || isLimitReached} 
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {joinLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Vào'}
@@ -159,9 +166,9 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   activeTab === 'MY_JOURNEYS' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <Layout className="w-4 h-4" /> Của tôi
+                <Layout className="w-4 h-4" /> Đang tham gia
                 {alerts.requests > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" title="Có yêu cầu tham gia cần duyệt" />
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-1" title="Có yêu cầu tham gia cần duyệt" />
                 )}
               </button>
               
@@ -173,7 +180,7 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
               >
                 <Bell className="w-4 h-4" /> Lời mời
                 {alerts.invitations > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-bold">
+                  <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-bold ml-1">
                     {alerts.invitations}
                   </span>
                 )}
@@ -189,16 +196,16 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <InvitationList onSuccess={refreshAll} />
               </div>
             ) : (
-              // --- TAB DANH SÁCH CỦA TÔI ---
+              // --- TAB DANH SÁCH ACTIVE ---
               <div className="space-y-3">
                 {listLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
-                ) : journeys.length === 0 ? (
+                ) : activeJourneys.length === 0 ? (
                   <div className="text-center py-10 text-zinc-500 text-sm">
-                    Bạn chưa có hành trình nào. <br/>Hãy tạo mới hoặc nhập mã để tham gia.
+                    Bạn chưa có hành trình nào đang hoạt động. <br/>Hãy tạo mới hoặc nhập mã để tham gia.
                   </div>
                 ) : (
-                  journeys.map((journey) => {
+                  activeJourneys.map((journey) => {
                     const isOwner = String(user?.id) === String(journey.creatorId);
                     const userRole = journey.currentUserStatus?.role;
                     const isPending = userRole === 'PENDING';
@@ -297,10 +304,16 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
         />
       )}
 
+      {/* [SỬA QUAN TRỌNG] Bắn event update sau khi tạo thành công */}
       <CreateJourneyModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={() => { setIsCreateOpen(false); refreshAll(); }}
+        onSuccess={() => { 
+            setIsCreateOpen(false); 
+            refreshAll(); 
+            // [MỚI] Bắn sự kiện global để HomePage biết mà reload
+            window.dispatchEvent(new Event('JOURNEY_UPDATED'));
+        }}
       />
     </>,
     document.body

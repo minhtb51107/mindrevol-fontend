@@ -4,6 +4,7 @@ import { X, Search, UserPlus, Loader2, Check } from 'lucide-react';
 import { journeyService } from '../services/journey.service';
 import { toast } from 'react-hot-toast';
 import { UserSummary } from '../types';
+import { trackEvent } from '@/lib/analytics'; // [Analytics] Import
 
 interface Props {
   isOpen: boolean;
@@ -43,6 +44,13 @@ export const InviteMembersModal: React.FC<Props> = ({ isOpen, onClose, journeyId
     setInviteLoading(friendId);
     try {
       await journeyService.inviteFriend(journeyId, friendId);
+      
+      // [Analytics] Đo lường: Growth
+      trackEvent('invite_sent', {
+         journey_id: journeyId,
+         method: 'direct_invite_modal'
+      });
+      
       toast.success("Đã gửi lời mời!");
       setInvitedIds(prev => new Set(prev).add(friendId));
     } catch (error: any) {
@@ -54,6 +62,13 @@ export const InviteMembersModal: React.FC<Props> = ({ isOpen, onClose, journeyId
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(inviteCode);
+    
+    // [Analytics] Đo lường: Growth (Sao chép mã)
+    trackEvent('invite_code_copied', {
+        journey_id: journeyId,
+        source: 'modal'
+    });
+    
     toast.success("Đã sao chép mã mời!");
   };
 

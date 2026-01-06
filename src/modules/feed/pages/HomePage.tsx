@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { JourneyPostCard } from '../components/JourneyPostCard';
@@ -27,6 +27,20 @@ const HomePage = () => {
   const [chatInput, setChatInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // [LOGIC MỚI] Lắng nghe sự kiện tạo hành trình mới để reload
+  useEffect(() => {
+    const handleJourneyUpdate = () => {
+      console.log("HomePage: Detecting new journey created, refreshing...");
+      refreshFeed(); // Gọi hàm refresh từ hook useFeedData
+    };
+
+    window.addEventListener('JOURNEY_UPDATED', handleJourneyUpdate);
+
+    return () => {
+      window.removeEventListener('JOURNEY_UPDATED', handleJourneyUpdate);
+    };
+  }, [refreshFeed]); // Dependency refreshFeed là quan trọng
 
   const activePost = filteredPosts[activeIndex] || null;
   const isOwner = useMemo(() => user && activePost && String(user.id) === String(activePost.userId), [user, activePost]);
@@ -65,7 +79,7 @@ const HomePage = () => {
 
   return (
     <MainLayout>
-      {/* [FIX]: Thay 'custom-scrollbar' bằng 'no-scrollbar' để ẩn thanh cuộn */}
+      {/* [FIX]: Ẩn thanh cuộn */}
       <div className="absolute inset-0 w-full h-full bg-[#121212] overflow-y-auto overflow-x-hidden no-scrollbar">
         
         {/* Background Ambient */}
@@ -142,7 +156,6 @@ const HomePage = () => {
                     <div className="min-w-[calc(50vw-42.5vw)] md:min-w-[calc(50vw-225px)] h-full shrink-0" />
                     </>
                 ) : (
-                    // [FIX]: Thêm w-full và text-center để căn giữa thông báo
                     !isLoading && <div className="w-full text-center text-zinc-500 font-medium">Không có bài đăng nào.</div>
                 )}
                 </div>

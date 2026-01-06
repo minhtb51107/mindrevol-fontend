@@ -3,7 +3,6 @@
 import { Checkin } from "@/modules/checkin/types";
 
 // --- ENUMS ---
-// (Giữ nguyên các Enum như cũ)
 export enum JourneyType {
   HABIT = 'HABIT',
   ROADMAP = 'ROADMAP',
@@ -14,7 +13,6 @@ export enum JourneyType {
 
 export enum JourneyStatus {
   ACTIVE = 'ACTIVE',
-  // [FIX] Thêm ONGOING/UPCOMING để khớp với Backend nếu Backend trả về các string này
   ONGOING = 'ONGOING', 
   UPCOMING = 'UPCOMING',
   COMPLETED = 'COMPLETED',
@@ -33,7 +31,7 @@ export enum JourneyRole {
 export enum JourneyVisibility {
   PUBLIC = 'PUBLIC',
   PRIVATE = 'PRIVATE',
-  FRIENDS_ONLY = 'FRIENDS_ONLY' // [FIX] Thêm giá trị này nếu Backend có dùng
+  FRIENDS_ONLY = 'FRIENDS_ONLY'
 }
 
 export enum InteractionType {
@@ -96,13 +94,12 @@ export interface UpdateJourneySettingsRequest {
   visibility?: JourneyVisibility; 
 }
 
-// [QUAN TRỌNG] Thêm hasNewUpdates vào đây để dùng ở HomePage
 export interface JourneyResponse {
   id: string;
   name: string;
   description: string;
   type: JourneyType;
-  status: JourneyStatus | string; // [FIX] Cho phép string
+  status: JourneyStatus | string;
   startDate: string;
   endDate: string;
   theme: string;
@@ -111,7 +108,7 @@ export interface JourneyResponse {
   settingHasStreak: boolean;
   settingReqFreezeTicket: boolean;
   settingIsHardcore: boolean;
-  visibility: JourneyVisibility | string; // [FIX] Cho phép string
+  visibility: JourneyVisibility | string;
   interactionType: InteractionType;
   createdAt: string;
   createdBy: string;
@@ -121,7 +118,7 @@ export interface JourneyResponse {
   participantCount: number;
   creatorId: string;
   
-  hasNewUpdates?: boolean; // [MỚI]
+  hasNewUpdates?: boolean;
 
   currentUserStatus?: {
     role: string; 
@@ -152,6 +149,7 @@ export interface JourneyParticipantResponse {
   lastCheckinAt: string | null;
 }
 
+// [CẬP NHẬT] Thêm field journeyStatus
 export interface JourneyInvitationResponse {
   id: number;
   journeyId: string;
@@ -160,6 +158,7 @@ export interface JourneyInvitationResponse {
   inviterAvatar?: string;
   status: JourneyInvitationStatus;
   sentAt: string;
+  journeyStatus?: JourneyStatus | string; // [MỚI]
 }
 
 export interface JourneyAlertResponse {
@@ -187,19 +186,17 @@ export interface JourneyRequestResponse {
   status: string;
 }
 
-// [CẬP NHẬT CHÍNH] Đồng bộ với DTO Backend
 export interface UserActiveJourneyResponse {
   id: string;
   name: string;
   description: string;
-  // [FIX] Cho phép string để tránh lỗi enum mapping từ JSON
   status: JourneyStatus | string; 
   visibility: JourneyVisibility | string;
   startDate: string;
-  endDate?: string; // [MỚI] Thêm để check
+  endDate?: string;
   totalCheckins: number;
   checkins: Checkin[];
-  hasNewUpdates?: boolean; // [MỚI]
+  hasNewUpdates?: boolean;
 }
 
 export type Journey = JourneyResponse;
