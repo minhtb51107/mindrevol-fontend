@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { journeyService } from '@/modules/journey/services/journey.service';
-import { checkinService } from '@/modules/checkin/services/checkin.service';
-import { JourneyResponse } from '@/modules/journey/types';
-import { PostProps, CheckinStatus, Emotion, InteractionType } from '../types';
+import { feedService } from '../services/feed.service'; // [UPDATE] Dùng feedService
+import { PostProps } from '../types';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 
@@ -26,28 +25,22 @@ export const useFeedData = () => {
   
   const [posts, setPosts] = useState<PostProps[]>([]);
   const [members, setMembers] = useState<FilterMember[]>([]); 
-  const [journeys, setJourneys] = useState<JourneyResponse[]>([]);
+  const [journeys, setJourneys] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null); 
   const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null);
 
-  // 1. Init Data (ĐÃ CẬP NHẬT LỌC NGÀY)
+  // 1. Init Data
   useEffect(() => {
     const initData = async () => {
       try {
         const myJourneys = await journeyService.getMyJourneys();
-        
-        // --- [FIX LỖI HIỂN THỊ] ---
         const now = new Date();
         const validJourneys = myJourneys.filter(j => {
-             // 1. Nếu backend đã đóng -> Ẩn
              if (j.status === 'COMPLETED' || j.status === 'FINISHED') return false;
-             
-             // 2. Nếu có ngày kết thúc -> Kiểm tra xem đã qua chưa
              if (j.endDate) {
                  const end = new Date(j.endDate);
-                 // Đặt là 23:59:59 của ngày kết thúc để hôm nay vẫn hiện
                  end.setHours(23, 59, 59, 999);
                  return end >= now; 
              }
@@ -55,10 +48,8 @@ export const useFeedData = () => {
         });
 
         setJourneys(validJourneys);
-        // --------------------------
         
         const urlJourneyId = searchParams.get('journeyId');
-        // Sử dụng danh sách đã lọc để check
         const isValidJourney = urlJourneyId && validJourneys.some(j => j.id === urlJourneyId);
 
         if (isValidJourney) {
@@ -80,57 +71,27 @@ export const useFeedData = () => {
     const currentId = selectedJourneyId || searchParams.get('journeyId');
     if (!currentId) return;
 
+    // Chỉ hiện loading nếu chưa có bài nào (để trải nghiệm mượt hơn khi refresh)
     if (posts.length === 0) setIsLoading(true); 
     
     try {
-      const [feedResponse, participants] = await Promise.all([
-        checkinService.getJourneyFeed(currentId),
+      // [UPDATE] Dùng feedService thay vì checkinService
+      const [feedData, participants] = await Promise.all([
+        feedService.getJourneyFeed(currentId), 
         journeyService.getParticipants(currentId).catch(() => [])
       ]);
 
-      const rawCheckins = Array.isArray(feedResponse) 
-          ? feedResponse 
-          : ((feedResponse as any).content || []); 
+      // [UPDATE] Vì feedService đã map dữ liệu chuẩn rồi, ta set trực tiếp
+      setPosts(feedData);
 
-      const mappedPosts: PostProps[] = rawCheckins.map((c: any) => {
-        const rawStatus = c.status as CheckinStatus;
-        let uiStatus: PostProps['status'] = 'normal';
-
-        if (rawStatus === CheckinStatus.COMEBACK) uiStatus = 'comeback';
-        else if (rawStatus === CheckinStatus.FAILED) uiStatus = 'failed';
-        else if (rawStatus === CheckinStatus.REST) uiStatus = 'rest';
-        else if (rawStatus === CheckinStatus.NORMAL) uiStatus = 'completed';
-
-        return {
-          id: c.id,
-          userId: c.userId.toString(),
-          user: { 
-            name: c.userFullName, 
-            avatar: c.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.userFullName)}` 
-          },
-          image: c.imageUrl,
-          caption: c.caption,
-          status: uiStatus,
-          emotion: c.emotion || Emotion.NORMAL,
-          interactionType: c.interactionType || InteractionType.GROUP_DISCUSS,
-          activityName: c.activityName,
-          locationName: c.locationName,
-          taskName: c.taskTitle || c.taskName,
-          timestamp: new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          reactionCount: c.reactionCount || 0,
-          commentCount: c.commentCount || 0,
-          latestReactions: c.latestReactions || [] 
-        };
-      });
-      setPosts(mappedPosts);
-
+      // Map Participants (Giữ nguyên logic cũ nếu backend trả về user nested)
       const mappedMembers: FilterMember[] = participants.map((p: any) => {
-          const userInfo = p.user || {}; 
-          const name = userInfo.fullname || "Unknown";
+          const userInfo = p.user || {}; // Đảm bảo lấy đúng object user
+          const name = userInfo.fullname || userInfo.name || "Unknown";
           return {
               id: userInfo.id, 
               name: name,
-              avatar: userInfo.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+              avatar: userInfo.avatarUrl || userInfo.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
               status: p.status || 'NORMAL',
               activityPersona: p.activityPersona || 'NEWBIE', 
               presenceRate: p.presenceRate || 0,
@@ -174,9 +135,12 @@ export const useFeedData = () => {
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, caption: newCaption } : p));
   };
 
+  // Logic lọc bài viết
   const filteredPosts = useMemo(() => {
     if (!selectedUserId) return posts; 
-    return posts.filter(p => p.userId === selectedUserId);
+    // [DEBUG] Nếu vẫn không hiện, hãy bỏ comment dòng dưới để kiểm tra ID
+    // console.log(`Filtering: Looking for ${selectedUserId}`, posts.map(p => p.userId));
+    return posts.filter(p => String(p.userId) === String(selectedUserId));
   }, [posts, selectedUserId]);
 
   const currentJourneyName = journeys.find(j => j.id === selectedJourneyId)?.name || "Tất cả hành trình";

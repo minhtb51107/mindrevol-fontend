@@ -133,13 +133,11 @@ const HomePage = () => {
             )}
 
             {/* 2. MAIN CONTENT AREA */}
-            {/* CẬP NHẬT: Thêm logic điều kiện cho className */}
-            <div className={cn(
-                "w-full flex-1 flex flex-col items-center transition-all",
-                // Nếu chưa có hành trình: căn giữa (justify-center), min-h lớn để chiếm màn hình
-                // Nếu đã có hành trình: căn trên (justify-start) để list post chạy bình thường
-                isJourneyEmpty ? "justify-center min-h-[80vh]" : "justify-start py-8 min-h-[50vh]"
-            )}>
+<div className={cn(
+    "w-full flex-1 flex flex-col items-center transition-all",
+    // GIẢM py-8 XUỐNG py-2 HOẶC py-4
+    isJourneyEmpty ? "justify-center min-h-[80vh]" : "justify-start py-2 min-h-[50vh]" 
+)}>
                 
                 {/* [CASE 1] EMPTY STATE: CHƯA CÓ HÀNH TRÌNH */}
                 {isJourneyEmpty ? (
