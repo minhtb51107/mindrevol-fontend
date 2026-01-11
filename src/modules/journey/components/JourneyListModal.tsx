@@ -95,7 +95,7 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
   return createPortal(
     <>
       <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="w-full max-w-md bg-[#18181b] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="w-full max-w-md bg-[#18181b] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
           
           {/* Header */}
           <div className="p-6 pb-0 space-y-4 shrink-0">

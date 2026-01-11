@@ -9,9 +9,9 @@
   --color-border: var(--border);
   --color-muted: var(--muted);
 
-  /* Màu chủ đạo: Electric Blue - Năng lượng Gen Z */
-  --color-primary: #FFF5C0; 
-  --color-primary-foreground: #000000; 
+  /* [CẬP NHẬT] Màu chủ đạo cơ bản (Dùng màu Hồng làm base) */
+  --color-primary: #FF66C4; 
+  --color-primary-foreground: #ffffff; 
 
   /* Font */
   --font-sans: "Plus Jakarta Sans", sans-serif;
@@ -22,21 +22,21 @@
 }
 
 :root {
-  /* LIGHT MODE: Sáng sủa, sạch sẽ (như Instagram) */
+  /* LIGHT MODE */
   --bg: #ffffff;
-  --surface: #f3f4f6; /* Gray 100 - Dùng làm nền cho cột trái */
-  --fg: #111827;      /* Gray 900 */
-  --border: #e5e7eb;  /* Gray 200 */
-  --muted: #6b7280;   /* Gray 500 */
+  --surface: #f3f4f6;
+  --fg: #111827;
+  --border: #e5e7eb;
+  --muted: #6b7280;
 }
 
 .dark {
-  /* DARK MODE: Đen sâu, huyền bí (như Locket/Spotify) */
-  --bg: #09090b;      /* Zinc 950 */
-  --surface: #101012; /* Zinc 925 - Nền cột trái tối hơn */
-  --fg: #fafafa;      /* Zinc 50 */
-  --border: #27272a;  /* Zinc 800 */
-  --muted: #a1a1aa;   /* Zinc 400 */
+  /* DARK MODE */
+  --bg: #09090b;
+  --surface: #101012;
+  --fg: #fafafa;
+  --border: #27272a;
+  --muted: #a1a1aa;
 }
 
 body {
@@ -46,37 +46,62 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Dark Mode: Đảo ngược màu icon từ Đen sang Trắng */
+/* Dark Mode: Đảo ngược màu icon lịch */
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
-    opacity: 0.8; /* Làm mờ chút cho đỡ chói */
+    opacity: 0.8;
     cursor: pointer;
 }
 
-/* Tùy chỉnh thêm cho đẹp (Optional) */
 .dark ::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
 }
 
-/* Ẩn thanh cuộn nhưng vẫn cho phép cuộn */
+/* Ẩn thanh cuộn mặc định */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @layer utilities {
-  /* Ẩn thanh cuộn cho Chrome, Safari and Opera */
+  /* --- UTILS THANH CUỘN --- */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  /* Ẩn thanh cuộn cho IE, Edge and Firefox */
   .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* --- [MỚI] BỘ MÀU THƯƠNG HIỆU (BRANDING) --- */
+  
+  /* 1. Nền Gradient (Dùng cho Button, Thanh loading...) */
+  .bg-brand {
+    @apply bg-gradient-to-r from-[#FF66C4] to-[#FFDE59];
+  }
+
+  /* 2. Chữ Gradient (Dùng cho Icon active, Tiêu đề...) */
+  .text-brand {
+    @apply bg-gradient-to-r from-[#FF66C4] to-[#FFDE59] bg-clip-text text-transparent;
+  }
+
+  /* 3. Viền chủ đạo (Dùng màu Hồng cho nét) */
+  .border-brand {
+    @apply border-[#FF66C4];
+  }
+
+  /* 4. Ring khi focus vào Input (Màu hồng) */
+  .ring-brand {
+    @apply ring-[#FF66C4];
+  }
+
+  /* 5. Hiệu ứng Hover cho nút bấm (Sáng lên + Bóng hồng) */
+  .hover-brand:hover {
+    @apply opacity-90 shadow-[0_0_15px_rgba(255,102,196,0.5)];
   }
 }

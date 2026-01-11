@@ -29,15 +29,22 @@ export const JourneySettingsModal: React.FC<Props> = ({
   const [mounted, setMounted] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
 
+  // [LOGIC MỚI] Callback xử lý khi Rời/Xóa thành công
   const handleLeaveOrDeleteSuccess = () => {
+    // 1. Gọi callback update từ cha (để list bên ngoài biết, dù invalidateQueries đã lo rồi nhưng cứ gọi cho chắc)
     onUpdateSuccess();
+    
+    // 2. Đóng modal
     onClose();
+
+    // 3. Nếu đang đứng ở trang chi tiết hành trình đó -> Chuyển về trang chủ
     const currentJourneyId = searchParams.get('journeyId');
     if (currentJourneyId === journey?.id) {
         navigate('/', { replace: true });
     }
   };
 
+  // Truyền callback vào hook mới
   const { deleteJourney, leaveJourney, isProcessing } = useJourneyAction(handleLeaveOrDeleteSuccess);
 
   useEffect(() => {
@@ -77,8 +84,6 @@ export const JourneySettingsModal: React.FC<Props> = ({
                   className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white mt-1 focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50"
                 />
               </div>
-
-              {/* [ĐÃ XÓA PHẦN CHỈNH SỬA MÔ TẢ Ở ĐÂY] */}
 
               {/* Chỉnh sửa Quyền riêng tư */}
               {isOwner && (
@@ -124,8 +129,8 @@ export const JourneySettingsModal: React.FC<Props> = ({
                <PendingRequestsList 
                  journeyId={journey.id} 
                  onSuccess={() => {
-                    setRefreshMemberKey(prev => prev + 1);
-                    onUpdateSuccess(); 
+                   setRefreshMemberKey(prev => prev + 1);
+                   onUpdateSuccess(); 
                  }}
                />
             )}
