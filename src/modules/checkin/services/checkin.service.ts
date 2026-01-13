@@ -1,4 +1,3 @@
-// src/modules/checkin/services/checkin.service.ts
 import { http } from '@/lib/http';
 import { Checkin, CreateCheckinRequest } from '@/modules/feed/types'; 
 
@@ -24,13 +23,11 @@ class CheckinService {
     if (req.statusRequest) formData.append('statusRequest', req.statusRequest);
     if (req.visibility) formData.append('visibility', req.visibility);
 
-    // Append Context fields
     if (req.emotion) formData.append('emotion', req.emotion);
     if (req.activityType) formData.append('activityType', req.activityType);
     if (req.activityName) formData.append('activityName', req.activityName);
     if (req.locationName) formData.append('locationName', req.locationName);
     
-    // Xử lý Tags
     if (req.tags && req.tags.length > 0) {
         req.tags.forEach(tag => formData.append('tags', tag));
     }
@@ -46,9 +43,11 @@ class CheckinService {
       return await http.delete(`${this.BASE_URL}/${checkinId}`);
   }
 
-  // 4. Cập nhật Caption
+  // 4. Cập nhật Caption [ĐÃ SỬA CHUẨN]
   async updateCheckin(checkinId: string, caption: string) {
-      return await http.put(`${this.BASE_URL}/${checkinId}`, { caption });
+      // Trả về res.data.data thay vì toàn bộ axios object
+      const res = await http.put<{ data: Checkin }>(`${this.BASE_URL}/${checkinId}`, { caption });
+      return res.data.data;
   }
 
   // 5. Comment

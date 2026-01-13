@@ -34,7 +34,9 @@ export interface ReactionDetail {
   createdAt: string;
 }
 
+// [CẬP NHẬT] Thêm type discriminator
 export interface JourneyPost {
+  type: 'POST'; // Cờ nhận biết
   id: string;
   imageUrl: string;
   thumbnailUrl: string;
@@ -77,9 +79,23 @@ export interface CreateCheckinRequest {
   tags?: string[];
 }
 
+// [MỚI] Type cho Quảng cáo
+export interface AdProps {
+  id: string;
+  type: 'AD'; // Cờ nhận biết
+  title: string;
+  description?: string;
+  imageUrl: string;
+  ctaText: string; 
+  ctaLink: string;
+  brandName?: string;
+  brandLogo?: string;
+}
+
 // 4. UI Props (Dữ liệu truyền vào Component)
-// QUAN TRỌNG: Interface này được export để các component khác import
+// [CẬP NHẬT] PostProps kế thừa hoặc map từ JourneyPost
 export interface PostProps {
+  type: 'POST';
   id: string;
   userId: string; 
   user: { 
@@ -104,3 +120,6 @@ export interface PostProps {
   commentCount: number;
   latestReactions: ReactionDetail[];
 }
+
+// [QUAN TRỌNG] Union Type dùng cho danh sách Feed
+export type FeedItem = PostProps | AdProps;

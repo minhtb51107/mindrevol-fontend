@@ -15,7 +15,8 @@ export const StepBasicInfo: React.FC<Props> = ({ register, errors, watch, setVal
 
   return (
     <div className="space-y-5">
-      {/* Tên hành trình */}
+      
+      {/* 1. Tên hành trình */}
       <div>
         <label className="block text-sm font-medium text-zinc-300 mb-1.5">Tên hành trình <span className="text-red-500">*</span></label>
         <input 
@@ -27,38 +28,41 @@ export const StepBasicInfo: React.FC<Props> = ({ register, errors, watch, setVal
         {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
       </div>
 
-      {/* [ĐÃ XÓA PHẦN MÔ TẢ Ở ĐÂY] */}
-
-      {/* Thời gian */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* 2. Thời gian (FIXED: Mobile xếp dọc, Desktop xếp ngang) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        
+        {/* Ngày bắt đầu */}
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-1.5">Ngày bắt đầu</label>
           <div className="relative">
             <input 
               type="date"
               {...register('startDate', { required: "Chọn ngày bắt đầu" })}
-              className="w-full bg-zinc-800 border border-white/10 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:dark]"
+              className="w-full bg-zinc-800 border border-white/10 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:dark] min-h-[46px]"
             />
             <Calendar className="absolute left-3 top-3.5 w-4 h-4 text-zinc-500" />
           </div>
         </div>
+
+        {/* Ngày kết thúc */}
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-1.5">Ngày kết thúc</label>
           <div className="relative">
             <input 
               type="date"
               {...register('endDate', { required: "Chọn ngày kết thúc" })}
-              className="w-full bg-zinc-800 border border-white/10 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:dark]"
+              className="w-full bg-zinc-800 border border-white/10 rounded-xl p-3 pl-10 text-white focus:ring-2 focus:ring-blue-500 outline-none [color-scheme:dark] min-h-[46px]"
             />
             <Calendar className="absolute left-3 top-3.5 w-4 h-4 text-zinc-500" />
           </div>
         </div>
       </div>
 
-      {/* Quyền riêng tư */}
+      {/* 3. Quyền riêng tư */}
       <div>
         <label className="block text-sm font-medium text-zinc-300 mb-3">Quyền riêng tư</label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          
           {/* Option: PUBLIC */}
           <div 
             onClick={() => setValue('visibility', JourneyVisibility.PUBLIC)}

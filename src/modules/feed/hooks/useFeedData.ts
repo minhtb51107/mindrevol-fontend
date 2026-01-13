@@ -4,8 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { journeyService } from '@/modules/journey/services/journey.service';
 import { feedService } from '../services/feed.service';
 import { useJourneyList } from '@/modules/journey/hooks/useJourneyList'; 
-import { PostProps } from '../types';
-import { toast } from 'react-hot-toast';
+import { FeedItem, PostProps } from '../types'; // [CẬP NHẬT] Import FeedItem
 import { useAuth } from '@/modules/auth/store/AuthContext';
 
 export type MemberStatus = 'COMPLETED' | 'FAILED' | 'COMEBACK' | 'LATE_SOON' | 'NORMAL' | 'REST';
@@ -21,9 +20,9 @@ export interface FilterMember {
   totalActiveDays?: number;
 }
 
-// Định nghĩa kiểu dữ liệu trả về của Query để TypeScript hiểu rõ
+// [CẬP NHẬT] Dùng FeedItem[] thay vì PostProps[]
 interface FeedQueryData {
-  posts: PostProps[];
+  posts: FeedItem[]; 
   members: FilterMember[];
 }
 
@@ -35,12 +34,9 @@ export const useFeedData = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null); 
   const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(searchParams.get('journeyId'));
 
-  // =========================================================================
-  // 1. DÙNG HOOK NÀY ĐỂ TỰ ĐỘNG CẬP NHẬT DANH SÁCH KHI CÓ THAY ĐỔI
-  // =========================================================================
+  // 1. DÙNG HOOK NÀY ĐỂ TỰ ĐỘNG CẬP NHẬT DANH SÁCH
   const { data: rawJourneys, isLoading: listLoading } = useJourneyList();
 
-  // Lọc hành trình hợp lệ
   const journeys = useMemo(() => {
     if (!rawJourneys) return [];
     const now = new Date();
@@ -55,9 +51,7 @@ export const useFeedData = () => {
     });
   }, [rawJourneys]);
 
-  // =========================================================================
-  // 2. TỰ ĐỘNG CHỌN HÀNH TRÌNH NẾU CHƯA CHỌN
-  // =========================================================================
+  // 2. TỰ ĐỘNG CHỌN HÀNH TRÌNH
   useEffect(() => {
     if (journeys.length > 0) {
         const urlId = searchParams.get('journeyId');
@@ -73,9 +67,7 @@ export const useFeedData = () => {
     }
   }, [journeys, searchParams, setSearchParams, selectedJourneyId]);
 
-  // =========================================================================
   // 3. LẤY BÀI VIẾT (FEED)
-  // =========================================================================
   const { data: feedDataRaw, isLoading: feedLoading, refetch: refetchFeed } = useQuery<FeedQueryData>({
     queryKey: ['feed', selectedJourneyId],
     queryFn: async () => {
@@ -107,16 +99,13 @@ export const useFeedData = () => {
     staleTime: 1000 * 60,
   });
 
-  // [FIX] Ép kiểu rõ ràng ở đây để bên dưới dùng không bị lỗi
-  const posts = (feedDataRaw?.posts as PostProps[]) || [];
+  // [CẬP NHẬT] Ép kiểu thành FeedItem[]
+  const posts = (feedDataRaw?.posts as FeedItem[]) || [];
   const members = (feedDataRaw?.members as FilterMember[]) || [];
   
   const isLoading = listLoading || (!!selectedJourneyId && feedLoading);
 
-  // =========================================================================
-  // 4. CÁC HÀM XỬ LÝ (ACTIONS)
-  // =========================================================================
-
+  // 4. ACTIONS
   const handleSelectJourney = (id: string) => {
       setSelectedJourneyId(id);
       setSearchParams({ journeyId: id });
@@ -127,8 +116,7 @@ export const useFeedData = () => {
         if (!oldData) return oldData;
         return {
             ...oldData,
-            // [FIX] Thay 'any' bằng PostProps
-            posts: oldData.posts.filter((p: PostProps) => p.id !== deletedPostId)
+            posts: oldData.posts.filter((p: FeedItem) => p.id !== deletedPostId)
         };
     });
   };
@@ -138,16 +126,17 @@ export const useFeedData = () => {
         if (!oldData) return oldData;
         return {
             ...oldData,
-            // [FIX] Thay 'any' bằng PostProps
-            posts: oldData.posts.map((p: PostProps) => p.id === postId ? { ...p, caption: newCaption } : p)
+            posts: oldData.posts.map((p: FeedItem) => 
+                (p.type === 'POST' && p.id === postId) ? { ...p, caption: newCaption } : p
+            )
         };
     });
   };
 
   const filteredPosts = useMemo(() => {
     if (!selectedUserId) return posts; 
-    // [FIX LỖI CHÍNH] Thêm kiểu (p: PostProps) để TypeScript không báo lỗi "implicitly has an 'any' type"
-    return posts.filter((p: PostProps) => String(p.userId) === String(selectedUserId));
+    // [LOGIC MỚI] Nếu đang lọc theo User, chỉ hiện bài POST của user đó (bỏ qua AD)
+    return posts.filter((p: FeedItem) => p.type === 'POST' && String(p.userId) === String(selectedUserId));
   }, [posts, selectedUserId]);
 
   const currentJourneyName = journeys.find(j => j.id === selectedJourneyId)?.name || "Tất cả hành trình";

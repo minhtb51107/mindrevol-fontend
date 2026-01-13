@@ -1,25 +1,35 @@
 import { http } from '@/lib/http';
-import { JourneyPost, ReactionDetail } from '../types';
+import { FeedItem, PostProps, AdProps, InteractionType } from '../types';
 
-// Helper map dữ liệu (Giữ nguyên logic này vì nó quan trọng để hiển thị User)
-// Hàm helper map dữ liệu
-const mapToJourneyPost = (item: any): JourneyPost => {
-  // 1. Xử lý thời gian: Chuyển ISO string sang đối tượng Date
-  const date = new Date(item.timestamp || item.createdAt);
+// Helper map dữ liệu
+const mapToFeedItem = (item: any): FeedItem => {
   
-  // 2. Format thành giờ:phút (Ví dụ: 22:53 hoặc 10:53 PM)
-  // Bạn có thể thêm 'en-US' hoặc 'vi-VN' vào tham số đầu tiên nếu muốn cố định ngôn ngữ
+  // 1. Kiểm tra nếu là QUẢNG CÁO (Dựa trên trường type hoặc feedType từ Backend)
+  if (item.type === 'AD' || item.feedType === 'AD') {
+      return {
+          id: item.id,
+          type: 'AD',
+          title: item.title || "Quảng cáo",
+          description: item.description,
+          imageUrl: item.imageUrl || item.image, // Ảnh quảng cáo
+          ctaText: item.ctaText || "Xem thêm",
+          ctaLink: item.ctaLink || "#",
+          brandName: item.brandName,
+          brandLogo: item.brandLogo
+      } as AdProps;
+  }
+
+  // 2. Nếu là POST (Logic cũ)
+  const date = new Date(item.timestamp || item.createdAt);
   const formattedTime = date.toLocaleTimeString([], { 
       hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false // Đặt true nếu muốn hiện AM/PM
+      minute: '2-digit', 
+      hour12: false 
   });
-
-  // (Tùy chọn) Nếu muốn hiện thêm ngày tháng:
-  // const formattedTime = date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
   return {
     ...item,
+    type: 'POST', // Gán cứng
     id: item.id,
     userId: item.user?.id || item.userId,
     user: {
@@ -30,7 +40,6 @@ const mapToJourneyPost = (item: any): JourneyPost => {
     image: item.imageUrl || item.image || item.thumbnailUrl,
     caption: item.caption,
     
-    // [CẬP NHẬT] Sử dụng thời gian đã format
     timestamp: formattedTime, 
     
     status: item.status?.toLowerCase() || 'normal',
@@ -38,37 +47,31 @@ const mapToJourneyPost = (item: any): JourneyPost => {
     commentCount: item.commentCount || 0,
     latestReactions: item.latestReactions || [],
     emotion: item.emotion || 'NORMAL',
+    interactionType: item.interactionType || InteractionType.GROUP_DISCUSS,
     activityName: item.activityName,
     locationName: item.locationName,
     taskName: item.taskTitle || item.taskName
-  };
+  } as PostProps;
 };
 
 export const feedService = {
   // 1. Lấy Feed tổng hợp (Unified)
-  getUnifiedFeed: async (page: number, limit: number = 10) => {
-    // API: /api/v1/checkins/unified?cursor=...&limit=...
-    // Backend đang để là /unified, không phải /feed. Cần sửa đúng theo CheckinController:
+  getUnifiedFeed: async (page: number, limit: number = 10): Promise<FeedItem[]> => {
     const response = await http.get<any>(`/checkins/unified`, { 
-      params: { 
-        // Backend dùng cursor (datetime), không phải page (int). 
-        // Nếu bạn chưa implement logic chuyển page -> cursor ở FE, backend sẽ lấy time hiện tại.
-        limit 
-      }
+      params: { limit }
     });
     const rawData = response.data.data || [];
-    return rawData.map(mapToJourneyPost);
+    return rawData.map(mapToFeedItem);
   },
 
-  // 2. Lấy Feed của Journey
-  getJourneyFeed: async (journeyId: string, cursor?: string, limit: number = 20) => {
-    // [SỬA LỖI Ở ĐÂY]: Xóa chữ '/cursor' đi để khớp với @GetMapping("/journey/{journeyId}")
+  // 2. Lấy Feed của Journey (Đã fix lỗi cursor)
+  getJourneyFeed: async (journeyId: string, cursor?: string, limit: number = 20): Promise<FeedItem[]> => {
     const response = await http.get<any>(`/checkins/journey/${journeyId}`, {
       params: { cursor, limit }
     });
     
     const rawData = response.data.data || [];
-    return rawData.map(mapToJourneyPost);
+    return rawData.map(mapToFeedItem);
   },
 
   // ... (Các hàm interaction giữ nguyên)
@@ -82,6 +85,6 @@ export const feedService = {
 
   getPostReactions: async (checkinId: string) => {
     const response = await http.get<any>(`/checkins/${checkinId}/reactions`);
-    return response.data.data as ReactionDetail[];
+    return response.data.data;
   }
 };

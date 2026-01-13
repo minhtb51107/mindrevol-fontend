@@ -43,8 +43,13 @@ export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyP
   const emoji = EMOTION_EMOJIS[post.emotion] || EMOTION_EMOJIS['DEFAULT'];
   const displayTitle = post.activityName || post.taskName || EMOTION_LABELS[post.emotion] || EMOTION_LABELS['DEFAULT'];
 
+  const getDisplayCaption = (rawCaption: any) => {
+      if (!rawCaption) return <span className="italic text-zinc-400/80">Không có ghi chú...</span>;
+      if (typeof rawCaption === 'string') return rawCaption;
+      return rawCaption.caption || JSON.stringify(rawCaption);
+  };
+
   return (
-    // [CẬP NHẬT]: Dùng w-[85vw] để tự co giãn theo chiều ngang màn hình, giữ tỉ lệ vuông aspect-square
     <div className={cn(
       "snap-center shrink-0 w-[85vw] md:w-[450px] aspect-square flex flex-col items-center justify-center transition-all duration-500 ease-out select-none relative group", 
       isActive 
@@ -57,28 +62,27 @@ export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyP
         "relative w-full h-full rounded-[36px] overflow-hidden bg-[#1c1c1e] transition-all duration-500 ring-1 ring-white/10",
         isActive ? "shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)]" : "shadow-none"
       )}>
-        {/* Ảnh full cover, đảm bảo không bị méo */}
+        {/* Ảnh full cover */}
         <img src={post.image} className="w-full h-full object-cover" draggable={false} alt="Moment" />
         
-        {/* Gradient overlays để làm nổi text */}
         <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
-        {/* --- Badge & Info (Góc trên trái) --- */}
+        {/* --- Badge & Info --- */}
         <div className="absolute top-4 left-4 flex flex-col items-start gap-2 z-10 pointer-events-auto">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-zinc-900/90 border border-white/10 shadow-lg backdrop-blur-md">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-black/40 border border-white/10 shadow-lg backdrop-blur-md">
                  <span className="text-[18px] leading-none filter drop-shadow-sm">{emoji}</span>
                  <span className="text-[14px] font-bold text-white max-w-[160px] truncate">{displayTitle}</span>
             </div>
             {post.locationName && (
-               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-sm ml-1">
+               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm ml-1">
                   <MapPin className="w-3 h-3 text-red-500" />
                   <span className="text-zinc-200 text-[11px] font-medium truncate max-w-[140px]">{post.locationName}</span>
                </div>
             )}
         </div>
 
-        {/* --- Menu (Góc trên phải) --- */}
+        {/* --- Menu --- */}
         {isActive && !isEditing && (
           <div className="absolute top-4 right-4 z-20 pointer-events-auto">
             <button onClick={toggleMenu} className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-black/80 backdrop-blur-md rounded-full text-white border border-white/10 shadow-lg">
@@ -102,9 +106,17 @@ export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyP
           </div>
         )}
 
-        {/* --- Caption (Góc dưới) --- */}
+        {/* --- Caption + Avatar (Hiệu ứng kính mờ) --- */}
         <div className="absolute bottom-0 inset-x-0 p-4 z-20">
-          <div className={cn("bg-zinc-950/90 border border-white/10 rounded-2xl px-4 py-3 backdrop-blur-sm transition-all origin-bottom-left", isEditing ? "w-full" : "w-fit max-w-[95%]")}>
+          <div className={cn(
+            // [THAY ĐỔI Ở ĐÂY]
+            // bg-black/60: Nền đen trong suốt 60%
+            // backdrop-blur-md: Làm mờ background phía sau
+            // border-white/15: Viền sáng nhẹ
+            "bg-black/50 backdrop-blur-md border border-white/15 transition-all origin-bottom-left shadow-xl", 
+            
+            isEditing ? "w-full rounded-2xl px-4 py-3" : "w-fit max-w-[95%] rounded-full p-1.5 pr-5"
+          )}>
             {isEditing ? (
               <div className="flex flex-col gap-2">
                 <textarea value={editCaption} onChange={(e) => setEditCaption(e.target.value)} className="bg-transparent text-white border-none outline-none text-sm w-full resize-none min-h-[50px]" autoFocus />
@@ -114,7 +126,22 @@ export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyP
                 </div>
               </div>
             ) : (
-              <p className="text-zinc-100 text-[13px] font-medium leading-relaxed">{post.caption || <span className="italic text-zinc-500">Không có ghi chú...</span>}</p>
+              <div className="flex items-center gap-3">
+                  {/* Avatar User */}
+                  <div className="shrink-0 w-9 h-9 rounded-full overflow-hidden border border-white/20 bg-black/30 shadow-sm">
+                      <img 
+                          src={post.user.avatar} 
+                          alt={post.user.name} 
+                          className="w-full h-full object-cover" 
+                      />
+                  </div>
+                  
+                  {/* Nội dung Caption */}
+                  {/* text-shadow-sm: Giúp chữ dễ đọc hơn trên nền kính */}
+                  <p className="text-white/95 text-[13px] font-medium leading-relaxed break-words min-w-0 pr-1 drop-shadow-sm">
+                      {getDisplayCaption(post.caption)}
+                  </p>
+              </div>
             )}
           </div>
         </div>

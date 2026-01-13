@@ -2,15 +2,17 @@ import React, { useState, useMemo, useEffect } from 'react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { JourneyPostCard } from '../components/JourneyPostCard';
+import { FeedAdCard } from '../components/FeedAdCard'; 
 import { ActivityModal } from '../components/ActivityModal';
 import { MemberFilter } from '../components/MemberFilter'; 
 import { CreateJourneyModal } from '@/modules/journey/components/CreateJourneyModal';
-import { Send, Smile, Loader2, Map as MapIcon, ChevronDown, X, Plus, Rocket, Camera } from 'lucide-react';
+import { Send, Smile, Loader2, Map as MapIcon, ChevronDown, X, Plus, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { chatService } from '@/modules/chat/services/chat.service';
 import { feedService } from '../services/feed.service';
 import { useFeedData } from '../hooks/useFeedData';
 import { useDraggableScroll } from '../hooks/useDraggableScroll';
+import { FeedItem, PostProps } from '../types';
 
 const HomePage = () => {
   const { 
@@ -19,9 +21,10 @@ const HomePage = () => {
     setSelectedUserId, handleSelectJourney, handlePostDeleted, handlePostUpdated, refreshFeed
   } = useFeedData();
 
+  // [FIX QUAN TRỌNG] Truyền filteredPosts.length vào để hook tự tính lại activeIndex khi dữ liệu load xong
   const { 
     scrollRef, activeIndex, setActiveIndex, isDragging, handlers, scrollToItem 
-  } = useDraggableScroll();
+  } = useDraggableScroll(filteredPosts.length);
 
   const [showJourneySelector, setShowJourneySelector] = useState(false);
   const [showActivityModal, setShowActivityModal] = useState(false);
@@ -39,7 +42,12 @@ const HomePage = () => {
     return () => window.removeEventListener('JOURNEY_UPDATED', handleJourneyUpdate);
   }, [refreshFeed]);
 
-  const activePost = filteredPosts[activeIndex] || null;
+  // [LOGIC MỚI] Lấy active item (có thể là AD hoặc POST)
+  const activeItem = filteredPosts[activeIndex] || null;
+  const isPost = activeItem?.type === 'POST';
+  // Ép kiểu an toàn để truy cập các thuộc tính của Post (nếu là Ad thì activePost = null)
+  const activePost = isPost ? (activeItem as PostProps) : null;
+
   const isOwner = useMemo(() => user && activePost && String(user.id) === String(activePost.userId), [user, activePost]);
   const reactionCount = (activePost?.reactionCount || 0);
   const commentCount = (activePost?.commentCount || 0);
@@ -80,7 +88,7 @@ const HomePage = () => {
     <MainLayout>
       <div className="relative w-full h-full bg-[#121212] overflow-y-auto overflow-x-hidden no-scrollbar">
         
-        {/* Background Ambient */}
+        {/* Background Ambient (Chỉ hiện khi item active là Post, Ad không hiện background mờ) */}
         {!isJourneyEmpty && activePost && (
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <img src={activePost.image} className="w-full h-full object-cover opacity-20 blur-[100px] scale-150 transition-opacity duration-1000" draggable={false}/>
@@ -133,21 +141,17 @@ const HomePage = () => {
             )}
 
             {/* 2. MAIN CONTENT AREA */}
-<div className={cn(
-    "w-full flex-1 flex flex-col items-center transition-all",
-    // GIẢM py-8 XUỐNG py-2 HOẶC py-4
-    isJourneyEmpty ? "justify-center min-h-[80vh]" : "justify-start py-2 min-h-[50vh]" 
-)}>
+            <div className={cn(
+                "w-full flex-1 flex flex-col items-center transition-all",
+                isJourneyEmpty ? "justify-center min-h-[80vh]" : "justify-start py-2 min-h-[50vh]" 
+            )}>
                 
-                {/* [CASE 1] EMPTY STATE: CHƯA CÓ HÀNH TRÌNH */}
                 {isJourneyEmpty ? (
-                    // CẬP NHẬT: Xóa mt-10 để căn giữa hoàn toàn
                     <div className="flex flex-col items-center justify-center animate-in zoom-in-95 duration-500 w-full px-4">
                         <button 
                             onClick={() => setIsCreateJourneyOpen(true)}
                             className="group relative w-full max-w-sm aspect-[4/5] rounded-[3rem] border-2 border-dashed border-zinc-700 bg-zinc-900/20 hover:bg-zinc-900/50 hover:border-zinc-500 transition-all duration-300 flex flex-col items-center justify-center gap-8 cursor-pointer"
                         >
-                            {/* Icon dấu cộng (Plus) */}
                             <div className="w-24 h-24 rounded-full bg-zinc-800/50 group-hover:bg-blue-500/20 border border-zinc-700 group-hover:border-blue-500/50 flex items-center justify-center transition-all duration-300 transform group-hover:scale-110 shadow-xl">
                                 <Plus className="w-10 h-10 text-zinc-400 group-hover:text-blue-400 transition-colors" strokeWidth={2} />
                             </div>
@@ -162,11 +166,10 @@ const HomePage = () => {
                         </button>
                     </div>
                 ) : (
-                    /* [CASE 2] Loading Posts */
                     isLoading && posts.length === 0 ? (
                         <div className="flex items-center justify-center h-40"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
                     ) : (
-                        /* [CASE 3] CAROUSEL */
+                        /* [CASE 3] CAROUSEL (HIỂN THỊ CẢ POST VÀ AD) */
                         <div 
                             ref={scrollRef} 
                             {...handlers} 
@@ -175,15 +178,27 @@ const HomePage = () => {
                             {filteredPosts.length > 0 ? (
                                 <>
                                 <div className="min-w-[calc(50vw-42.5vw)] md:min-w-[calc(50vw-225px)] h-full shrink-0" />
-                                {filteredPosts.map((post, index) => (
-                                    <div key={post.id} className="post-card-wrapper mx-2 shrink-0" onClick={() => scrollToItem(index)}>
-                                        <JourneyPostCard post={post} isActive={index === activeIndex} onDelete={onPostDelete} onUpdate={handlePostUpdated} />
+                                {filteredPosts.map((item, index) => (
+                                    <div key={item.id} className="post-card-wrapper mx-2 shrink-0" onClick={() => scrollToItem(index)}>
+                                        {/* [LOGIC RENDER CÓ ĐIỀU KIỆN] */}
+                                        {item.type === 'AD' ? (
+                                            // Bọc FeedAdCard trong div để có hiệu ứng zoom/mờ giống JourneyPostCard
+                                            <div className={cn(
+                                                "w-[85vw] md:w-[450px] aspect-square flex flex-col items-center justify-center transition-all duration-500 ease-out select-none relative group",
+                                                index === activeIndex 
+                                                    ? "scale-100 opacity-100 z-10" 
+                                                    : "scale-90 opacity-40 blur-[1px] grayscale-[50%] z-0"
+                                            )}>
+                                                <FeedAdCard ad={item} />
+                                            </div>
+                                        ) : (
+                                            <JourneyPostCard post={item} isActive={index === activeIndex} onDelete={onPostDelete} onUpdate={handlePostUpdated} />
+                                        )}
                                     </div>
                                 ))}
                                 <div className="min-w-[calc(50vw-42.5vw)] md:min-w-[calc(50vw-225px)] h-full shrink-0" />
                                 </>
                             ) : (
-                                /* [CASE 4] EMPTY STATE: CHƯA CÓ BÀI ĐĂNG TRONG HÀNH TRÌNH */
                                 <div className="w-full flex justify-center px-4">
                                     <div className="group relative w-100 aspect-square rounded-[2.5rem] border-2 border-dashed border-zinc-800 bg-zinc-900/10 flex flex-col items-center justify-center gap-6 p-6 text-center select-none animate-in fade-in zoom-in-95 duration-500">
                                         <div className="w-20 h-20 rounded-full bg-zinc-800/30 border border-zinc-700 flex items-center justify-center">
@@ -203,10 +218,11 @@ const HomePage = () => {
                 )}
             </div>
 
-            {/* 3. FOOTER */}
-            {!isJourneyEmpty && activePost && (
+            {/* 3. FOOTER (CHỈ HIỆN KHI LÀ POST, NẾU LÀ AD THÌ ẨN) */}
+            {!isJourneyEmpty && activePost ? (
                 <div className="w-full shrink-0 px-4 flex justify-center">
                     <div className="w-full max-w-[450px] flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {/* Thông tin User (Chỉ cho Post) */}
                         <div className="flex flex-col items-center text-center">
                             <h2 className="text-2xl font-extrabold text-white drop-shadow-md">{activePost.user.name}</h2>
                             <div className="flex items-center gap-2 text-xs font-medium text-zinc-300 mt-2 bg-zinc-800/50 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/5">
@@ -220,6 +236,7 @@ const HomePage = () => {
                             </div>
                         </div>
 
+                        {/* Thanh chat/Reaction (Chỉ cho Post) */}
                         <div className="w-full">
                             {!isOwner ? (
                                 <div className="relative">
@@ -269,7 +286,7 @@ const HomePage = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            ) : null}
         </div>
 
         {/* Modals */}
