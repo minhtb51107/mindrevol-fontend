@@ -1,5 +1,3 @@
-// src/modules/journey/types.ts
-
 import { Checkin } from "@/modules/checkin/types";
 
 // --- ENUMS ---
@@ -149,7 +147,6 @@ export interface JourneyParticipantResponse {
   lastCheckinAt: string | null;
 }
 
-// [CẬP NHẬT] Thêm field journeyStatus
 export interface JourneyInvitationResponse {
   id: number;
   journeyId: string;
@@ -158,7 +155,7 @@ export interface JourneyInvitationResponse {
   inviterAvatar?: string;
   status: JourneyInvitationStatus;
   sentAt: string;
-  journeyStatus?: JourneyStatus | string; // [MỚI]
+  journeyStatus?: JourneyStatus | string;
 }
 
 export interface JourneyAlertResponse {
@@ -199,4 +196,5 @@ export interface UserActiveJourneyResponse {
   hasNewUpdates?: boolean;
 }
 
+// Alias type để tương thích ngược nếu có file nào dùng type Journey
 export type Journey = JourneyResponse;

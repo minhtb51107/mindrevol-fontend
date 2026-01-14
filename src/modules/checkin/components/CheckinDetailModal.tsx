@@ -1,8 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-// Import Checkin từ module hiện tại
 import { Checkin, CheckinStatus } from '../types';
-// Import Enum/Interface từ feed/types
 import { Emotion, InteractionType, PostProps } from '@/modules/feed/types';
 import { JourneyPostCard } from '@/modules/feed/components/JourneyPostCard';
 
@@ -29,9 +27,8 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
     return key ? (Emotion as any)[key] : Emotion.NORMAL;
   }
 
-  // 3. Helper: Lấy thông tin User an toàn (Fix lỗi Avatar "US")
+  // 3. Helper: Lấy thông tin User an toàn
   const getUserInfo = (item: any) => {
-      // Trường hợp 1: Dữ liệu User nằm trong object lồng nhau (thường gặp ở Recap/Feed)
       if (item.user) {
           const name = item.user.fullname || item.user.name || "Người dùng";
           return {
@@ -40,8 +37,6 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
               avatar: item.user.avatarUrl || item.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
           };
       }
-      
-      // Trường hợp 2: Dữ liệu phẳng (Flat fields)
       const name = item.userFullName || "Người dùng";
       return {
           id: item.userId,
@@ -55,29 +50,21 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
   // 4. Tạo Post Data chuẩn cho Card
   const postData: PostProps = {
     type: 'POST', 
-    
     id: checkin.id,
     userId: String(userInfo.id),
     user: {
       name: userInfo.name,
       avatar: userInfo.avatar
     },
-    
-    // Ưu tiên thumbnail nếu có (để load nhanh), hoặc ảnh gốc
     image: checkin.imageUrl || checkin.thumbnailUrl,
     caption: checkin.caption, 
-    
     status: mapStatus(checkin.status),
     interactionType: InteractionType.GROUP_DISCUSS,
-
     emotion: mapEmotion(checkin.emotion), 
     activityName: checkin.activityName,         
     locationName: checkin.locationName,         
-    taskName: undefined, // Checkin không có taskTitle, set undefined
-    
-    // Format giờ phút (VD: 22:30)
+    taskName: undefined,
     timestamp: new Date(checkin.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-    
     reactionCount: checkin.reactionCount || 0,
     commentCount: checkin.commentCount || 0,
     latestReactions: checkin.latestReactions || [] 
@@ -85,8 +72,6 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      
-      {/* Nút đóng */}
       <button 
         onClick={onClose}
         className="absolute top-4 right-4 z-[110] p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/70 hover:text-white transition-all backdrop-blur-sm"
@@ -94,13 +79,10 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
         <X className="w-8 h-8" />
       </button>
 
-      {/* Wrapper click ra ngoài để đóng */}
       <div className="absolute inset-0 z-0" onClick={onClose} />
 
-      {/* Hiển thị Card ở chính giữa */}
       <div className="w-full max-w-[450px] aspect-square flex items-center justify-center relative z-10 pointer-events-none">
           <div className="pointer-events-auto w-full">
-             {/* isActive={true} để Card luôn hiển thị rõ nét */}
              <JourneyPostCard 
                 post={postData} 
                 isActive={true} 

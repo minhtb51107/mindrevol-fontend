@@ -16,12 +16,13 @@ export interface FriendshipResponse {
   createdAt: string;
 }
 
+// [FIX] Interface này phải khớp với backend trả về từ API search
 export interface UserSummary {
   id: any;
   fullname: string;
   handle: string;
   avatarUrl: string;
-  friendshipStatus: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'BLOCKED' | 'NONE';
+  friendshipStatus: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'BLOCKED' | 'NONE' | 'RECEIVED';
 }
 
 interface PageParams {
@@ -38,15 +39,14 @@ class FriendService {
 
   // [THÊM MỚI] Hàm này cần thiết cho Modal bạn bè khi xem profile người khác
   async getUserFriends(userId: string, params?: PageParams): Promise<FriendshipResponse[]> {
-     // Lưu ý: Đảm bảo Backend có API này (ví dụ: GET /api/v1/friends/user/{userId})
-     // Nếu backend chưa có, bạn có thể tạm thời gọi API public khác hoặc trả về mảng rỗng để không lỗi
-     try {
-         const res = await http.get<any>(`/friends/user/${userId}`, { params }); 
-         return res.data?.data?.content || [];
-     } catch (e) {
-         console.warn("API lấy bạn bè người khác chưa sẵn sàng:", e);
-         return [];
-     }
+      // Backend: GET /api/v1/friends/user/{userId}
+      try {
+          const res = await http.get<any>(`/friends/user/${userId}`, { params }); 
+          return res.data?.data?.content || [];
+      } catch (e) {
+          console.warn("API lấy bạn bè người khác chưa sẵn sàng hoặc lỗi:", e);
+          return [];
+      }
   }
 
   async getIncomingRequests(params?: PageParams): Promise<FriendshipResponse[]> {
@@ -72,7 +72,9 @@ class FriendService {
     await http.post(`/friends/decline/${friendshipId}`);
   }
 
+  // [QUAN TRỌNG] Hàm hủy kết bạn cho ChatHeader gọi
   async unfriend(targetUserId: any): Promise<void> {
+    // API Backend: DELETE /api/v1/friends/{targetUserId}
     await http.delete(`/friends/${targetUserId}`);
   }
 }

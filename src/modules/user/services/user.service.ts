@@ -120,6 +120,16 @@ class UserService {
     await http.post('/auth/update-password-otp', data);
   }
 
+  // [QUAN TRỌNG] Hàm chặn người dùng (để ChatHeader gọi)
+  async blockUser(targetUserId: string): Promise<void> {
+    await http.post(`/users/blocks/${targetUserId}`);
+  }
+
+  // Hàm bỏ chặn
+  async unblockUser(targetUserId: string): Promise<void> {
+    await http.delete(`/users/blocks/${targetUserId}`);
+  }
+
   // --- SETTINGS API ---
   async getNotificationSettings(): Promise<NotificationSettings> {
     const response = await http.get<{ data: NotificationSettings }>('/users/settings/notifications');
