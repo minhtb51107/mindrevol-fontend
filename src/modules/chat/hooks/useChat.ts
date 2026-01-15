@@ -1,12 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
-
-// [QUAN TRỌNG] Import userService để dùng hàm blockUser
-import { userService } from '@/modules/user/services/user.service';
-
+// [XÁC NHẬN] Import này đúng với cấu trúc thư mục bạn cung cấp
+import { blockService } from '@/modules/user/services/block.service'; 
 import { friendService } from '@/modules/user/services/friend.service'; 
-
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { useChatSocket } from './useChatSocket';
 import { Message } from '../types';
@@ -84,27 +81,26 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   }, [conversationId, partnerId, currentUserId, addMessage, updateMessageStatus]);
 
-  // --- [FIX] Dùng userService để chặn ---
+  // Logic Chặn
   const blockUser = async () => { 
     if (!partnerId) return;
     try {
-        // Gọi hàm blockUser từ userService (đã có sẵn trong file user.service.ts bạn gửi)
-        await userService.blockUser(partnerId); 
+        await blockService.blockUser(partnerId);
         toast.success("Đã chặn người dùng");
-        navigate('/messages'); 
+        navigate('/messages');
     } catch (error: any) {
         console.error("Block user error:", error);
         toast.error(error.response?.data?.message || "Lỗi khi chặn người dùng");
     }
   };
 
-  // --- [FIX] Dùng friendService để hủy kết bạn ---
+  // Logic Hủy kết bạn
   const unfriendUser = async () => { 
     if (!partnerId) return;
     try {
-        await friendService.unfriend(partnerId); 
+        await friendService.unfriend(partnerId);
         toast.success("Đã hủy kết bạn");
-        window.location.reload(); 
+        window.location.reload();
     } catch (error: any) {
         console.error("Unfriend error:", error);
         toast.error(error.response?.data?.message || "Lỗi khi hủy kết bạn");
