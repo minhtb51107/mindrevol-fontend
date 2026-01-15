@@ -4,24 +4,21 @@ import { socket } from '@/lib/socket';
 import { useChatStore } from '../store/useChatStore';
 import { Message } from '../types';
 
-// [FIX] Nhận tham số conversationId
-export const useChatSocket = (conversationId: string) => {
+// [FIX] Cho phép nhận string | null
+export const useChatSocket = (conversationId: string | null) => {
   const { user } = useAuth();
   const { addMessage } = useChatStore();
 
   useEffect(() => {
+    // Nếu không có user hoặc chưa chọn hội thoại thì không làm gì cả
     if (!user || !conversationId) return;
 
-    // [FIX] Subscribe vào topic chung: /topic/chat.{id}
-    // Topic này khớp với backend ChatServiceImpl.java
+    // Topic khớp với backend: /topic/chat.{id}
     const topic = `/topic/chat.${conversationId}`;
     
-    // console.log("Subscribing to chat topic:", topic); // Uncomment để debug nếu cần
+    // console.log("Subscribing to chat topic:", topic); 
 
     const msgSub = socket.subscribe(topic, (msg: Message) => {
-      // Logic xử lý tin nhắn nhận được
-      // useChatStore (Zustand) thường sẽ có logic để tránh trùng lặp tin nhắn
-      // dựa trên id hoặc clientSideId (đã được thêm bởi Optimistic UI)
       addMessage(msg);
     });
 
