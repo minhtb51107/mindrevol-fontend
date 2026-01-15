@@ -1,9 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
-// [XÁC NHẬN] Import này đúng với cấu trúc thư mục bạn cung cấp
-import { blockService } from '@/modules/user/services/block.service'; 
+
+// [FIX QUAN TRỌNG] 
+// 1. Import userService để dùng hàm blockUser (vì bạn đã viết hàm này trong user.service.ts)
+import { userService } from '@/modules/user/services/user.service'; 
+
+// 2. Import friendService để dùng hàm unfriend (đảm bảo file này tồn tại ở modules/user/services/friend.service.ts)
 import { friendService } from '@/modules/user/services/friend.service'; 
+
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { useChatSocket } from './useChatSocket';
 import { Message } from '../types';
@@ -81,26 +86,28 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   }, [conversationId, partnerId, currentUserId, addMessage, updateMessageStatus]);
 
-  // Logic Chặn
+  // [LOGIC CHẶN USER] Gọi userService.blockUser
   const blockUser = async () => { 
     if (!partnerId) return;
+    
     try {
-        await blockService.blockUser(partnerId);
+        await userService.blockUser(partnerId); // Sử dụng userService
         toast.success("Đã chặn người dùng");
-        navigate('/messages');
+        navigate('/messages'); 
     } catch (error: any) {
         console.error("Block user error:", error);
         toast.error(error.response?.data?.message || "Lỗi khi chặn người dùng");
     }
   };
 
-  // Logic Hủy kết bạn
+  // [LOGIC HỦY KẾT BẠN] Gọi friendService.unfriend
   const unfriendUser = async () => { 
     if (!partnerId) return;
+
     try {
-        await friendService.unfriend(partnerId);
+        await friendService.unfriend(partnerId); // Sử dụng friendService
         toast.success("Đã hủy kết bạn");
-        window.location.reload();
+        window.location.reload(); 
     } catch (error: any) {
         console.error("Unfriend error:", error);
         toast.error(error.response?.data?.message || "Lỗi khi hủy kết bạn");
