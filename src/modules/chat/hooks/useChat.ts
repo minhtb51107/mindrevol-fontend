@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
-import { blockService } from '@/modules/user/services/block.service'; // [FIX] Import đúng file
-import { friendService } from '@/modules/user/services/friend.service'; // [FIX] Import đúng file
+// [XÁC NHẬN] Import này đúng với cấu trúc thư mục bạn cung cấp
+import { blockService } from '@/modules/user/services/block.service'; 
+import { friendService } from '@/modules/user/services/friend.service'; 
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { useChatSocket } from './useChatSocket';
 import { Message } from '../types';
@@ -80,31 +81,26 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   }, [conversationId, partnerId, currentUserId, addMessage, updateMessageStatus]);
 
-  // --- [LOGIC CHẶN USER] Gọi blockService ---
+  // Logic Chặn
   const blockUser = async () => { 
     if (!partnerId) return;
-    // Có thể bỏ window.confirm nếu UI đã có modal confirm riêng, hoặc giữ lại để chắc chắn
-    // if (!window.confirm("Bạn có chắc chắn muốn chặn người này?")) return;
-
     try {
-        await blockService.blockUser(partnerId); // Gọi service riêng
+        await blockService.blockUser(partnerId);
         toast.success("Đã chặn người dùng");
-        navigate('/messages'); // Quay về inbox để tránh lỗi hiển thị chat
+        navigate('/messages');
     } catch (error: any) {
         console.error("Block user error:", error);
         toast.error(error.response?.data?.message || "Lỗi khi chặn người dùng");
     }
   };
 
-  // --- [LOGIC HỦY KẾT BẠN] Gọi friendService ---
+  // Logic Hủy kết bạn
   const unfriendUser = async () => { 
     if (!partnerId) return;
-    // if (!window.confirm("Bạn có chắc chắn muốn hủy kết bạn?")) return;
-
     try {
-        await friendService.unfriend(partnerId); // Gọi service riêng
+        await friendService.unfriend(partnerId);
         toast.success("Đã hủy kết bạn");
-        window.location.reload(); // Reload để cập nhật UI (nút kết bạn/chat)
+        window.location.reload();
     } catch (error: any) {
         console.error("Unfriend error:", error);
         toast.error(error.response?.data?.message || "Lỗi khi hủy kết bạn");

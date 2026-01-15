@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 // Đảm bảo bạn đã có file avatar.tsx ở bước trước
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'; 
+import { Avatar, AvatarImage, AvatarFallback } from './avatar'; 
 
 interface UserAvatarLinkProps {
   userId: string;
