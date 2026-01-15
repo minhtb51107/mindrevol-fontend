@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-// [FIX] Sửa đường dẫn import từ '../ui/avatar' thành './avatar' hoặc '@/components/ui/avatar'
-import { Avatar, AvatarImage, AvatarFallback } from './avatar'; 
+// Đảm bảo bạn đã có file avatar.tsx ở bước trước
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'; 
 
 interface UserAvatarLinkProps {
   userId: string;
@@ -19,6 +19,7 @@ export const UserAvatarLink: React.FC<UserAvatarLinkProps> = ({
   size = "md"
 }) => {
   
+  // Mapping size sang class của Tailwind
   const sizeClasses = {
     sm: "h-8 w-8",
     md: "h-10 w-10",
@@ -27,18 +28,16 @@ export const UserAvatarLink: React.FC<UserAvatarLinkProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    // Ngăn sự kiện click lan ra ngoài (ví dụ bấm avatar trong bài post không mở bài post)
     e.stopPropagation(); 
   };
 
-  // Safe check
-  const displayName = fullname || "User";
-  const displayInitial = displayName.charAt(0)?.toUpperCase() || "?";
-
+  // Nếu không có userId thì chỉ hiển thị Avatar thường (không bấm được)
   if (!userId) {
      return (
         <Avatar className={`${sizeClasses[size]} ${className}`}>
-          <AvatarImage src={avatarUrl} alt={displayName} />
-          <AvatarFallback>{displayInitial}</AvatarFallback>
+          <AvatarImage src={avatarUrl} alt={fullname} />
+          <AvatarFallback>{fullname?.charAt(0)?.toUpperCase()}</AvatarFallback>
         </Avatar>
      );
   }
@@ -50,8 +49,8 @@ export const UserAvatarLink: React.FC<UserAvatarLinkProps> = ({
       className={`inline-block transition-opacity hover:opacity-90 ${className}`}
     >
       <Avatar className={`${sizeClasses[size]} w-full h-full`}>
-        <AvatarImage src={avatarUrl} alt={displayName} />
-        <AvatarFallback>{displayInitial}</AvatarFallback>
+        <AvatarImage src={avatarUrl} alt={fullname} />
+        <AvatarFallback>{fullname?.charAt(0)?.toUpperCase()}</AvatarFallback>
       </Avatar>
     </Link>
   );
