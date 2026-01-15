@@ -2,11 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
 
-// [FIX QUAN TRỌNG] 
-// 1. Import userService để dùng hàm blockUser (vì bạn đã viết hàm này trong user.service.ts)
-import { userService } from '@/modules/user/services/user.service'; 
+// [QUAN TRỌNG] Import userService để dùng hàm blockUser
+import { userService } from '@/modules/user/services/user.service';
 
-// 2. Import friendService để dùng hàm unfriend (đảm bảo file này tồn tại ở modules/user/services/friend.service.ts)
 import { friendService } from '@/modules/user/services/friend.service'; 
 
 import { useAuth } from '@/modules/auth/store/AuthContext';
@@ -86,12 +84,12 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   }, [conversationId, partnerId, currentUserId, addMessage, updateMessageStatus]);
 
-  // [LOGIC CHẶN USER] Gọi userService.blockUser
+  // --- [FIX] Dùng userService để chặn ---
   const blockUser = async () => { 
     if (!partnerId) return;
-    
     try {
-        await userService.blockUser(partnerId); // Sử dụng userService
+        // Gọi hàm blockUser từ userService (đã có sẵn trong file user.service.ts bạn gửi)
+        await userService.blockUser(partnerId); 
         toast.success("Đã chặn người dùng");
         navigate('/messages'); 
     } catch (error: any) {
@@ -100,12 +98,11 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   };
 
-  // [LOGIC HỦY KẾT BẠN] Gọi friendService.unfriend
+  // --- [FIX] Dùng friendService để hủy kết bạn ---
   const unfriendUser = async () => { 
     if (!partnerId) return;
-
     try {
-        await friendService.unfriend(partnerId); // Sử dụng friendService
+        await friendService.unfriend(partnerId); 
         toast.success("Đã hủy kết bạn");
         window.location.reload(); 
     } catch (error: any) {
