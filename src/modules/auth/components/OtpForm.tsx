@@ -14,6 +14,7 @@ export const OtpForm = () => {
     countdown,
     handleChange,
     handleKeyDown,
+    handlePaste, // Lấy hàm handlePaste từ hook
     handleSubmit,
     handleResend,
     goToLogin,
@@ -50,6 +51,7 @@ export const OtpForm = () => {
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
+              onPaste={handlePaste} // <-- Gắn sự kiện paste vào đây
               disabled={isLoading}
               className={`
                 w-10 h-12 sm:w-12 sm:h-14 
@@ -87,9 +89,9 @@ export const OtpForm = () => {
              onClick={handleResend}
              disabled={countdown > 0 || isLoading}
              className={`text-xs transition-colors underline underline-offset-4 ${
-                countdown > 0 
-                    ? 'text-zinc-600 cursor-not-allowed' 
-                    : 'text-zinc-500 hover:text-[#FFF5C0]'
+               countdown > 0 
+                   ? 'text-zinc-600 cursor-not-allowed' 
+                   : 'text-zinc-500 hover:text-[#FFF5C0]'
              }`}
            >
              {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã'}
