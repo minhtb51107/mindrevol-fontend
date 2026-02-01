@@ -2,11 +2,16 @@
 
 // 1. DTO cho User (dùng chung cho Auth và User module)
 export interface UserSummary {
-  id: number;
+  id: number; // Lưu ý: Backend bạn trả về String (UUID), xem xét sửa lại type ở đây là string nếu cần
   handle: string;
   fullname: string;
   avatarUrl: string;
   isOnline: boolean;
+  
+  // --- THÊM MỚI ---
+  hasPassword: boolean; 
+  authProvider: string; 
+  // ----------------
 }
 
 // 2. DTO phản hồi khi Login/Register thành công
@@ -36,8 +41,7 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
-// 5. [QUAN TRỌNG] Type định nghĩa các bước của luồng Auth
-// Đây chính là phần bạn đang thiếu
+// 5. Type định nghĩa các bước của luồng Auth
 export type AuthStep = 
   | 'EMAIL_INPUT'       // Bước 1: Nhập Email
   | 'PASSWORD_LOGIN'    // Bước 2a: Nhập Pass (User cũ)

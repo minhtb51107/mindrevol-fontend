@@ -1,9 +1,17 @@
 import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
-import { useOtpForm } from '../hooks/useOtpForm'; // Import Hook mới
+import { useOtpForm } from '../hooks/useOtpForm';
 
-export const OtpForm = () => {
+// [QUAN TRỌNG]: Khai báo prop initialCountdown ở đây để tránh lỗi đỏ
+interface Props {
+  onBack?: () => void;
+  customVerify?: (email: string, otp: string) => Promise<any>;
+  onResend?: (email: string) => Promise<any>;
+  initialCountdown?: number; // <-- Dòng này cực kỳ quan trọng
+}
+
+export const OtpForm: React.FC<Props> = ({ onBack, customVerify, onResend, initialCountdown }) => {
   const {
     otp,
     inputRefs,
@@ -14,12 +22,11 @@ export const OtpForm = () => {
     countdown,
     handleChange,
     handleKeyDown,
-    handlePaste, // Lấy hàm handlePaste từ hook
+    handlePaste,
     handleSubmit,
     handleResend,
-    goToLogin,
-    resetFlow
-  } = useOtpForm();
+    goToLogin
+  } = useOtpForm({ customVerify, onResend, initialCountdown });
 
   return (
     <motion.div 
@@ -29,7 +36,6 @@ export const OtpForm = () => {
       className="flex flex-col h-full"
     >
       <div className="flex-1 space-y-8">
-        {/* Header Text */}
         <div className="text-center space-y-2">
           <p className="text-sm text-zinc-400">
             Mã xác thực 6 số đã được gửi đến:
@@ -39,7 +45,6 @@ export const OtpForm = () => {
           </p>
         </div>
 
-        {/* Input 6 số */}
         <div className="flex gap-2 justify-center">
           {otp.map((digit, index) => (
             <input
@@ -51,7 +56,7 @@ export const OtpForm = () => {
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
-              onPaste={handlePaste} // <-- Gắn sự kiện paste vào đây
+              onPaste={handlePaste}
               disabled={isLoading}
               className={`
                 w-10 h-12 sm:w-12 sm:h-14 
@@ -65,14 +70,12 @@ export const OtpForm = () => {
           ))}
         </div>
 
-        {/* Hiển thị lỗi */}
         {error && (
-            <p className="text-red-500 text-sm text-center font-medium animate-pulse">
-                {error}
-            </p>
+           <p className="text-red-500 text-sm text-center font-medium animate-pulse">
+             {error}
+           </p>
         )}
 
-        {/* Nút Xác thực */}
         <Button 
           onClick={handleSubmit} 
           isLoading={isLoading} 
@@ -82,7 +85,7 @@ export const OtpForm = () => {
           Xác thực ngay
         </Button>
 
-        {/* Nút Gửi lại mã (Có logic đếm ngược) */}
+        {/* Nút Gửi lại mã */}
         <div className="text-center">
            <button 
              type="button" 
@@ -90,8 +93,8 @@ export const OtpForm = () => {
              disabled={countdown > 0 || isLoading}
              className={`text-xs transition-colors underline underline-offset-4 ${
                countdown > 0 
-                   ? 'text-zinc-600 cursor-not-allowed' 
-                   : 'text-zinc-500 hover:text-[#FFF5C0]'
+                   ? 'text-zinc-500 cursor-not-allowed' // Màu khi đang đếm
+                   : 'text-blue-400 hover:text-blue-300' // Màu khi được nhấn (làm nổi bật lên)
              }`}
            >
              {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã'}
@@ -99,22 +102,27 @@ export const OtpForm = () => {
         </div>
       </div>
 
-      {/* Footer Buttons */}
       <div className="mt-8 pt-6 border-t border-zinc-800/50 flex flex-col gap-3">
-        <Button
-          variant="secondary"
-          className="w-full h-12 font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300"
-          onClick={goToLogin}
-        >
-          Đăng nhập bằng mật khẩu
-        </Button>
-        
-        <button 
-          onClick={resetFlow}
-          className="text-xs text-zinc-500 hover:text-white transition-colors py-2"
-        >
-          Quay lại nhập Email
-        </button>
+        {/* Logic phân biệt: Nếu KHÔNG phải đăng ký (không có customVerify) thì hiện nút Login Pass */}
+        {!customVerify && (
+            <Button
+              variant="secondary"
+              className="w-full h-12 font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300"
+              onClick={goToLogin}
+            >
+              Đăng nhập bằng mật khẩu
+            </Button>
+        )}
+
+        {/* Nếu LÀ đăng ký (có nút Back) */}
+        {onBack && (
+            <button 
+                onClick={onBack}
+                className="text-xs text-zinc-500 hover:text-white transition-colors py-2"
+            >
+                Quay lại bước trước
+            </button>
+        )}
       </div>
     </motion.div>
   );

@@ -73,11 +73,13 @@ const AuthContent = () => {
             </div>
           )}
           
+          {/* --- SỬA Ở ĐÂY: Thêm initialCountdown={60} --- */}
           {currentStep === 'OTP_INPUT' && (
             <div key="otp" className="absolute inset-0">
-              <OtpForm />
+              <OtpForm initialCountdown={60} />
             </div>
           )}
+          {/* ------------------------------------------- */}
 
           {currentStep === 'PASSWORD_LOGIN' && (
             <div key="password" className="absolute inset-0">

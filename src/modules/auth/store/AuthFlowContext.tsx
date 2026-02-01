@@ -1,8 +1,8 @@
 import React, { createContext, useContext } from 'react';
 import { UserSummary, RegisterPayload, AuthStep } from '../types';
-import { useAuthLogic } from '../hooks/useAuthLogic'; // Import hook logic vừa tạo
+import { useAuthLogic } from '../hooks/useAuthLogic'; 
 
-// Interface định nghĩa Context trông như thế nào
+// Interface định nghĩa Context
 interface AuthFlowContextType {
   currentStep: AuthStep;
   email: string;
@@ -17,7 +17,10 @@ interface AuthFlowContextType {
   // Các hàm Async
   submitEmail: (email: string) => Promise<void>;
   login: (password: string) => Promise<void>;
-  register: (finalData?: Partial<RegisterPayload>) => Promise<void>; 
+  
+  // [ĐÃ XÓA] register: (finalData?: Partial<RegisterPayload>) => Promise<void>; 
+  // Lý do: Việc đăng ký giờ do useRegisterWizard đảm nhiệm riêng biệt
+  
   verifyOtp: (code: string) => Promise<void>;
   resendOtp: () => Promise<void>;
   
@@ -36,7 +39,6 @@ interface AuthFlowContextType {
 const AuthFlowContext = createContext<AuthFlowContextType | undefined>(undefined);
 
 export const AuthFlowProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Gọi hook logic ở đây. Toàn bộ logic nằm trong hook này.
   const authLogic = useAuthLogic();
 
   return (

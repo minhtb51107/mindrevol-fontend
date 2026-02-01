@@ -20,13 +20,9 @@ export const usePasswordForm = () => {
   };
 
   // 3. Xử lý chuyển sang đăng nhập OTP
+  // [QUAN TRỌNG]: Đã xóa dòng authService.sendOtp(email) để tránh gửi kép
   const handleSwitchToOtp = async () => {
-    try {
-      await authService.sendOtp(email);
-      goToOtp(); 
-    } catch (e) {
-      alert("Không thể gửi mã OTP. Vui lòng thử lại sau.");
-    }
+     goToOtp(); 
   };
 
   // 4. Xử lý quên mật khẩu

@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { motion } from 'framer-motion';
-import { useStepBasicInfo } from '../../hooks/useRegisterSteps'; // Import Hook
+import { useStepBasicInfo } from '../../hooks/useRegisterSteps';
 import { StepBasicInfoValues } from '../../schemas/auth.schema';
 
 interface Props {
@@ -14,6 +14,8 @@ export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
   const { form, onSubmit } = useStepBasicInfo(onNext);
   const { register, formState: { errors } } = form;
 
+  // ĐÃ XÓA LOGIC CHECK EMAIL Ở ĐÂY
+
   return (
     <motion.div 
       initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}
@@ -21,7 +23,7 @@ export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
     >
       <div className="space-y-2">
         <h2 className="text-2xl font-bold">Giới thiệu bản thân</h2>
-        <p className="text-muted text-sm">Hãy cho mọi người biết thêm về bạn.</p>
+        <p className="text-muted text-sm">Chúng tôi cần một chút thông tin cơ bản.</p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
@@ -57,10 +59,6 @@ export const StepBasicInfo: React.FC<Props> = ({ onNext, onBack }) => {
               <option value="OTHER">Khác</option>
               <option value="PREFER_NOT_TO_SAY">Không muốn tiết lộ</option>
             </select>
-            
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </div>
           </div>
           {errors.gender && <span className="text-xs text-destructive font-bold ml-1">{errors.gender.message}</span>}
         </div>
