@@ -39,6 +39,7 @@ export default {
           "Arial", 
           "sans-serif"
         ],
+        coiny: ['"Coiny"', 'cursive', 'sans-serif'],
       },
     },
   },
