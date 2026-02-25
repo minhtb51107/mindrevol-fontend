@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/modules/auth/store/AuthContext'; 
@@ -5,13 +6,17 @@ import { AuthFlowProvider } from '@/modules/auth/store/AuthFlowContext';
 import { Loader2 } from 'lucide-react';
 
 import AuthPage from '@/modules/auth/pages/AuthPage';
-import HomePage from '@/modules/feed/pages/HomePage';
+import HomePage from '@/pages/HomePage';
 import { TikTokCallback } from '@/modules/auth/pages/TikTokCallback';
 import { JoinLinkPage } from '@/modules/journey/pages/JoinLinkPage';
 import ProfilePage from './modules/user/pages/ProfilePage';
 import ChatPage from '@/modules/chat/pages/ChatPage'; 
-import Terms from '@/pages/Terms';     // [MỚI] Import trang Điều khoản
-import Privacy from '@/pages/Privacy'; // [MỚI] Import trang Riêng tư
+import Terms from '@/pages/Terms';     
+import Privacy from '@/pages/Privacy'; 
+
+// [MỚI] Import các trang của Box
+import BoxListPage from '@/modules/box/pages/BoxListPage';
+import BoxDetailPage from '@/modules/box/pages/BoxDetailPage';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -53,14 +58,20 @@ function App() {
         isAuthenticated ? <ChatPage /> : <Navigate to="/" replace />
       } />
       
-      {/* Route xem profile của chính mình */}
       <Route path="/profile" element={
         isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
       } />
 
-      {/* Route xem profile người khác */}
       <Route path="/profile/:userId" element={
         isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
+      } />
+
+      {/* [MỚI] Routes cho module Box */}
+      <Route path="/box" element={
+        isAuthenticated ? <BoxListPage /> : <Navigate to="/" replace />
+      } />
+      <Route path="/box/:boxId" element={
+        isAuthenticated ? <BoxDetailPage /> : <Navigate to="/" replace />
       } />
 
       {/* Fallback route: Nếu không khớp route nào thì về trang chủ */}

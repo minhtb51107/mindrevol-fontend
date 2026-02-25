@@ -1,7 +1,8 @@
-import React from 'react';
-import { X, Loader2, Send, MapPin, Smile } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Loader2, MapPin, Smile, Maximize, ChevronDown } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
-import { useCheckinModal, ACTIVITY_PRESETS } from '../hooks/useCheckinModal'; // Import Hook
+import Cropper from 'react-easy-crop';
+import { useCheckinModal, ACTIVITY_PRESETS } from '../hooks/useCheckinModal'; 
 
 interface CheckinModalProps {
   isOpen: boolean;
@@ -14,133 +15,210 @@ interface CheckinModalProps {
 export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
   const { isOpen, onClose, file } = props;
 
-  // [HOOK] Tách biệt logic
   const {
-    caption, setCaption,
-    location, setLocation,
-    selectedActivity, setSelectedActivity,
-    customContext, setCustomContext,
-    moodEmoji, setMoodEmoji,
-    previewUrl,
-    isSubmitting,
-    showEmojiPicker, setShowEmojiPicker,
-    scrollRef, pickerRef,
-    dragHandlers,
-    handleSubmit
+    caption, setCaption, location, setLocation, selectedActivity, setSelectedActivity,
+    customContext, setCustomContext, moodEmoji, setMoodEmoji, previewUrl, isSubmitting,
+    showEmojiPicker, setShowEmojiPicker, pickerRef, handleSubmit,
+    crop, setCrop, zoom, setZoom, aspect, setAspect, onCropComplete,
+    // Lấy thêm các biến quản lý Dropdown
+    activeJourneys, selectedJourneyId, setSelectedJourneyId, 
+    isJourneyDropdownOpen, setIsJourneyDropdownOpen, journeyDropdownRef
   } = useCheckinModal(props);
+
+  const [showCropMenu, setShowCropMenu] = useState(false);
 
   if (!isOpen || !file) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-300 px-4">
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-[calc(100%-32px)] max-w-[440px] max-h-[90vh] overflow-y-auto no-scrollbar flex flex-col rounded-[32px] bg-[#121212] shadow-2xl ring-1 ring-white/10 z-10 transition-all duration-300 my-4">
+      <div className="relative w-full max-w-[900px] h-[85vh] max-h-[700px] bg-[#1c1c1e] rounded-2xl overflow-hidden flex flex-col shadow-2xl ring-1 ring-white/10 z-10">
         
-        {/* --- CONTENT --- */}
-        <div className="flex flex-col p-3 sm:p-4 gap-4">
+        {/* Header */}
+        <div className="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 bg-[#121212]">
+          <button onClick={onClose} className="p-2 -ml-2 text-zinc-400 hover:text-white transition-colors">
+             <X size={24} strokeWidth={1.5}/>
+          </button>
+          <h2 className="text-white font-bold text-base">Tạo bài viết mới</h2>
+          <button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || !selectedJourneyId}
+            className="text-blue-500 font-bold hover:text-blue-400 disabled:opacity-50 transition-colors"
+          >
+            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Chia sẻ"}
+          </button>
+        </div>
+
+        {/* Body 2 Cột */}
+        <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
             
-            {/* 1. IMAGE PREVIEW */}
-            <div className="relative w-full aspect-square rounded-[28px] overflow-hidden bg-[#1c1c1e] border border-white/10 shadow-2xl shrink-0 group">
-                {previewUrl && <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />}
-                
-                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+            {/* CỘT TRÁI: ẢNH VÀ CROP (60%) */}
+            <div className="w-full md:w-[55%] h-[50vh] md:h-full bg-black relative group flex items-center justify-center border-b md:border-b-0 md:border-r border-white/10">
+                {previewUrl ? (
+                    <Cropper
+                        image={previewUrl}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={aspect}
+                        onCropChange={setCrop}
+                        onCropComplete={onCropComplete}
+                        onZoomChange={setZoom}
+                        classes={{ containerClassName: 'bg-black' }}
+                    />
+                ) : (
+                    <Loader2 className="w-8 h-8 text-zinc-500 animate-spin" />
+                )}
 
-                {/* Close Button Inside Image */}
-                <div className="absolute top-4 right-4 z-50">
-                    <button 
-                        onClick={onClose} 
-                        className="p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white border border-white/20 transition-all active:scale-90"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                <div className="absolute bottom-4 left-4 flex items-center gap-3">
+                    <div className="relative">
+                        <button 
+                            onClick={() => setShowCropMenu(!showCropMenu)}
+                            className="p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-colors shadow-lg border border-white/10"
+                        >
+                            <Maximize size={18} />
+                        </button>
+                        
+                        {/* Menu chọn tỷ lệ */}
+                        {showCropMenu && (
+                            <div className="absolute bottom-full left-0 mb-2 bg-black/80 backdrop-blur-lg border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-2xl">
+                                <button onClick={() => {setAspect(1); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 1 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>1:1 (Vuông)</button>
+                                <button onClick={() => {setAspect(4/5); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 4/5 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>4:5 (Dọc)</button>
+                                <button onClick={() => {setAspect(16/9); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 16/9 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>16:9 (Ngang)</button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Badges */}
-                <div className="absolute top-4 left-4 flex flex-col items-start gap-2 z-10 pointer-events-none">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-black/40 border border-white/10 shadow-lg backdrop-blur-md">
-                        <span className="text-[18px] leading-none filter drop-shadow-sm">{moodEmoji}</span>
-                        <span className="text-[14px] font-bold text-white max-w-[160px] truncate">
-                            {customContext || selectedActivity.label}
-                        </span>
-                    </div>
-
-                    {location && (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm ml-1">
-                           <MapPin className="w-3 h-3 text-red-500" />
-                           <span className="text-zinc-200 text-[11px] font-medium truncate max-w-[140px]">{location}</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Caption Preview (Pill Style) */}
-                <div className="absolute bottom-0 inset-x-0 p-4 z-20 pointer-events-none">
-                    <div className="bg-black/60 backdrop-blur-md border border-white/15 shadow-xl w-fit max-w-[95%] rounded-full p-1.5 pr-5 flex items-center gap-3">
-                        <div className="shrink-0 w-9 h-9 rounded-full bg-zinc-700 border border-white/20 flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">Me</span>
-                        </div>
-                        <p className="text-white/95 text-[13px] font-medium leading-relaxed break-words min-w-0 pr-1 drop-shadow-sm">
-                           {caption || <span className="italic text-zinc-400/80">Ghi chú...</span>}
-                        </p>
-                    </div>
+                <div className="absolute bottom-4 right-4 w-32 hidden md:block">
+                    <input 
+                        type="range" value={zoom} min={1} max={3} step={0.1}
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className="w-full accent-white"
+                    />
                 </div>
             </div>
 
-            {/* 2. CONTROLS */}
-            <div className="flex flex-col gap-4">
-                <div className="relative space-y-2">
-                    <div className="flex justify-between items-center px-2">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Cảm xúc & Hoạt động</span>
-                      <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-xs bg-white/5 hover:bg-white/10 text-zinc-300 px-2.5 py-1 rounded-lg transition-colors border border-white/5 flex items-center gap-1">
-                         <Smile className="w-3.5 h-3.5" /><span>Đổi Mood</span>
-                      </button>
-                    </div>
-
-                    {showEmojiPicker && (
-                      <div className="absolute bottom-full right-0 mb-2 z-50" ref={pickerRef}>
-                          <div className="shadow-2xl rounded-2xl overflow-hidden border border-white/10">
-                            <EmojiPicker onEmojiClick={(d) => { setMoodEmoji(d.emoji); setShowEmojiPicker(false); }} theme={Theme.DARK} width={280} height={320} previewConfig={{ showPreview: false }} />
-                          </div>
-                      </div>
-                    )}
-
-                    <div ref={scrollRef} className="flex gap-3 overflow-x-auto py-1 no-scrollbar cursor-grab active:cursor-grabbing select-none"
-                      {...dragHandlers} // Spread handlers từ hook
-                    >
-                      {ACTIVITY_PRESETS.map((item) => {
-                          const isActive = !customContext && selectedActivity.type === item.type;
-                          return (
-                            <div key={item.type} onClick={() => { setSelectedActivity(item); setCustomContext(''); }}
-                               className={`group flex flex-col items-center gap-1.5 shrink-0 transition-all duration-200 cursor-pointer ${isActive ? 'opacity-100 scale-100' : 'opacity-60 hover:opacity-100'}`}>
-                               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-md border border-white/5 transition-all ${isActive ? item.color + ' ring-2 ring-white/20' : 'bg-zinc-800 group-hover:bg-zinc-700'}`}>
-                                  {item.emoji}
-                               </div>
-                               <span className="text-[10px] font-medium text-zinc-400 group-hover:text-white transition-colors">{item.label}</span>
+            {/* CỘT PHẢI: NỘI DUNG VÀ SETTINGS (45%) */}
+            <div className="w-full md:w-[45%] h-full bg-[#121212] overflow-y-auto custom-scrollbar flex flex-col">
+                
+                {/* [MỚI] CHỌN HÀNH TRÌNH ĐÍCH */}
+                <div className="p-4 border-b border-white/10 z-20" ref={journeyDropdownRef}>
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Đăng vào Hành trình</span>
+                    <div className="relative">
+                        <button 
+                            onClick={() => setIsJourneyDropdownOpen(!isJourneyDropdownOpen)}
+                            className="w-full bg-zinc-900/80 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-zinc-800 transition-colors focus:ring-1 focus:ring-blue-500"
+                        >
+                            <div className="flex items-center gap-2 overflow-hidden">
+                                {selectedJourneyId ? (() => {
+                                    const j = activeJourneys.find(x => x.id === selectedJourneyId);
+                                    return j ? (
+                                        <>
+                                            <span className="text-lg leading-none">{j.avatar || '🚀'}</span>
+                                            <span className="text-sm text-white font-bold truncate">{j.name}</span>
+                                        </>
+                                    ) : <span className="text-sm text-zinc-500">Đang tải...</span>;
+                                })() : (
+                                    <span className="text-sm text-zinc-500">Vui lòng chọn hành trình...</span>
+                                )}
                             </div>
-                          );
-                      })}
+                            <ChevronDown size={18} className={`text-zinc-500 transition-transform ${isJourneyDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {/* Dropdown danh sách */}
+                        {isJourneyDropdownOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-[200px] overflow-y-auto custom-scrollbar">
+                                {activeJourneys.map(j => (
+                                    <button
+                                        key={j.id}
+                                        onClick={() => { setSelectedJourneyId(j.id); setIsJourneyDropdownOpen(false); }}
+                                        className={`w-full text-left px-4 py-3 hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-white/5 last:border-0 ${selectedJourneyId === j.id ? 'bg-blue-500/10' : ''}`}
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5" style={{ borderBottom: `2px solid ${j.themeColor || '#3b82f6'}` }}>
+                                            <span className="text-sm">{j.avatar || '🚀'}</span>
+                                        </div>
+                                        <div className="flex flex-col overflow-hidden">
+                                            <span className={`text-sm font-bold truncate ${selectedJourneyId === j.id ? 'text-blue-400' : 'text-white'}`}>{j.name}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                                {activeJourneys.length === 0 && (
+                                    <div className="px-4 py-4 text-sm text-zinc-500 text-center">Bạn chưa tham gia hành trình nào</div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-zinc-800/50 border border-white/5 focus-within:border-blue-500/50 focus-within:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all">
-                          <input value={customContext} onChange={e => setCustomContext(e.target.value)} placeholder="Hoạt động khác..." className="w-full bg-transparent text-xs font-medium text-white placeholder:text-zinc-600 focus:outline-none"/>
-                        </div>
-                        <div className="bg-zinc-800/50 border border-white/5 focus-within:border-blue-500/50 focus-within:bg-zinc-800 rounded-xl px-3 py-2.5 transition-all flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                          <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Địa điểm..." className="w-full bg-transparent text-xs font-medium text-white placeholder:text-zinc-600 focus:outline-none"/>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-zinc-800/50 border border-white/5 focus-within:border-white/20 focus-within:bg-zinc-800 rounded-2xl px-4 py-3 transition-all">
-                          <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Ghi chú..." rows={1} className="w-full bg-transparent text-sm text-white placeholder:text-zinc-600 focus:outline-none resize-none align-middle" style={{ minHeight: '24px', maxHeight: '60px' }}/>
-                        </div>
-                        <button onClick={handleSubmit} disabled={isSubmitting} className="h-12 w-12 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:bg-zinc-200 active:scale-90 transition-all disabled:opacity-50 disabled:shadow-none shrink-0">
-                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
+                {/* Khu vực Ghi chú */}
+                <div className="p-4 border-b border-white/10">
+                    <textarea 
+                        value={caption} 
+                        onChange={e => setCaption(e.target.value)} 
+                        placeholder="Viết chú thích..." 
+                        className="w-full bg-transparent text-[15px] text-white placeholder:text-zinc-500 focus:outline-none resize-none min-h-[120px]"
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                        <button className="p-1.5 -ml-1.5 text-zinc-400 hover:text-white transition-colors">
+                            <Smile size={20} />
                         </button>
+                        <span className="text-xs text-zinc-600">{caption.length}/2200</span>
                     </div>
+                </div>
+
+                {/* Vị trí */}
+                <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-zinc-900/20 focus-within:bg-zinc-800/50 transition-colors">
+                    <MapPin size={20} className="text-zinc-400 shrink-0" />
+                    <input 
+                        value={location} 
+                        onChange={e => setLocation(e.target.value)} 
+                        placeholder="Thêm vị trí" 
+                        className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+                    />
+                </div>
+
+                {/* Cảm xúc & Hoạt động */}
+                <div className="p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-zinc-300">Hoạt động & Cảm xúc</span>
+                        <div className="relative" ref={pickerRef}>
+                            <button 
+                                onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
+                                className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center hover:bg-zinc-700 transition-colors text-lg"
+                            >
+                                {moodEmoji}
+                            </button>
+                            {showEmojiPicker && (
+                                <div className="absolute top-full right-0 mt-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-white/10">
+                                    <EmojiPicker onEmojiClick={(d) => { setMoodEmoji(d.emoji); setShowEmojiPicker(false); }} theme={Theme.DARK} width={280} height={320} previewConfig={{ showPreview: false }} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {ACTIVITY_PRESETS.map((item) => (
+                            <button 
+                                key={item.type} 
+                                onClick={() => { setSelectedActivity(item); setCustomContext(''); }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-all ${
+                                    (!customContext && selectedActivity.type === item.type)
+                                    ? 'bg-white text-black border-white'
+                                    : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                                }`}
+                            >
+                                <span>{item.emoji}</span> {item.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <input 
+                        value={customContext} 
+                        onChange={e => setCustomContext(e.target.value)} 
+                        placeholder="Hoặc nhập hoạt động khác..." 
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500 transition-all mt-2"
+                    />
                 </div>
             </div>
         </div>

@@ -9,28 +9,23 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const ChatPage = () => {
-  // [FIX] Lấy đúng các state/action từ store
   const { 
     activeConversationId, 
     setConversations,
-    fetchConversations // Lấy action này từ store thay vì fetch tay ở đây để code gọn
+    fetchConversations 
   } = useChatStore();
   
   const [isLoading, setIsLoading] = useState(true);
 
-  // Truyền activeConversationId vào socket nếu cần, hoặc để null nếu hook tự lấy từ store
   useChatSocket(activeConversationId); 
 
   useEffect(() => {
     const initData = async () => {
         setIsLoading(true);
-        // Nếu store đã có hàm fetch, nên dùng nó. 
-        // Nhưng giữ logic cũ của bạn cũng được, chỉ cần đảm bảo type đúng.
         try {
             if (fetchConversations) {
                 await fetchConversations();
             } else {
-                // Fallback nếu store chưa có fetchConversations
                 const res: any = await chatService.getConversations();
                 setConversations(res);
             }
@@ -45,24 +40,24 @@ const ChatPage = () => {
 
   return (
     <MainLayout>
-        <div className="flex w-full h-full bg-[#121212] overflow-hidden relative">
+        {/* Container khóa kín chiều cao toàn màn hình, bỏ các margin thừa */}
+        <div className="flex w-full h-[100dvh] bg-[#121212] overflow-hidden text-white">
           
-          {/* CỘT TRÁI: DANH SÁCH */}
+          {/* CỘT TRÁI: DANH SÁCH BẠN BÈ */}
+          {/* Cố định width 350px trên Desktop, viền chia cách */}
           <div className={cn(
-            "h-full bg-[#121212] transition-all duration-300",
-            activeConversationId ? "hidden" : "w-full flex",
-            "md:flex md:w-auto"
+            "h-full shrink-0 border-r border-white/5",
+            activeConversationId ? "hidden md:block md:w-[350px]" : "w-full md:w-[350px]"
           )}>
               <ConversationList />
           </div>
 
           {/* CỘT PHẢI: CỬA SỔ CHAT */}
+          {/* Dãn tối đa flex-1 */}
           <div className={cn(
-            "h-full bg-[#121212] flex flex-col min-w-0 border-l border-white/5",
-            !activeConversationId ? "hidden" : "w-full flex fixed inset-0 z-50 md:static",
-            "md:flex md:flex-1"
+            "h-full flex-col flex-1 min-w-0 bg-[#0a0a0a]",
+            !activeConversationId ? "hidden md:flex" : "flex w-full"
           )}>
-            
             {isLoading ? (
                <div className="flex-1 flex flex-col items-center justify-center text-zinc-500">
                   <Loader2 className="w-8 h-8 animate-spin text-zinc-600 mb-2" />

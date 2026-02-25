@@ -1,3 +1,5 @@
+// src/modules/journey/types.ts
+
 import { Checkin } from "@/modules/checkin/types";
 
 // --- ENUMS ---
@@ -53,8 +55,18 @@ export enum WidgetStatus {
   OFF_TRACK = 'OFF_TRACK'
 }
 
-// --- SHARED INTERFACES ---
+export enum JourneyTheme {
+  TRAVEL = 'TRAVEL',
+  FOOD = 'FOOD',
+  STUDY = 'STUDY',
+  DATING = 'DATING',
+  SPORTS = 'SPORTS',
+  GAME = 'GAME',
+  LIFESTYLE = 'LIFESTYLE',
+  OTHER = 'OTHER'
+}
 
+// --- SHARED INTERFACES ---
 export interface UserSummary {
   id: string; 
   fullname: string;
@@ -63,7 +75,6 @@ export interface UserSummary {
 }
 
 // --- INTERFACES ---
-
 export interface CreateJourneyRequest {
   name: string;
   description: string;
@@ -79,6 +90,11 @@ export interface CreateJourneyRequest {
     description?: string;
   }[];
   requireApproval?: boolean;
+  boxId?: string; 
+  
+  // [THÊM MỚI] 2 trường này
+  themeColor?: string;
+  avatar?: string;
 }
 
 export interface UpdateJourneySettingsRequest {
@@ -90,6 +106,10 @@ export interface UpdateJourneySettingsRequest {
   isHardcore?: boolean;
   requireApproval?: boolean;
   visibility?: JourneyVisibility; 
+  themeColor?: string;
+  avatar?: string;
+  // [THÊM MỚI]
+  boxId?: string; 
 }
 
 export interface JourneyResponse {
@@ -183,18 +203,28 @@ export interface JourneyRequestResponse {
   status: string;
 }
 
+// Cập nhật UserActiveJourneyResponse
 export interface UserActiveJourneyResponse {
   id: string;
   name: string;
   description: string;
-  status: JourneyStatus | string; 
-  visibility: JourneyVisibility | string;
+  status: string; 
+  visibility: string;
   startDate: string;
   endDate?: string;
+  thumbnailUrl?: string;     
+  theme: JourneyTheme | string;      
+  
+  // [THÊM MỚI] 2 trường này
+  themeColor?: string;
+  avatar?: string;
+
+  memberAvatars: (string | null)[]; 
+  totalMembers: number;
+  daysRemaining: number;
   totalCheckins: number;
-  checkins: Checkin[];
+  checkins: any[]; 
   hasNewUpdates?: boolean;
 }
 
-// Alias type để tương thích ngược nếu có file nào dùng type Journey
 export type Journey = JourneyResponse;

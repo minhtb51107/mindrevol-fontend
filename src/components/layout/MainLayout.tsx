@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
+import { Navigation } from './Navigation'; 
 import { CreateJourneyModal } from '@/modules/journey/components/CreateJourneyModal';
 import { CheckinModal } from '@/modules/checkin/components/CheckinModal';
 import { JourneyListModal } from '@/modules/journey/components/JourneyListModal'; 
+import { SettingsModal } from '@/modules/user/components/SettingsModal'; // [THÊM MỚI]
 import { journeyService } from '@/modules/journey/services/journey.service';
 import { cn } from '@/lib/utils';
 
@@ -19,14 +20,31 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [isJourneyListOpen, setIsJourneyListOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); // [THÊM MỚI]
 
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() => {
+      const saved = localStorage.getItem('sidebar_expanded');
+      return saved !== null ? saved === 'true' : true;
+  });
+
+  const [navRefreshKey, setNavRefreshKey] = useState(0);
   const [checkinFile, setCheckinFile] = useState<File | null>(null);
   const [defaultJourneyId, setDefaultJourneyId] = useState<string | null>(null);
 
   const urlJourneyId = searchParams.get('journeyId');
   const activeJourneyId = urlJourneyId || defaultJourneyId;
 
-  const isChatPage = location.pathname.startsWith('/chat');
+  useEffect(() => {
+      const isChatPage = location.pathname.startsWith('/chat');
+      const isProfilePage = location.pathname.startsWith('/profile');
+      
+      if (isChatPage || isProfilePage) {
+          setIsSidebarExpanded(false);
+      } else {
+          const saved = localStorage.getItem('sidebar_expanded');
+          setIsSidebarExpanded(saved !== null ? saved === 'true' : true);
+      }
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchDefaultJourney = async () => {
@@ -47,37 +65,46 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     setIsCheckinModalOpen(true);
   };
 
-  return (
-    // [FIX 1]: h-[100dvh] để fix lỗi Safari, flex-col cho mobile
-    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-[#121212] text-white font-sans overflow-hidden relative">
-      
-      {/* Sidebar */}
-      {!isChatPage && (
-        <Sidebar 
-            onCheckinClick={handleCheckinClick} 
-            onJourneyClick={() => setIsJourneyListOpen(true)}
-        />
-      )}
+  const handleDataRefresh = () => {
+     setNavRefreshKey(prev => prev + 1); 
+  };
 
-      {/* [FIX 2]: Main Content
-          - XÓA overflow-y-auto: Để HomePage tự quản lý scroll (ngăn việc kéo cả trang).
-          - XÓA pb-32: Để HomePage tự padding bottom (tránh khoảng trắng thừa hoặc thiếu).
-          - min-w-0: Fix lỗi flexbox child quá rộng.
-      */}
+  const handleToggleSidebar = () => {
+      const newVal = !isSidebarExpanded;
+      setIsSidebarExpanded(newVal);
+      localStorage.setItem('sidebar_expanded', String(newVal)); 
+  };
+
+  return (
+    <div className="min-h-[100dvh] w-full bg-[#121212] text-white font-sans relative flex">
+      
+      <Navigation 
+        onCheckinClick={handleCheckinClick} 
+        onJourneyClick={() => setIsJourneyListOpen(true)}
+        onSettingsClick={() => setIsSettingsModalOpen(true)} // [THÊM MỚI] Mở Modal Setting
+        refreshTrigger={navRefreshKey}
+        isSidebarExpanded={isSidebarExpanded}
+        toggleSidebar={handleToggleSidebar} 
+        setSidebarExpanded={setIsSidebarExpanded} 
+      />
+
       <main className={cn(
-        "flex-1 relative flex flex-col min-w-0 overflow-hidden", 
-        // Nếu là trang Chat thì giữ nguyên logic cũ nếu cần, các trang khác để full height
-        isChatPage ? "" : "" 
+        "relative w-full min-h-[100dvh]", 
+        "transition-all duration-300 ease-in-out",
+        "pb-[100px] md:pb-0",
+        isSidebarExpanded ? "md:pl-[260px]" : "md:pl-[80px]"
       )}>
         {children || <Outlet />}
       </main>
 
       {/* --- MODALS TOÀN CỤC --- */}
-      
       <CreateJourneyModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
-        onSuccess={() => window.location.reload()} 
+        onSuccess={() => {
+            handleDataRefresh();
+            window.location.reload(); 
+        }} 
       />
 
       <JourneyListModal 
@@ -91,9 +118,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             onClose={() => setIsCheckinModalOpen(false)} 
             file={checkinFile} 
             journeyId={activeJourneyId} 
-            onSuccess={() => window.location.reload()} 
+            onSuccess={() => {
+                handleDataRefresh();
+                window.location.reload(); 
+            }} 
           />
       )}
+
+      {/* [THÊM MỚI] Render Modal Cài đặt */}
+      <SettingsModal 
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
     </div>
   );
 };

@@ -106,14 +106,14 @@ export const ConversationList = () => {
       {/* HEADER */}
       <div className="h-16 shrink-0 flex items-center px-4 border-b border-white/5 justify-between gap-2">
         <div className="flex items-center gap-2">
-            <button 
+            {/* <button 
             onClick={() => navigate('/')} 
             className="p-2 rounded-full hover:bg-white/10 transition-colors text-zinc-400 hover:text-white"
             title="Quay lại Trang chủ"
             >
             <ChevronLeft className="w-6 h-6" />
-            </button>
-            <h2 className="text-lg font-bold text-white">Đoạn chat</h2>
+            </button> */}
+                   <h2 className="text-2xl font-extrabold text-white">Đoạn chat</h2>
         </div>
       </div>
 

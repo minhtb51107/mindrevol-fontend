@@ -5,7 +5,6 @@ import { journeyService } from '../services/journey.service';
 export const useJourneySettings = (journey: JourneyResponse | null, onUpdateSuccess?: () => void) => {
   const [isLoading, setIsLoading] = useState(false);
   
-  // State quản lý form settings
   const [settings, setSettings] = useState<UpdateJourneySettingsRequest>({
     name: '',
     description: '',
@@ -13,10 +12,12 @@ export const useJourneySettings = (journey: JourneyResponse | null, onUpdateSucc
     hasStreak: false,
     requiresFreezeTicket: false,
     isHardcore: false,
-    requireApproval: false
+    requireApproval: false,
+    themeColor: '#3b82f6',
+    avatar: '🚀',
+    boxId: '' // [THÊM MỚI]
   });
 
-  // Khi mở modal, đổ dữ liệu cũ của journey vào form
   useEffect(() => {
     if (journey) {
       setSettings({
@@ -26,7 +27,11 @@ export const useJourneySettings = (journey: JourneyResponse | null, onUpdateSucc
         hasStreak: journey.settingHasStreak,
         requiresFreezeTicket: journey.settingReqFreezeTicket,
         isHardcore: journey.settingIsHardcore,
-        requireApproval: journey.requireApproval
+        requireApproval: journey.requireApproval,
+        visibility: journey.visibility as any,
+        themeColor: journey.themeColor || '#3b82f6',
+        avatar: journey.avatar || '🚀',
+        boxId: journey.boxId || '' // [THÊM MỚI]
       });
     }
   }, [journey]);

@@ -1,17 +1,16 @@
 import { http } from '@/lib/http';
-import { FeedItem, PostProps, AdProps, InteractionType } from '../types';
+import { FeedItem, PostProps, AdProps, InteractionType, Emotion } from '../types';
 
-// Helper map dữ liệu
+// Helper map dữ liệu từ Backend sang UI Model
 const mapToFeedItem = (item: any): FeedItem => {
-  
-  // 1. Kiểm tra nếu là QUẢNG CÁO (Dựa trên trường type hoặc feedType từ Backend)
+  // 1. Map Quảng Cáo
   if (item.type === 'AD' || item.feedType === 'AD') {
       return {
           id: item.id,
           type: 'AD',
           title: item.title || "Quảng cáo",
           description: item.description,
-          imageUrl: item.imageUrl || item.image, // Ảnh quảng cáo
+          imageUrl: item.imageUrl || item.image,
           ctaText: item.ctaText || "Xem thêm",
           ctaLink: item.ctaLink || "#",
           brandName: item.brandName,
@@ -19,7 +18,7 @@ const mapToFeedItem = (item: any): FeedItem => {
       } as AdProps;
   }
 
-  // 2. Nếu là POST (Logic cũ)
+  // 2. Map Bài Post (Checkin)
   const date = new Date(item.timestamp || item.createdAt);
   const formattedTime = date.toLocaleTimeString([], { 
       hour: '2-digit', 
@@ -29,7 +28,7 @@ const mapToFeedItem = (item: any): FeedItem => {
 
   return {
     ...item,
-    type: 'POST', // Gán cứng
+    type: 'POST',
     id: item.id,
     userId: item.user?.id || item.userId,
     user: {
@@ -46,7 +45,7 @@ const mapToFeedItem = (item: any): FeedItem => {
     reactionCount: item.reactionCount || 0,
     commentCount: item.commentCount || 0,
     latestReactions: item.latestReactions || [],
-    emotion: item.emotion || 'NORMAL',
+    emotion: item.emotion || Emotion.NORMAL,
     interactionType: item.interactionType || InteractionType.GROUP_DISCUSS,
     activityName: item.activityName,
     locationName: item.locationName,
@@ -55,34 +54,39 @@ const mapToFeedItem = (item: any): FeedItem => {
 };
 
 export const feedService = {
-  // 1. Lấy Feed tổng hợp (Unified)
-  getUnifiedFeed: async (page: number, limit: number = 10): Promise<FeedItem[]> => {
+  // 1. Lấy Feed Mặc định (Backend tự lọc 3 ngày gần nhất)
+  getRecentFeed: async (page: number = 0, limit: number = 10): Promise<FeedItem[]> => {
+    // Gọi endpoint Unified của CheckinController
     const response = await http.get<any>(`/checkins/unified`, { 
-      params: { limit }
+      params: { page, limit }
     });
     const rawData = response.data.data || [];
     return rawData.map(mapToFeedItem);
   },
 
-  // 2. Lấy Feed của Journey (Đã fix lỗi cursor)
-  getJourneyFeed: async (journeyId: string, cursor?: string, limit: number = 20): Promise<FeedItem[]> => {
+  // 2. Lấy Feed của Hành trình (Lấy tất cả)
+  getJourneyFeed: async (journeyId: string, page: number = 0, limit: number = 10): Promise<FeedItem[]> => {
+    // Gọi endpoint Journey của CheckinController
     const response = await http.get<any>(`/checkins/journey/${journeyId}`, {
-      params: { cursor, limit }
+      params: { page, limit }
     });
     
-    const rawData = response.data.data || [];
+    const rawData = response.data.data || []; // CheckinController trả về List<CheckinResponse>
+    // Nếu API trả về Page object, cần sửa thành response.data.data.content
     return rawData.map(mapToFeedItem);
   },
 
-  // ... (Các hàm interaction giữ nguyên)
+  // 3. Tương tác (Thả tim/Reaction)
   toggleReaction: async (checkinId: string, emoji: string) => {
     return await http.post(`/checkins/${checkinId}/reactions`, { emoji });
   },
 
+  // 4. Bình luận
   postComment: async (checkinId: string, content: string) => {
       return await http.post(`/checkins/${checkinId}/comments`, { content });
   },
 
+  // 5. Lấy danh sách Reaction
   getPostReactions: async (checkinId: string) => {
     const response = await http.get<any>(`/checkins/${checkinId}/reactions`);
     return response.data.data;

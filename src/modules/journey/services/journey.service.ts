@@ -16,7 +16,6 @@ import { Checkin } from "@/modules/checkin/types";
 const JOURNEY_URL = "/journeys"; 
 const INVITATION_URL = "/journey-invitations";
 
-// [MỚI] Interface cho alert response
 export interface JourneyAlertResponse {
   journeyPendingInvitations: number;
   waitingApprovalRequests: number;
@@ -32,7 +31,6 @@ interface PageResponse<T> {
 }
 
 export const journeyService = {
-  // [MỚI] Gọi API alerts
   getAlerts: async (): Promise<JourneyAlertResponse> => {
     const response = await http.get<{ data: JourneyAlertResponse }>(`${JOURNEY_URL}/alerts`);
     return response.data.data;
