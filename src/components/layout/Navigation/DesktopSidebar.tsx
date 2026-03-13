@@ -15,7 +15,7 @@ interface DesktopSidebarProps {
   toggleSidebar: () => void;
   onNotificationClick: () => void;
   isNotificationOpen: boolean;
-  onSettingsClick?: () => void; // [THÊM MỚI]
+  onSettingsClick?: () => void; 
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -27,122 +27,130 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   toggleSidebar,
   onNotificationClick,
   isNotificationOpen,
-  onSettingsClick // [THÊM MỚI]
+  onSettingsClick 
 }) => {
   return (
     <div className={cn(
-      "fixed z-50 top-0 left-0 h-full transition-all duration-300 ease-in-out",
-      "bg-transparent border-r border-white/10", 
+      "fixed z-50 top-0 left-0 h-full transition-all duration-300 ease-in-out font-sans",
+      // Thiết kế mềm mại hơn: Viền mỏng 1px, màu sắc nhã nhặn
+      "bg-white dark:bg-[#121212] border-r border-zinc-200 dark:border-white/10", 
       "flex flex-col py-8",
-      isExpanded ? "w-[260px] px-6" : "w-[80px] px-3", 
+      isExpanded ? "w-[260px] px-5" : "w-[88px] px-3", 
       "hidden md:flex" 
     )}>
       
-      {/* Nút Kéo ra / Thu vào */}
+      {/* Nút Kéo ra / Thu vào (Tinh tế hơn) */}
       <button
         onClick={toggleSidebar}
-        className="absolute -right-3.5 top-12 w-7 h-7 bg-[#121212] border border-white/10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all z-50 shadow-lg"
+        className="absolute -right-4 top-12 w-8 h-8 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 transition-all z-50 shadow-sm active:scale-95"
       >
-        {isExpanded ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        {isExpanded ? <ChevronLeft className="w-5 h-5 ml-0.5" /> : <ChevronRight className="w-5 h-5 ml-1" />}
       </button>
 
       {/* 1. Tên nền tảng */}
-      <div className={cn("mb-5 transition-all flex items-center", isExpanded ? "px-2 justify-start" : "justify-center")}>
-        <span className="text-[22px] font-extrabold text-white tracking-wide drop-shadow-md select-none">
+      <div className={cn("mb-6 transition-all flex items-center", isExpanded ? "px-3 justify-start" : "justify-center")}>
+        <span className="text-[28px] font-normal text-black dark:text-white tracking-wide select-none" style={{ fontFamily: '"Jua", sans-serif' }}>
           {isExpanded ? "MindRevol" : "M."}
         </span>
       </div>
 
-      <div className="w-full h-px bg-white/10 mb-6 shrink-0" />
+      <div className="w-full h-px bg-zinc-200 dark:bg-white/10 mb-6 shrink-0" />
 
-      {/* 2. Menu Items */}
-      <div className="flex-1 flex flex-col gap-1">
-        <DesktopNavItem to="/" icon={Home} label="Trang chủ" isExpanded={isExpanded} />
+      {/* 2. Menu Items (Tiếng Anh, Hover nhẹ nhàng, Dark mode không bị âm bản) */}
+      <div className="flex-1 flex flex-col gap-1.5">
+        <DesktopNavItem to="/" icon={Home} label="Home" isExpanded={isExpanded} />
         
         <button 
           onClick={onJourneyClick}
-          title={!isExpanded ? "Hành trình" : undefined}
+          title={!isExpanded ? "Journeys" : undefined}
           className={cn(
-            "flex items-center rounded-2xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all group relative bg-transparent",
-            isExpanded ? "w-full gap-4 px-3 py-3.5 justify-start" : "w-full px-0 py-3.5 justify-center"
+            "flex items-center rounded-[16px] transition-all group relative border border-transparent",
+            isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
+            "text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-[0.98]"
           )}
         >
-          <Compass className="w-[26px] h-[26px] transition-transform group-hover:scale-110 drop-shadow-sm shrink-0" strokeWidth={2} />
-          {isExpanded && <span className="font-medium text-[15px] drop-shadow-sm whitespace-nowrap">Hành trình</span>}
+          <Compass className="w-6 h-6 transition-transform group-hover:scale-110 shrink-0" strokeWidth={2} />
+          {isExpanded && <span className="font-normal text-[17px] whitespace-nowrap tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>Journeys</span>}
           {hasJourneyAlerts && (
-            <span className={cn("absolute bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.8)]", isExpanded ? "right-4 w-2 h-2" : "top-3 right-[14px] w-2 h-2")} />
+            <span className={cn("absolute bg-red-500 rounded-full", isExpanded ? "right-4 w-2.5 h-2.5" : "top-2.5 right-[12px] w-2.5 h-2.5")} />
           )}
         </button>
 
         <DesktopNavItem to="/box" icon={Box} label="Box" isExpanded={isExpanded} />
-        <DesktopNavItem to="/chat" icon={MessageCircle} label="Tin nhắn" badge={totalUnread} isExpanded={isExpanded} />
-        <DesktopNavItem to="/map" icon={MapIcon} label="Bản đồ" isExpanded={isExpanded} />
+        <DesktopNavItem to="/chat" icon={MessageCircle} label="Messages" badge={totalUnread} isExpanded={isExpanded} />
+        <DesktopNavItem to="/map" icon={MapIcon} label="Map" isExpanded={isExpanded} />
         
+        {/* Nút Thông báo */}
         <button 
           onClick={onNotificationClick}
-          title={!isExpanded ? "Thông báo" : undefined}
+          title={!isExpanded ? "Notifications" : undefined}
           className={cn(
-            "flex items-center rounded-2xl transition-all relative group bg-transparent",
-            isExpanded ? "w-full gap-4 px-3 py-3.5 justify-start" : "w-full px-0 py-3.5 justify-center",
-            isNotificationOpen ? "text-white" : "text-zinc-400 hover:text-white hover:bg-white/5"
+            "flex items-center rounded-[16px] transition-all relative group border",
+            isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
+            isNotificationOpen 
+              ? "bg-zinc-100 dark:bg-white/10 text-black dark:text-white border-transparent" 
+              : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-[0.98]"
           )}
         >
-          <Bell className={cn("w-[26px] h-[26px] transition-transform drop-shadow-sm shrink-0", isNotificationOpen ? "scale-105" : "group-hover:scale-110")} strokeWidth={isNotificationOpen ? 2.5 : 2} />
-          {isExpanded && <span className={cn("text-[15px] drop-shadow-sm whitespace-nowrap", isNotificationOpen ? "font-bold" : "font-medium")}>Thông báo</span>}
+          <Bell className={cn("w-6 h-6 transition-transform shrink-0", isNotificationOpen ? "scale-105" : "group-hover:scale-110")} strokeWidth={isNotificationOpen ? 2.5 : 2} />
+          {isExpanded && <span className="font-normal text-[17px] whitespace-nowrap tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>Notifications</span>}
         </button>
 
+        {/* Nút Đăng bài */}
         <button 
             onClick={triggerUpload}
-            title={!isExpanded ? "Đăng bài" : undefined}
+            title={!isExpanded ? "Post" : undefined}
             className={cn(
-                "flex items-center rounded-2xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all group bg-transparent",
-                isExpanded ? "w-full gap-4 px-3 py-3.5 justify-start" : "w-full px-0 py-3.5 justify-center"
+                "flex items-center rounded-[16px] transition-all group border border-transparent mt-1",
+                isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
+                "text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-[0.98]"
             )}
         >
-            <PlusSquare className="w-[26px] h-[26px] transition-transform group-hover:scale-110 drop-shadow-sm shrink-0" strokeWidth={2} />
-            {isExpanded && <span className="font-medium text-[15px] drop-shadow-sm whitespace-nowrap">Đăng</span>}
+            <PlusSquare className="w-6 h-6 transition-transform group-hover:scale-110 shrink-0" strokeWidth={2} />
+            {isExpanded && <span className="font-normal text-[17px] whitespace-nowrap tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>Post</span>}
         </button>
 
-        <DesktopNavItem to="/profile" icon={User} label="Cá nhân" isExpanded={isExpanded} />
+        <DesktopNavItem to="/profile" icon={User} label="Profile" isExpanded={isExpanded} />
       </div>
 
       {/* 3. Cài đặt */}
-      <div className="mt-auto pt-4 shrink-0 border-t border-white/10">
-        {/* [SỬA LẠI] Đổi từ NavLink sang thẻ button gọi Modal */}
+      <div className="mt-auto pt-4 shrink-0 border-t border-zinc-200 dark:border-white/10">
         <button 
           onClick={onSettingsClick}
-          title={!isExpanded ? "Cài đặt" : undefined}
+          title={!isExpanded ? "Settings" : undefined}
           className={cn(
-            "flex items-center rounded-2xl transition-all relative group bg-transparent w-full",
-            isExpanded ? "px-3 py-3.5 gap-4 justify-start" : "px-0 py-3.5 justify-center",
-            "text-zinc-400 hover:text-white hover:bg-white/5"
+            "flex items-center rounded-[16px] transition-all relative group border border-transparent w-full",
+            isExpanded ? "px-4 py-3 gap-4 justify-start" : "px-0 py-3 justify-center",
+            "text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-[0.98]"
           )}
         >
-          <Settings className={cn("w-[26px] h-[26px] transition-transform drop-shadow-sm shrink-0 group-hover:scale-110")} strokeWidth={2} />
-          {isExpanded && <span className="text-[15px] drop-shadow-sm whitespace-nowrap font-medium">Cài đặt</span>}
+          <Settings className="w-6 h-6 transition-transform shrink-0 group-hover:scale-110" strokeWidth={2} />
+          {isExpanded && <span className="font-normal text-[17px] whitespace-nowrap tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>Settings</span>}
         </button>
       </div>
     </div>
   );
 };
 
-// Component cũ giữ nguyên
+// Component con: DesktopNavItem
 const DesktopNavItem = ({ to, icon: Icon, label, badge, isExpanded }: any) => (
     <NavLink 
       to={to} 
       title={!isExpanded ? label : undefined}
       className={({ isActive }) => cn(
-        "flex items-center rounded-2xl transition-all relative group bg-transparent",
-        isExpanded ? "px-3 py-3.5 gap-4 justify-start" : "px-0 py-3.5 justify-center",
-        isActive ? "text-white" : "text-zinc-400 hover:text-white hover:bg-white/5"
+        "flex items-center rounded-[16px] transition-all relative group border",
+        isExpanded ? "px-4 py-3 gap-4 justify-start" : "px-0 py-3 justify-center",
+        isActive 
+          ? "bg-zinc-100 dark:bg-white/10 text-black dark:text-white border-transparent" 
+          : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-[0.98]"
       )}
     >
       {({ isActive }) => (
         <>
-          <Icon className={cn("w-[26px] h-[26px] transition-transform drop-shadow-sm shrink-0", isActive ? "scale-105" : "group-hover:scale-110")} strokeWidth={isActive ? 2.5 : 2} />
-          {isExpanded && <span className={cn("text-[15px] drop-shadow-sm whitespace-nowrap", isActive ? "font-bold" : "font-medium")}>{label}</span>}
-          {badge > 0 && isExpanded && <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">{badge > 99 ? '99+' : badge}</span>}
-          {badge > 0 && !isExpanded && <span className="absolute top-3 right-[14px] w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
+          <Icon className={cn("w-6 h-6 transition-transform shrink-0", isActive ? "scale-105" : "group-hover:scale-110")} strokeWidth={isActive ? 2.5 : 2} />
+          {isExpanded && <span className="font-normal text-[17px] whitespace-nowrap tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>{label}</span>}
+          {badge > 0 && isExpanded && <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{badge > 99 ? '99+' : badge}</span>}
+          {badge > 0 && !isExpanded && <span className="absolute top-2.5 right-[12px] w-2.5 h-2.5 bg-red-500 rounded-full" />}
         </>
       )}
     </NavLink>

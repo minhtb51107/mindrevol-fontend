@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
-// [XÁC NHẬN] Import này đúng với cấu trúc thư mục bạn cung cấp
 import { blockService } from '@/modules/user/services/block.service'; 
 import { friendService } from '@/modules/user/services/friend.service'; 
 import { useAuth } from '@/modules/auth/store/AuthContext';
@@ -33,10 +32,17 @@ export const useChat = (conversationId: any, partnerId: any) => {
 
   useEffect(() => {
     const fetchMessages = async () => {
-      if (!conversationId || !partnerId) return;
+      // Bỏ qua nếu là ID giả (người chưa từng chat)
+      if (!conversationId) return;
+      if (conversationId.startsWith('friend_')) {
+          setMessages(conversationId, []); 
+          return;
+      }
+
       setIsLoading(true);
       try {
-        const data = await chatService.getMessages(partnerId);
+        // [ĐÃ SỬA] Gọi API bằng conversationId thay vì partnerId
+        const data = await chatService.getMessages(conversationId);
         const sortedMessages = [...data].reverse();
         setMessages(conversationId, sortedMessages);
       } catch (err) {
@@ -47,11 +53,11 @@ export const useChat = (conversationId: any, partnerId: any) => {
       }
     };
     fetchMessages();
-  }, [conversationId, partnerId, setMessages]);
+  }, [conversationId, setMessages]); // Bỏ partnerId khỏi dependencies
 
   const sendMessage = useCallback(async (content: string, type: 'TEXT' | 'IMAGE' = 'TEXT') => {
     if (!content.trim() && type === 'TEXT') return;
-    if (!partnerId || !currentUserId) return;
+    if (!currentUserId || !conversationId) return; 
 
     const clientSideId = Date.now().toString(); 
     const optimisticMessage: Message = {
@@ -67,13 +73,13 @@ export const useChat = (conversationId: any, partnerId: any) => {
     addMessage(optimisticMessage);
 
     try {
-      const realMessage = await chatService.sendMessage({
-        receiverId: partnerId,
+      await chatService.sendMessage({
+        conversationId: conversationId, // [THÊM MỚI] Gửi id cuộc trò chuyện xuống Backend
+        receiverId: partnerId || "",    // Vẫn gửi kèm dự phòng
         content,
         type,
         clientSideId 
       });
-      updateMessageStatus(clientSideId, 'SENT', realMessage.id);
     } catch (err) {
       console.error("Send message failed", err);
       updateMessageStatus(clientSideId, 'ERROR');

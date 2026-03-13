@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
+@custom-variant dark (&:where(.dark, .dark *));
 @theme {
   /* --- THEME CONFIG --- */
   --color-background: var(--bg);
@@ -39,11 +39,10 @@
   --muted: #a1a1aa;
 }
 
+/* [SỬA LỖI TẠI ĐÂY] Dùng @apply để Tailwind tự đổi màu body theo class 'dark' */
 body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  @apply bg-[#fafafa] dark:bg-[#0a0a0a] text-zinc-900 dark:text-white transition-colors duration-300 ease-in-out;
   font-family: var(--font-sans);
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Dark Mode: Đảo ngược màu icon lịch */
@@ -78,7 +77,7 @@ body {
     scrollbar-width: none;
   }
 
-  /* --- [MỚI] BỘ MÀU THƯƠNG HIỆU (BRANDING) --- */
+  /* --- BỘ MÀU THƯƠNG HIỆU (BRANDING) --- */
   
   /* 1. Nền Gradient (Dùng cho Button, Thanh loading...) */
   .bg-brand {
@@ -103,5 +102,38 @@ body {
   /* 5. Hiệu ứng Hover cho nút bấm (Sáng lên + Bóng hồng) */
   .hover-brand:hover {
     @apply opacity-90 shadow-[0_0_15px_rgba(255,102,196,0.5)];
+  }
+
+  /* Ghi đè CSS của Leaflet cho phù hợp với Dark Theme */
+  .leaflet-container {
+    background-color: #121212 !important;
+    font-family: inherit;
+    z-index: 10;
+  }
+
+  /* Tùy chỉnh Popup của Bản đồ */
+  .leaflet-popup-content-wrapper {
+    background-color: #1c1c1e !important;
+    color: white !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .leaflet-popup-tip {
+    background-color: #1c1c1e !important;
+  }
+
+  /* Custom Marker Cluster (Gom cụm) */
+  .marker-cluster-small,
+  .marker-cluster-medium,
+  .marker-cluster-large {
+    background-color: rgba(59, 130, 246, 0.6) !important;
+  }
+  .marker-cluster-small div,
+  .marker-cluster-medium div,
+  .marker-cluster-large div {
+    background-color: rgba(59, 130, 246, 0.9) !important;
+    color: white !important;
+    font-weight: bold;
+    font-family: inherit;
   }
 }

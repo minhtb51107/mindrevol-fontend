@@ -1,81 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom'; 
 import { cn } from '@/lib/utils';
 import { 
   MoreHorizontal, Trash2, Edit2, Flag, 
-  MapPin, MessageCircle, Share2, SmilePlus, Sparkles 
+  MapPin, Share2, Bookmark, BookmarkCheck 
 } from 'lucide-react';
 import { ReportModal } from '@/modules/report/components/ReportModal';
 import { ReportTargetType } from '@/modules/report/services/report.service';
 import { usePostCardLogic } from '../hooks/usePostCardLogic';
-import { usePostReaction } from '../hooks/usePostReaction';
 import { PostProps, Emotion } from '../types'; 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import EmojiPicker, { Theme } from 'emoji-picker-react';
+import { useTheme } from '@/contexts/ThemeContext'; 
 
-// --- CÁC COMPONENT CON ---
+import { checkinService } from '@/modules/checkin/services/checkin.service';
+
 import { ActivityModal } from './ActivityModal';
-import { PostComments } from './PostComments'; 
-import { ShareModal } from './ShareModal'; // [THÊM MỚI] Import ShareModal
-
-// --- CONFIG EMOJI CHUẨN ---
-const EMOTION_EMOJIS: Record<string, string> = {
-  [Emotion.EXCITED]:   '🤩',
-  [Emotion.NORMAL]:    '🙂',
-  [Emotion.TIRED]:     '😫',
-  [Emotion.HOPELESS]:  '😞',
-  'DEFAULT':           '✨',
-};
+import { ShareModal } from './ShareModal'; 
 
 interface JourneyPostCardProps {
   post: PostProps;
   isActive: boolean;
+  headerTarget?: HTMLDivElement | null; // Nơi sẽ nhận Header
   onDelete?: (postId: string) => void;
   onUpdate?: (postId: string, newCaption: string) => void;
 }
 
-export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyPostCardProps) => {
-  // 1. Hook quản lý logic bài viết (Sửa, Xóa, Báo cáo)
+export const JourneyPostCard = ({ post, isActive, headerTarget, onDelete, onUpdate }: JourneyPostCardProps) => {
+  const { theme } = useTheme(); 
+
   const { 
     isOwner, showMenu, setShowMenu, toggleMenu,
     showReportModal, setShowReportModal,
     isEditing, editCaption, setEditCaption, isSaving, handlers
   } = usePostCardLogic({ post, onDelete, onUpdate });
 
-  // 2. Hook quản lý logic Thả cảm xúc
-  const { 
-    localReactionCount, showEmojiPicker, pickerRef, 
-    handleSelectEmoji, toggleEmojiPicker 
-  } = usePostReaction(post.id, post.reactionCount || 0, post.isLiked);
-
-  // 3. State quản lý các Modal & Mở rộng UI
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false); // [THÊM MỚI] State cho ShareModal
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false); 
   
-  const emoji = EMOTION_EMOJIS[post.emotion] || EMOTION_EMOJIS['DEFAULT'];
+  const [isSaved, setIsSaved] = useState(post.isSaved || false);
 
-  return (
-    <div className="w-full mb-6 relative">
-      
-      {/* --- HEADER --- */}
-      <div className="flex items-center justify-between px-2 py-3">
+  useEffect(() => {
+    setIsSaved(post.isSaved || false);
+  }, [post.isSaved]);
+
+  const handleToggleSave = async () => {
+    const newSavedStatus = !isSaved;
+    setIsSaved(newSavedStatus);
+    post.isSaved = newSavedStatus; 
+    setShowMenu(false); 
+    try {
+      await checkinService.toggleSave(post.id);
+    } catch (error) {
+      setIsSaved(!newSavedStatus);
+      post.isSaved = !newSavedStatus;
+      console.error("Lỗi khi lưu bài viết", error);
+    }
+  };
+
+  // ==============================================
+  // GIAO DIỆN HEADER SẼ ĐƯỢC CỐ ĐỊNH TRÊN CÙNG
+  // ==============================================
+  const HeaderContent = (
+    <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col pointer-events-auto">
+      <div className="flex items-center justify-between px-2 pb-3">
+        {/* Góc trái: Avatar & Thông tin */}
         <div className="flex items-center gap-3">
-          <Avatar className="w-10 h-10 border border-zinc-800">
+          <Avatar className="w-11 h-11 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <AvatarImage src={post.user.avatar} />
             <AvatarFallback>U</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="text-[15px] font-semibold text-zinc-100 leading-none">
+            <span className="text-[15px] font-bold text-zinc-900 dark:text-white leading-none hover:underline cursor-pointer">
               {post.user.name}
             </span>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-xs text-zinc-500">{post.timestamp}</span>
+            <div className="flex items-center gap-1.5 mt-1 opacity-80">
+              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{post.timestamp}</span>
               {post.locationName && (
                 <>
-                  <span className="text-zinc-600 text-[10px]">•</span>
-                  <div className="flex items-center gap-0.5 text-zinc-400">
+                  <span className="text-[10px] text-zinc-400">•</span>
+                  <div className="flex items-center gap-0.5 text-zinc-500 dark:text-zinc-400">
                     <MapPin className="w-3 h-3" />
-                    <span className="text-xs truncate max-w-[120px]">{post.locationName}</span>
+                    <span className="text-xs truncate max-w-[110px]">{post.locationName}</span>
                   </div>
                 </>
               )}
@@ -83,28 +88,40 @@ export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyP
           </div>
         </div>
 
-        {/* Menu 3 chấm */}
+        {/* Góc phải: Menu 3 chấm */}
         <div className="relative">
-          <button onClick={toggleMenu} className="p-2 hover:bg-zinc-800/50 rounded-full transition-colors text-zinc-400">
+          <button 
+            onClick={toggleMenu} 
+            className="p-2 bg-zinc-100/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-full text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+          >
             <MoreHorizontal className="w-5 h-5" />
           </button>
           
           {showMenu && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
-              <div className="absolute right-0 top-full mt-1 w-40 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 z-30">
+              <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden py-1 z-30 animate-in fade-in zoom-in-95 origin-top-right">
+                
+                <button onClick={() => { setIsShareModalOpen(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors">
+                  <Share2 className="w-4 h-4 text-zinc-500"/> Chia sẻ
+                </button>
+
+                <button onClick={handleToggleSave} className="w-full text-left px-4 py-2.5 text-sm text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors">
+                  {isSaved ? <><BookmarkCheck className="w-4 h-4 text-primary"/> Bỏ lưu bài viết</> : <><Bookmark className="w-4 h-4 text-zinc-500"/> Lưu bài viết</>}
+                </button>
+
                 {isOwner ? (
                   <>
-                    <button onClick={handlers.handleEditClick} className="w-full text-left px-4 py-2.5 text-sm text-zinc-200 hover:bg-zinc-800 flex items-center gap-2">
-                      <Edit2 className="w-4 h-4 text-zinc-400"/> Chỉnh sửa
+                    <button onClick={handlers.handleEditClick} className="w-full text-left px-4 py-2.5 text-sm text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors">
+                      <Edit2 className="w-4 h-4 text-zinc-500"/> Chỉnh sửa
                     </button>
-                    <button onClick={handlers.handleDelete} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800">
+                    <button onClick={handlers.handleDelete} className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 border-t border-zinc-100 dark:border-zinc-800 transition-colors">
                       <Trash2 className="w-4 h-4"/> Xóa bài
                     </button>
                   </>
                 ) : (
-                  <button onClick={handlers.handleReport} className="w-full text-left px-4 py-2.5 text-sm text-zinc-200 hover:bg-zinc-800 flex items-center gap-2">
-                    <Flag className="w-4 h-4 text-zinc-400"/> Báo cáo
+                  <button onClick={handlers.handleReport} className="w-full text-left px-4 py-2.5 text-sm text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-100 dark:border-zinc-800 transition-colors">
+                    <Flag className="w-4 h-4 text-zinc-500"/> Báo cáo
                   </button>
                 )}
               </div>
@@ -112,177 +129,66 @@ export const JourneyPostCard = ({ post, isActive, onDelete, onUpdate }: JourneyP
           )}
         </div>
       </div>
-
-      {/* --- CAPTION --- */}
-      <div className="px-2 pb-3">
-        {isEditing ? (
-          <div className="flex flex-col gap-2">
-            <textarea 
-              value={editCaption} 
-              onChange={(e) => setEditCaption(e.target.value)} 
-              className="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-zinc-500 resize-none min-h-[80px]" 
-              autoFocus 
-            />
-            <div className="flex justify-end gap-2">
-              <button onClick={handlers.handleCancelEdit} className="px-3 py-1.5 text-zinc-400 text-xs font-medium hover:text-white transition-colors">Hủy</button>
-              <button onClick={handlers.handleSaveEdit} disabled={isSaving} className="px-4 py-1.5 bg-white text-black text-xs font-bold rounded-md hover:bg-zinc-200 transition-colors">Lưu</button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-[14px] text-zinc-200 leading-relaxed whitespace-pre-line">
-            {post.caption ? (
-               typeof post.caption === 'string' ? post.caption : (post.caption as any).caption || ''
-            ) : (
-               <span className="italic text-zinc-500 text-xs">Không có ghi chú...</span>
-            )}
-          </p>
-        )}
-      </div>
-
-      {/* --- IMAGE BACKGROUND BLUR --- */}
-      <div className="w-full relative overflow-hidden rounded-xl bg-zinc-900/50 flex items-center justify-center max-h-[650px]">
-        <div 
-          className="absolute inset-0 -z-10 bg-cover bg-center blur-2xl scale-110 opacity-60 saturate-150"
-          style={{ backgroundImage: `url(${post.image})` }}
-          aria-hidden="true" 
-        />
-        <img 
-          src={post.image} 
-          alt="Post content" 
-          className="relative z-10 w-auto h-auto max-w-full max-h-[650px] object-contain shadow-sm" 
-          draggable={false} 
-        />
-      </div>
-
-      {/* --- FOOTER: Actions & Stats --- */}
-      <div className="px-2 py-4 flex items-center justify-between relative">
-        
-        {/* Left Actions */}
-        <div className="flex items-center gap-5 relative">
-          
-          {/* TRƯỜNG HỢP LÀ CHỦ BÀI VIẾT: Hiện nút Xem Tương tác (Ngôi sao) */}
-          {isOwner ? (
-            <button 
-              onClick={() => setIsActivityModalOpen(true)}
-              className="flex items-center gap-1.5 group transition-transform active:scale-95"
-              title="Xem tương tác"
-            >
-              <Sparkles className={cn(
-                "w-6 h-6 transition-all", 
-                localReactionCount > 0 
-                  ? "text-yellow-500 fill-yellow-500/20" 
-                  : "text-zinc-400 group-hover:text-yellow-500" 
-              )} />
-              {localReactionCount > 0 && (
-                <span className="text-sm font-semibold text-yellow-500">
-                  {localReactionCount}
-                </span>
-              )}
-            </button>
-          ) : (
-            /* TRƯỜNG HỢP LÀ NGƯỜI XEM: Hiện nút Thả Emoji */
-            <>
-              {showEmojiPicker && (
-                <div 
-                  ref={pickerRef}
-                  className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-xl"
-                >
-                  <EmojiPicker 
-                    theme={Theme.DARK} 
-                    onEmojiClick={handleSelectEmoji} 
-                    lazyLoadEmojis={true} 
-                    searchDisabled={true} 
-                    skinTonesDisabled={true} 
-                    height={350} 
-                  />
-                </div>
-              )}
-              <button 
-                onClick={toggleEmojiPicker}
-                className="flex items-center gap-1.5 group transition-transform active:scale-90"
-              >
-                <SmilePlus className={cn(
-                  "w-6 h-6 transition-colors", 
-                  localReactionCount > 0 ? "text-yellow-500" : "text-zinc-400 group-hover:text-yellow-500"
-                )} />
-                {localReactionCount > 0 && (
-                  <span className={cn("text-sm font-medium", localReactionCount > 0 ? "text-yellow-500" : "text-zinc-400")}>
-                    {localReactionCount}
-                  </span>
-                )}
-              </button>
-            </>
-          )}
-          
-          {/* Nút bật/tắt bình luận */}
-          <button 
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 group active:scale-95 transition-transform"
-          >
-            <MessageCircle className={cn(
-              "w-6 h-6 transition-colors", 
-              showComments ? "text-blue-500" : "text-zinc-400 group-hover:text-blue-500"
-            )} />
-            {post.commentCount > 0 && (
-              <span className={cn(
-                "text-sm font-medium", 
-                showComments ? "text-blue-500" : "text-zinc-400"
-              )}>
-                {post.commentCount}
-              </span>
-            )}
-          </button>
-
-          {/* Nút Chia sẻ (Share) -> Mở ShareModal */}
-          <button 
-            onClick={() => setIsShareModalOpen(true)}
-            className="group active:scale-95 transition-transform"
-          >
-            <Share2 className="w-6 h-6 text-zinc-400 group-hover:text-white transition-colors" />
-          </button>
-        </div>
-
-        {/* Right Info: Activity / Emotion */}
-        <div className="flex items-center gap-2">
-           <span className="text-xl leading-none">{emoji}</span>
-           {(post.activityName || post.taskName) && (
-             <span className="text-[11px] font-medium text-zinc-400">
-               {post.activityName || post.taskName}
-             </span>
-           )}
-        </div>
-      </div>
-
-      <div className="w-full h-px bg-zinc-800/60 mt-2" />
-
-      {/* --- KHUNG BÌNH LUẬN INLINE --- */}
-      {showComments && (
-        <PostComments 
-          postId={post.id} 
-          onClose={() => setShowComments(false)}
-        />
-      )}
-
-      {/* --- CÁC MODAL CỦA POST --- */}
-      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} targetId={post.id} targetType={ReportTargetType.CHECKIN} />
       
-      {isActivityModalOpen && (
-        <ActivityModal 
-          isOpen={isActivityModalOpen} 
-          onClose={() => setIsActivityModalOpen(false)} 
-          postId={post.id}
-        />
-      )}
+      {/* [ĐÃ THÊM] Thẻ hr cắt ngang ngay bên dưới Avatar */}
+      <hr className="w-full border-zinc-200 dark:border-white/10" />
+    </div>
+  );
 
-      {/* [THÊM MỚI]: Share Modal */}
-      {isShareModalOpen && (
-        <ShareModal 
-          isOpen={isShareModalOpen} 
-          onClose={() => setIsShareModalOpen(false)} 
-          postId={post.id} 
-          postImage={post.image} // <--- THÊM DÒNG NÀY ĐỂ TRUYỀN ẢNH XUỐNG
-        />
-      )}
+  return (
+    <div className="w-full relative flex flex-col">
+
+      {/* Bắn Header lên khung cố định nếu bài này đang lọt vào khung hình */}
+      {isActive && headerTarget ? createPortal(HeaderContent, headerTarget) : null}
+
+      {/* KHỐI VUÔNG CHỈ CHỨA ẢNH & CAPTION ĐỂ CUỘN */}
+      <div className="relative w-full aspect-square z-10 mt-1">
+        
+        {/* Lớp Ảnh nền */}
+        <div className="absolute inset-0 rounded-[28px] overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-sm border border-zinc-200 dark:border-white/10">
+          <img 
+            src={post.image} 
+            alt="Post content" 
+            className="w-full h-full object-cover" 
+            draggable={false} 
+          />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+        </div>
+
+        {/* Caption nằm đè trên ảnh */}
+        <div className="absolute bottom-4 left-4 max-w-[80%] z-10">
+          {isEditing ? (
+            <div className="flex flex-col gap-2 bg-black/50 backdrop-blur-lg rounded-2xl p-3 border border-white/10 w-[300px]">
+              <textarea 
+                value={editCaption} 
+                onChange={(e) => setEditCaption(e.target.value)} 
+                className="w-full bg-transparent p-0 text-sm text-white placeholder:text-white/50 focus:outline-none resize-none min-h-[60px]" 
+                placeholder="Viết ghi chú..."
+                autoFocus 
+              />
+              <div className="flex justify-end gap-1.5 pt-1">
+                <button onClick={handlers.handleCancelEdit} className="px-3 py-1 text-white/80 text-xs font-medium hover:text-white transition-colors">Hủy</button>
+                <button onClick={handlers.handleSaveEdit} disabled={isSaving} className="px-3 py-1 bg-white text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">Lưu</button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-black/40 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/10 shadow-inner">
+              <p className="text-[14px] text-white font-medium leading-relaxed whitespace-pre-line line-clamp-3">
+                {post.caption ? (
+                   typeof post.caption === 'string' ? post.caption : (post.caption as any).caption || ''
+                ) : (
+                   <span className="italic text-white/60 text-sm">Không có ghi chú...</span>
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Các Modals */}
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} targetId={post.id} targetType={ReportTargetType.CHECKIN} />
+      {isActivityModalOpen && <ActivityModal isOpen={isActivityModalOpen} onClose={() => setIsActivityModalOpen(false)} postId={post.id} />}
+      {isShareModalOpen && <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} postId={post.id} postImage={post.image} />}
 
     </div>
   );

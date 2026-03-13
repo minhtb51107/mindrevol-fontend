@@ -1,14 +1,15 @@
-// src/modules/chat/components/ChatInput.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Smile, Send } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ChatInputProps {
   onSend: (text: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ onSend }) => {
+  const { theme } = useTheme();
   const [text, setText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -30,65 +31,61 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend }) => {
     setShowEmojiPicker(false);
   };
 
-  const onEmojiClick = (emojiObject: any) => {
-    setText((prev) => prev + emojiObject.emoji);
-  };
-
   return (
-    // Giữ nguyên wrapper footer gradient
-    <div className="px-4 pb-4 pt-2 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent shrink-0 z-30">
-      {/* Giữ nguyên style container input: rounded-[26px], shadow-black/50 */}
-      <div className="max-w-4xl mx-auto flex items-end gap-2 bg-[#1c1c1e] border border-white/5 rounded-[26px] p-1.5 shadow-2xl shadow-black/50 relative">
+    <div className="px-4 pb-6 pt-3 bg-white dark:bg-[#121212] border-t border-zinc-200 dark:border-white/5 shrink-0 z-30 transition-colors duration-300">
+      
+      {/* Khung Input Neo-Brutalism */}
+      <div className="max-w-4xl mx-auto flex items-end gap-3 bg-white dark:bg-zinc-900 border-2 border-black dark:border-white rounded-[32px] p-1.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.7)] relative transition-all focus-within:translate-x-[2px] focus-within:translate-y-[2px] focus-within:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:focus-within:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.7)]">
         
         {/* Nút Emoji */}
         <div className="relative" ref={emojiPickerRef}>
             {showEmojiPicker && (
-                <div className="absolute bottom-14 left-0 z-50 shadow-2xl rounded-2xl border border-white/10 overflow-hidden">
+                <div className="absolute bottom-16 left-0 z-50 shadow-2xl rounded-2xl border-2 border-black dark:border-white overflow-hidden">
                     <EmojiPicker 
-                      theme={Theme.DARK} 
-                      onEmojiClick={onEmojiClick}
-                      width={300}
-                      height={400}
-                      searchDisabled
-                      skinTonesDisabled
+                      theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} 
+                      onEmojiClick={(e) => setText(p => p + e.emoji)} 
+                      width={300} 
+                      height={400} 
+                      searchDisabled 
+                      skinTonesDisabled 
                     />
                 </div>
             )}
             <button 
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
               className={cn(
-                  "p-2.5 transition-all rounded-full active:scale-90",
-                  showEmojiPicker ? "text-yellow-400 bg-yellow-400/10" : "text-zinc-400 hover:text-yellow-400 hover:bg-yellow-400/10"
+                "p-3 rounded-full transition-transform active:scale-90", 
+                showEmojiPicker ? "text-orange-500 bg-orange-100 dark:bg-orange-500/20" : "text-zinc-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10"
               )}
-              title="Biểu cảm"
             >
               <Smile className="w-6 h-6" />
             </button>
         </div>
 
-        <div className="flex-1 py-3 px-1">
+        {/* Nhập text */}
+        <div className="flex-1 py-3 px-2">
           <input 
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Gửi tin nhắn..."
-              // Giữ nguyên style input transparent
-              className="w-full bg-transparent border-none outline-none text-zinc-100 placeholder:text-zinc-600 text-[16px] font-normal leading-relaxed"
+            value={text} 
+            onChange={(e) => setText(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
+            placeholder="Aa..." 
+            className="w-full bg-transparent border-none outline-none text-black dark:text-white placeholder:text-zinc-400 text-lg leading-relaxed" 
+            style={{ fontFamily: '"Jua", sans-serif' }} 
           />
         </div>
-        
+
+        {/* Nút Gửi */}
         <button 
-          onClick={() => handleSend()}
-          disabled={!text.trim()}
+          onClick={handleSend} 
+          disabled={!text.trim()} 
           className={cn(
-              "w-11 h-11 rounded-full transition-all duration-300 flex items-center justify-center mb-[1px]",
-              text.trim() 
-              ? "bg-white text-black hover:bg-zinc-200 hover:scale-105 shadow-lg" 
-              : "bg-[#2c2c2e] text-zinc-500 cursor-not-allowed"
+            "w-12 h-12 rounded-full transition-all duration-300 flex items-center justify-center mb-[2px]", 
+            text.trim() ? "bg-black text-white dark:bg-white dark:text-black hover:scale-105 shadow-md" : "bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600 cursor-not-allowed"
           )}
         >
-          <Send className={cn("w-5 h-5", text.trim() && "ml-0.5")} />
+          <Send className={cn("w-5 h-5", text.trim() && "ml-1")} />
         </button>
+
       </div>
     </div>
   );

@@ -14,9 +14,11 @@ import ChatPage from '@/modules/chat/pages/ChatPage';
 import Terms from '@/pages/Terms';     
 import Privacy from '@/pages/Privacy'; 
 
-// [MỚI] Import các trang của Box
 import BoxListPage from '@/modules/box/pages/BoxListPage';
 import BoxDetailPage from '@/modules/box/pages/BoxDetailPage';
+
+// [THÊM MỚI] Import MapPage
+import { MapPage } from '@/modules/map/pages/MapPage';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -66,12 +68,17 @@ function App() {
         isAuthenticated ? <ProfilePage /> : <Navigate to="/" replace />
       } />
 
-      {/* [MỚI] Routes cho module Box */}
       <Route path="/box" element={
         isAuthenticated ? <BoxListPage /> : <Navigate to="/" replace />
       } />
+      
       <Route path="/box/:boxId" element={
         isAuthenticated ? <BoxDetailPage /> : <Navigate to="/" replace />
+      } />
+
+      {/* [THÊM MỚI] Route cho module Bản đồ (Map) */}
+      <Route path="/map" element={
+        isAuthenticated ? <MapPage /> : <Navigate to="/" replace />
       } />
 
       {/* Fallback route: Nếu không khớp route nào thì về trang chủ */}

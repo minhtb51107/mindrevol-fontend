@@ -4,7 +4,7 @@ import { Navigation } from './Navigation';
 import { CreateJourneyModal } from '@/modules/journey/components/CreateJourneyModal';
 import { CheckinModal } from '@/modules/checkin/components/CheckinModal';
 import { JourneyListModal } from '@/modules/journey/components/JourneyListModal'; 
-import { SettingsModal } from '@/modules/user/components/SettingsModal'; // [THÊM MỚI]
+import { SettingsModal } from '@/modules/user/components/SettingsModal'; 
 import { journeyService } from '@/modules/journey/services/journey.service';
 import { cn } from '@/lib/utils';
 
@@ -16,11 +16,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
-  // State quản lý Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [isJourneyListOpen, setIsJourneyListOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); // [THÊM MỚI]
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); 
 
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() => {
       const saved = localStorage.getItem('sidebar_expanded');
@@ -34,17 +33,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const urlJourneyId = searchParams.get('journeyId');
   const activeJourneyId = urlJourneyId || defaultJourneyId;
 
+  // [ĐÃ SỬA] Thêm kiểm tra xem có phải Trang chủ không
+  const isHomePage = location.pathname === '/';
+  const isChatPage = location.pathname.startsWith('/chat');
+  const isProfilePage = location.pathname.startsWith('/profile');
+
   useEffect(() => {
-      const isChatPage = location.pathname.startsWith('/chat');
-      const isProfilePage = location.pathname.startsWith('/profile');
-      
       if (isChatPage || isProfilePage) {
           setIsSidebarExpanded(false);
       } else {
           const saved = localStorage.getItem('sidebar_expanded');
           setIsSidebarExpanded(saved !== null ? saved === 'true' : true);
       }
-  }, [location.pathname]);
+  }, [isChatPage, isProfilePage]);
 
   useEffect(() => {
     const fetchDefaultJourney = async () => {
@@ -76,28 +77,30 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#121212] text-white font-sans relative flex">
+    <div className="min-h-[100dvh] w-full bg-[#fcfcfc] dark:bg-[#121212] text-zinc-900 dark:text-white font-sans relative flex transition-colors duration-300 ease-in-out">
       
       <Navigation 
         onCheckinClick={handleCheckinClick} 
         onJourneyClick={() => setIsJourneyListOpen(true)}
-        onSettingsClick={() => setIsSettingsModalOpen(true)} // [THÊM MỚI] Mở Modal Setting
+        onSettingsClick={() => setIsSettingsModalOpen(true)} 
         refreshTrigger={navRefreshKey}
         isSidebarExpanded={isSidebarExpanded}
         toggleSidebar={handleToggleSidebar} 
         setSidebarExpanded={setIsSidebarExpanded} 
+        hideBottomNav={isChatPage}
       />
 
       <main className={cn(
-        "relative w-full min-h-[100dvh]", 
+        "relative w-full flex flex-col", 
         "transition-all duration-300 ease-in-out",
-        "pb-[100px] md:pb-0",
+        // [LOGIC ĐÚNG CHUẨN]: Chỉ khóa chiều cao nếu là trang chủ. Còn lại cho phép dài ra tự nhiên.
+        isHomePage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]",
+        isChatPage ? "pb-0" : "pb-[72px] md:pb-0", 
         isSidebarExpanded ? "md:pl-[260px]" : "md:pl-[80px]"
       )}>
         {children || <Outlet />}
       </main>
 
-      {/* --- MODALS TOÀN CỤC --- */}
       <CreateJourneyModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
@@ -125,7 +128,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           />
       )}
 
-      {/* [THÊM MỚI] Render Modal Cài đặt */}
       <SettingsModal 
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}

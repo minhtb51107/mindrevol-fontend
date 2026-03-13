@@ -1,30 +1,26 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { feedService } from '../services/feed.service';
-import { FeedItem } from '../types';
-import { JourneyPostCard } from './JourneyPostCard';
-import { Loader2, Sparkles, LayoutGrid } from 'lucide-react';
-import { MemberFilter } from './MemberFilter'; // [THÊM MỚI] Import bộ lọc
-import { useAuth } from '@/modules/auth/store/AuthContext'; // [THÊM MỚI] Lấy thông tin User hiện tại
+import { FeedItem, PostProps } from '../types';
+import { LocketFeedViewer } from './LocketFeedViewer'; 
+import { Loader2 } from 'lucide-react';
+import { MemberFilter } from './MemberFilter'; 
+import { useAuth } from '@/modules/auth/store/AuthContext'; 
 
 interface HomeFeedProps {
   selectedJourneyId: string | null;
 }
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({ selectedJourneyId }) => {
-  const { user } = useAuth(); // Lấy thông tin user đăng nhập
+  const { user } = useAuth(); 
   const [posts, setPosts] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  // [THÊM MỚI] State lưu người dùng đang được chọn để lọc
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // 1. Tải danh sách bài viết
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setPosts([]); 
-      setSelectedUserId(null); // Reset bộ lọc khi đổi hành trình
-      
+      setSelectedUserId(null); 
       try {
         let data: FeedItem[] = [];
         if (selectedJourneyId) {
@@ -39,114 +35,70 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ selectedJourneyId }) => {
         setLoading(false);
       }
     };
-
     loadData();
   }, [selectedJourneyId]);
 
-  // 2. [THÊM MỚI] Tự động trích xuất danh sách thành viên từ các bài viết hiện có
   const feedMembers = useMemo(() => {
     const membersMap = new Map();
-    
     posts.forEach(post => {
-      if (post.type === 'AD') return;
-      
-      // Tùy theo DTO của bạn, ID user có thể nằm ở post.userId hoặc post.user.id
-      const uid = post.user?.id || post.userId;
-      
-      if (uid && !membersMap.has(uid)) {
-        membersMap.set(uid, {
-          id: uid,
-          name: post.user?.name || 'User',
-          avatar: post.user?.avatar,
-          status: 'NORMAL',
-          presenceRate: 0 // Có thể nối với API để lấy % điểm danh sau
-        });
+      if (post.type !== 'AD') {
+        const uid = post.user?.id || post.userId;
+        if (uid && !membersMap.has(uid)) {
+          membersMap.set(uid, {
+            id: uid, name: post.user?.name || 'User', avatar: post.user?.avatar, status: 'NORMAL', presenceRate: 0 
+          });
+        }
       }
     });
-    
     return Array.from(membersMap.values());
   }, [posts]);
 
-  // 3. [THÊM MỚI] Lọc bài viết theo người dùng được chọn
   const filteredPosts = useMemo(() => {
-    if (!selectedUserId) return posts; // Nếu không chọn ai -> Hiện tất cả
-    
+    if (!selectedUserId) return posts; 
     return posts.filter(post => {
-      if (post.type === 'AD') return false;
-      const uid = post.user?.id || post.userId;
-      return String(uid) === String(selectedUserId);
+      if (post.type !== 'AD') {
+          const uid = post.user?.id || post.userId;
+          return String(uid) === String(selectedUserId);
+      }
+      return false; 
     });
   }, [posts, selectedUserId]);
 
-  // --- Header Title Component ---
-  const FeedHeader = () => (
-    <div className="w-full flex items-center gap-2 mb-6 mt-8">
-      {selectedJourneyId ? (
-        <>
-          <LayoutGrid className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-bold text-white">Bài viết hành trình</h3>
-        </>
-      ) : (
-        <>
-          <Sparkles className="w-5 h-5 text-yellow-500" />
-          <h3 className="text-lg font-bold text-white">Mới nhất cho bạn</h3>
-        </>
-      )}
-    </div>
-  );
+  const actualPostsForLocket = useMemo(() => {
+     return filteredPosts.filter(p => p.type !== 'AD') as PostProps[];
+  }, [filteredPosts]);
 
   if (loading) {
     return (
-      <div className="w-full max-w-[680px] mx-auto px-4 relative">
-        <FeedHeader />
-        <div className="w-full flex justify-center py-10">
-          <Loader2 className="w-8 h-8 text-zinc-500 animate-spin" />
-        </div>
+      <div className="w-full h-full flex flex-col items-center justify-center bg-transparent">
+        <Loader2 className="w-8 h-8 text-zinc-500 animate-spin" />
       </div>
     );
   }
 
+  if (filteredPosts.length === 0) {
+     return (
+        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-zinc-500 bg-transparent">
+            {selectedUserId ? "Thành viên này chưa có bài viết nào ở đây." : selectedJourneyId ? "Hành trình này chưa có bài viết nào." : "Chưa có hoạt động nào gần đây."}
+        </div>
+     );
+  }
+
   return (
-    <div className="w-full relative pb-20">
+    <div className="w-full h-full flex flex-col relative bg-transparent">
         
-      {/* [THÊM MỚI] Gọi Component Lọc Thành Viên */}
+      {/* Bộ lọc thành viên (nếu có) */}
       {feedMembers.length > 0 && (
-        <MemberFilter 
-          members={feedMembers}
-          currentUser={user}
-          selectedUserId={selectedUserId}
-          onSelectUser={setSelectedUserId}
-        />
+        <div className="absolute top-2 left-0 right-0 z-[60] flex justify-center pointer-events-auto">
+            <MemberFilter members={feedMembers} currentUser={user} selectedUserId={selectedUserId} onSelectUser={setSelectedUserId} />
+        </div>
       )}
 
-      <div className="w-full max-w-[680px] mx-auto px-4 flex flex-col items-center">
-        {/* Tiêu đề bảng tin */}
-        <FeedHeader />
-
-        {/* Danh sách bài viết SAU KHI LỌC */}
-        {filteredPosts.length === 0 ? (
-           <div className="w-full text-center py-10 text-zinc-500 text-sm bg-white/5 rounded-xl border border-white/5">
-             {selectedUserId 
-                ? "Thành viên này chưa có bài viết nào ở đây." 
-                : selectedJourneyId 
-                    ? "Hành trình này chưa có bài viết nào." 
-                    : "Chưa có hoạt động nào gần đây."}
-           </div>
-        ) : (
-           <div className="flex flex-col gap-8 w-full items-center">
-             {filteredPosts.map((item) => {
-                 if (item.type === 'AD') return null; 
-                 return (
-                   <JourneyPostCard 
-                       key={item.id} 
-                       post={item as any} 
-                       isActive={true} 
-                   />
-                 );
-             })}
-           </div>
-        )}
+      {/* Vùng Locket (Đã xóa FeedHeader tĩnh) */}
+      <div className="flex-1 w-full relative overflow-hidden">
+        <LocketFeedViewer posts={actualPostsForLocket} />
       </div>
+      
     </div>
   );
 };

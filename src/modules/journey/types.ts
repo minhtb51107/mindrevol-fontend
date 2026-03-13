@@ -1,5 +1,3 @@
-// src/modules/journey/types.ts
-
 import { Checkin } from "@/modules/checkin/types";
 
 // --- ENUMS ---
@@ -91,8 +89,6 @@ export interface CreateJourneyRequest {
   }[];
   requireApproval?: boolean;
   boxId?: string; 
-  
-  // [THÊM MỚI] 2 trường này
   themeColor?: string;
   avatar?: string;
 }
@@ -108,7 +104,6 @@ export interface UpdateJourneySettingsRequest {
   visibility?: JourneyVisibility; 
   themeColor?: string;
   avatar?: string;
-  // [THÊM MỚI]
   boxId?: string; 
 }
 
@@ -135,8 +130,12 @@ export interface JourneyResponse {
   role?: JourneyRole;
   participantCount: number;
   creatorId: string;
-  
   hasNewUpdates?: boolean;
+  previewImages?: string[];
+
+  // [THÊM 2 DÒNG NÀY ĐỂ FIX LỖI]
+  themeColor?: string;
+  avatar?: string;
 
   currentUserStatus?: {
     role: string; 
@@ -203,7 +202,6 @@ export interface JourneyRequestResponse {
   status: string;
 }
 
-// Cập nhật UserActiveJourneyResponse
 export interface UserActiveJourneyResponse {
   id: string;
   name: string;
@@ -214,11 +212,8 @@ export interface UserActiveJourneyResponse {
   endDate?: string;
   thumbnailUrl?: string;     
   theme: JourneyTheme | string;      
-  
-  // [THÊM MỚI] 2 trường này
   themeColor?: string;
   avatar?: string;
-
   memberAvatars: (string | null)[]; 
   totalMembers: number;
   daysRemaining: number;

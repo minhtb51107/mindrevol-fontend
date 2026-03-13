@@ -10,28 +10,29 @@ import { NotificationPanel } from './NotificationPanel';
 interface NavigationProps {
   onCheckinClick: (file: File) => void;
   onJourneyClick: () => void;
-  onSettingsClick?: () => void; // [THÊM MỚI]
+  onSettingsClick?: () => void; 
   refreshTrigger?: number;
   
   isSidebarExpanded?: boolean;
   toggleSidebar?: () => void;
   setSidebarExpanded?: (expanded: boolean) => void; 
+  hideBottomNav?: boolean; // [THÊM MỚI] 
 }
 
 export const Navigation: React.FC<NavigationProps> = ({ 
   onCheckinClick, 
   onJourneyClick, 
-  onSettingsClick, // [THÊM MỚI]
+  onSettingsClick, 
   refreshTrigger,
   isSidebarExpanded = true,
   toggleSidebar = () => {},
-  setSidebarExpanded 
+  setSidebarExpanded,
+  hideBottomNav = false // [THÊM MỚI] Giá trị mặc định
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
 
-  // --- LOGIC CHAT & ALERTS GIỮ NGUYÊN ---
   const conversations = useChatStore((state) => state.conversations);
   const totalUnread = useMemo(() => {
     return conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0);
@@ -92,14 +93,17 @@ export const Navigation: React.FC<NavigationProps> = ({
     triggerUpload,
     totalUnread,
     hasJourneyAlerts,
-    onSettingsClick // [THÊM MỚI] 
+    onSettingsClick 
   };
 
   return (
     <>
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
       
-      <MobileBottomNav {...viewProps} />
+      {/* [SỬA LẠI ĐOẠN NÀY] Chỉ render thanh bottom nav nếu không bị yêu cầu ẩn */}
+      {!hideBottomNav && (
+          <MobileBottomNav {...viewProps} />
+      )}
       
       <DesktopSidebar 
         {...viewProps} 

@@ -43,3 +43,16 @@ export interface CreateBoxRequest {
 }
 
 export interface UpdateBoxRequest extends CreateBoxRequest {}
+
+// [THÊM MỚI] Interface cho Lời mời
+export interface BoxInvitationResponse {
+    id: number;
+    boxId: string;
+    boxName: string;
+    boxAvatar?: string;
+    inviterId: string;
+    inviterName: string;
+    inviterAvatar?: string;
+    status: string;
+    sentAt: string;
+}

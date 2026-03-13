@@ -1,17 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, Settings, UserPlus, Loader2, Search, Bell, Layout } from 'lucide-react';
-import { useJourneyList } from '../hooks/useJourneyList';
+import { Loader2, Leaf, Star } from 'lucide-react';
+import { toast } from 'react-hot-toast'; 
+
 import { useJoinJourney } from '../hooks/useJoinJourney'; 
 import { journeyService } from '../services/journey.service';
+import { useAuth } from '@/modules/auth/store/AuthContext';
+import { JourneyResponse, JourneyStatus, UserActiveJourneyResponse } from '../types';
+import { cn } from '@/lib/utils';
+
+// Import các Component con 
+import { JourneyListHeader } from './JourneyListHeader';
+import { ActiveJourneyCard } from './ActiveJourneyCard';
 import { JourneySettingsModal } from './JourneySettingsModal';
 import { InviteMembersModal } from './InviteMembersModal';
 import { CreateJourneyModal } from './CreateJourneyModal';
 import { InvitationList } from './InvitationList';
-import { JourneyResponse, JourneyStatus } from '../types';
-import { useAuth } from '@/modules/auth/store/AuthContext';
-import { toast } from 'react-hot-toast'; 
+
+interface MergedJourney extends JourneyResponse {
+  memberAvatars?: (string | null)[];
+  daysRemaining?: number;
+  totalMembers?: number;
+}
 
 interface Props {
   isOpen: boolean;
@@ -22,29 +33,17 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Hooks Logic
-  const { data: journeys, isLoading: listLoading, refresh: refreshList } = useJourneyList();
-  const { inviteCode, setInviteCode, handleJoin, isLoading: joinLoading } = useJoinJourney(() => refreshAll());
-
   // UI State
   const [activeTab, setActiveTab] = useState<'MY_JOURNEYS' | 'INVITATIONS'>('MY_JOURNEYS');
-  const [selectedJourney, setSelectedJourney] = useState<JourneyResponse | null>(null);
+  const [selectedJourney, setSelectedJourney] = useState<MergedJourney | null>(null);
   const [modalType, setModalType] = useState<'SETTINGS' | 'INVITE' | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // [LOGIC MỚI] Chỉ lấy danh sách hành trình ĐANG HOẠT ĐỘNG
-  const activeJourneys = useMemo(() => {
-    if (!journeys) return [];
-    // Chỉ giữ lại các trạng thái active/ongoing/upcoming
-    return journeys.filter(j => 
-      [JourneyStatus.ACTIVE, JourneyStatus.ONGOING, JourneyStatus.UPCOMING].includes(j.status as JourneyStatus)
-    );
-  }, [journeys]);
+  // Data State
+  const [journeys, setJourneys] = useState<MergedJourney[]>([]);
+  const [listLoading, setListLoading] = useState(false);
 
-  // Giới hạn hành trình (Tính trên số lượng đang hoạt động)
-  const MAX_JOURNEYS = 5;
-  const currentCount = activeJourneys.length;
-  const isLimitReached = currentCount >= MAX_JOURNEYS;
+  const { inviteCode, setInviteCode, handleJoin, isLoading: joinLoading } = useJoinJourney(() => refreshAll());
 
   // Alert State
   const [alerts, setAlerts] = useState({
@@ -53,15 +52,32 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
     journeyIdsWithRequests: new Set<string>()
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      refreshAll();
-    }
-  }, [isOpen]);
+  const fetchJourneys = async () => {
+      setListLoading(true);
+      try {
+          const [myList, activeList] = await Promise.all([
+              journeyService.getMyJourneys(),
+              journeyService.getUserActiveJourneys("me")
+          ]);
 
-  const refreshAll = async () => {
-    refreshList();
-    fetchAlerts();
+          const merged: MergedJourney[] = myList.map((journey: JourneyResponse) => {
+              const extraData = activeList.find((a: UserActiveJourneyResponse) => a.id === journey.id);
+              return {
+                  ...journey,
+                  memberAvatars: extraData?.memberAvatars || [],
+                  daysRemaining: extraData?.daysRemaining,
+                  totalMembers: extraData?.totalMembers || journey.participantCount || 1,
+                  themeColor: extraData?.themeColor || journey.themeColor,
+                  avatar: extraData?.avatar || journey.avatar
+              };
+          });
+          
+          setJourneys(merged);
+      } catch (error) {
+          console.error("Failed to load active journeys", error);
+      } finally {
+          setListLoading(false);
+      }
   };
 
   const fetchAlerts = async () => {
@@ -77,6 +93,26 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
     }
   };
 
+  const refreshAll = async () => {
+    fetchJourneys();
+    fetchAlerts();
+  };
+
+  useEffect(() => {
+    if (isOpen) refreshAll();
+  }, [isOpen]);
+
+  const activeJourneys = useMemo(() => {
+    if (!journeys) return [];
+    return journeys.filter(j => 
+      [JourneyStatus.ACTIVE, JourneyStatus.ONGOING, JourneyStatus.UPCOMING].includes(j.status as JourneyStatus)
+    );
+  }, [journeys]);
+
+  const MAX_JOURNEYS = 5;
+  const currentCount = activeJourneys.length;
+  const isLimitReached = currentCount >= MAX_JOURNEYS;
+
   if (!isOpen) return null;
 
   const handleEnterJourney = (journeyId: string) => {
@@ -86,210 +122,92 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const handleActionWhenLimitReached = () => {
     if (isLimitReached) {
-        toast.error(`Bạn đã đạt giới hạn ${MAX_JOURNEYS} hành trình đang hoạt động.`);
+        toast.error(`You have reached the limit of ${MAX_JOURNEYS} active journeys.`);
         return true;
     }
     return false;
   };
 
+  // [ĐÃ SỬA THIẾT KẾ] Cấu trúc UI hệt như CreateJourneyModal
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-        <div className="w-full max-w-md bg-[#18181b] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
-          
-          {/* Header */}
-          <div className="p-6 pb-0 space-y-4 shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline gap-2">
-                <h2 className="text-xl font-bold text-white">Hành trình</h2>
-                <span className={`text-sm font-medium ${isLimitReached ? 'text-red-500' : 'text-zinc-500'}`}>
-                    ({currentCount}/{MAX_JOURNEYS})
-                </span>
-              </div>
+      <div 
+        className="fixed inset-0 z-[9990] overflow-y-auto custom-scrollbar bg-white dark:bg-[#0a0a0a] transition-colors duration-500 flex flex-col font-sans"
+        style={{ fontFamily: '"Jua", sans-serif' }}
+      >
+        {/* NỀN BLUR TỔNG THỂ */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden flex justify-center z-0">
+           <div className="w-full max-w-[1000px] h-full relative">
+              <div className="absolute -top-10 -left-20 w-[400px] h-[300px] bg-blue-200/80 dark:bg-blue-600/10 blur-[100px] rounded-full transition-colors duration-500" />
+              <div className="absolute top-[50%] -right-20 w-[400px] h-[400px] bg-purple-200/60 dark:bg-purple-600/10 blur-[120px] rounded-full transition-colors duration-500" />
+              <Leaf className="absolute right-[10%] top-[15%] w-16 h-16 text-blue-300 dark:text-blue-500/30 opacity-50 rotate-12 transition-colors duration-500" />
+              <Star className="absolute left-[10%] top-[45%] w-12 h-12 text-purple-300 dark:text-purple-500/30 opacity-50 -rotate-12 transition-colors duration-500" />
+           </div>
+        </div>
 
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => {
-                    if (!handleActionWhenLimitReached()) {
-                        setIsCreateOpen(true);
-                    }
-                  }}
-                  disabled={isLimitReached} 
-                  className={`p-2 rounded-full text-white transition-colors ${
-                    isLimitReached 
-                        ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-500'
-                  }`}
-                  title={isLimitReached ? "Đã đạt giới hạn số lượng" : "Tạo hành trình mới"}
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-zinc-400">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        {/* WRAPPER NỘI DUNG CUỘN */}
+        <div className="relative min-h-full w-full flex flex-col items-center sm:py-12 pt-20 pb-4">
+           {/* HỘP MODAL CHÍNH */}
+           <div className="mt-auto sm:my-auto relative z-10 w-full max-w-[460px] mx-auto min-h-[85vh] sm:min-h-[80vh] flex flex-col px-4 sm:px-6 py-6 sm:py-8 bg-white/70 sm:bg-white/90 dark:bg-[#121212]/90 dark:sm:bg-[#121212]/80 rounded-t-[40px] sm:rounded-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] sm:shadow-2xl backdrop-blur-2xl sm:backdrop-blur-xl transition-colors duration-300 overflow-hidden animate-in fade-in slide-in-from-bottom-8">
+               
+               <div className="flex flex-col h-full">
+                  <JourneyListHeader 
+                    currentCount={currentCount}
+                    maxJourneys={MAX_JOURNEYS}
+                    isLimitReached={isLimitReached}
+                    inviteCode={inviteCode}
+                    setInviteCode={setInviteCode}
+                    joinLoading={joinLoading}
+                    onJoin={() => { if (!handleActionWhenLimitReached()) handleJoin(); }}
+                    onCreateClick={() => { if (!handleActionWhenLimitReached()) setIsCreateOpen(true); }}
+                    onClose={onClose}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    alerts={alerts}
+                  />
 
-            {/* Quick Join */}
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
-                <input 
-                  type="text" 
-                  placeholder={isLimitReached ? "Đã đạt giới hạn tham gia" : "Nhập mã tham gia..."}
-                  disabled={isLimitReached} 
-                  className={`w-full bg-zinc-900 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm text-white outline-none uppercase ${
-                    isLimitReached ? 'opacity-50 cursor-not-allowed' : 'focus:border-blue-500'
-                  }`}
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                />
-              </div>
-              <button 
-                onClick={() => {
-                    if (!handleActionWhenLimitReached()) {
-                        handleJoin();
-                    }
-                }}
-                disabled={!inviteCode || joinLoading || isLimitReached} 
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {joinLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Vào'}
-              </button>
-            </div>
-
-            {/* TABS Navigation */}
-            <div className="flex border-b border-white/10 mt-2">
-              <button 
-                onClick={() => setActiveTab('MY_JOURNEYS')}
-                className={`flex-1 pb-3 text-sm font-medium flex justify-center items-center gap-2 relative transition-colors ${
-                  activeTab === 'MY_JOURNEYS' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Layout className="w-4 h-4" /> Đang tham gia
-                {alerts.requests > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse ml-1" title="Có yêu cầu tham gia cần duyệt" />
-                )}
-              </button>
-              
-              <button 
-                onClick={() => setActiveTab('INVITATIONS')}
-                className={`flex-1 pb-3 text-sm font-medium flex justify-center items-center gap-2 relative transition-colors ${
-                  activeTab === 'INVITATIONS' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Bell className="w-4 h-4" /> Lời mời
-                {alerts.invitations > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-bold ml-1">
-                    {alerts.invitations}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Body Content */}
-          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-[#18181b]">
-            
-            {activeTab === 'INVITATIONS' ? (
-              <div className="space-y-2">
-                <InvitationList onSuccess={refreshAll} />
-              </div>
-            ) : (
-              // --- TAB DANH SÁCH ACTIVE ---
-              <div className="space-y-3">
-                {listLoading ? (
-                  <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
-                ) : activeJourneys.length === 0 ? (
-                  <div className="text-center py-10 text-zinc-500 text-sm">
-                    Bạn chưa có hành trình nào đang hoạt động. <br/>Hãy tạo mới hoặc nhập mã để tham gia.
-                  </div>
-                ) : (
-                  activeJourneys.map((journey) => {
-                    const isOwner = String(user?.id) === String(journey.creatorId);
-                    const userRole = journey.currentUserStatus?.role;
-                    const isPending = userRole === 'PENDING';
-                    
-                    const hasPendingRequests = isOwner && alerts.journeyIdsWithRequests.has(journey.id);
-                    const canInvite = isOwner || (journey.visibility === 'PUBLIC');
-
-                    return (
-                      <div 
-                        key={journey.id} 
-                        onClick={() => !isPending && handleEnterJourney(journey.id)}
-                        className={`group relative bg-zinc-900 border border-white/5 rounded-2xl p-4 transition-all overflow-hidden ${
-                          isPending ? 'opacity-60 cursor-not-allowed' : 'hover:border-white/20 cursor-pointer'
-                        }`}
-                      >
-                        {/* ICONS GÓC TRÊN PHẢI */}
-                        {!isPending && (
-                          <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-                            {canInvite && (
-                              <button 
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  setSelectedJourney(journey); 
-                                  setModalType('INVITE'); 
-                                }}
-                                className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-                                title="Mời thành viên"
-                              >
-                                <UserPlus className="w-4 h-4" />
-                              </button>
-                            )}
-
-                            <button 
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                setSelectedJourney(journey); 
-                                setModalType('SETTINGS'); 
-                              }}
-                              className={`p-2 rounded-full transition-colors relative ${
-                                hasPendingRequests 
-                                  ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10' 
-                                  : 'text-zinc-400 hover:text-white hover:bg-white/10'
-                              }`}
-                              title="Cài đặt hành trình"
-                            >
-                              <Settings className={`w-4 h-4 ${hasPendingRequests ? 'animate-pulse' : ''}`} />
-                              {hasPendingRequests && (
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-[#18181b]" />
-                              )}
-                            </button>
-                          </div>
-                        )}
-
-                        {/* NỘI DUNG CARD */}
-                        <div className="pr-16">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-white text-base truncate">
-                              {journey.name}
-                            </h3>
-                            {isPending && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold border bg-orange-500/10 text-orange-400 border-orange-500/20 whitespace-nowrap">
-                                CHỜ DUYỆT
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-zinc-500">
-                            {journey.participantCount} thành viên
-                          </p>
-                        </div>
+                  <div className="flex-1 overflow-y-auto mt-4 custom-scrollbar px-1 pb-4">
+                    {activeTab === 'INVITATIONS' ? (
+                      <div className="space-y-2">
+                        <InvitationList onSuccess={refreshAll} />
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {listLoading ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 text-zinc-400 animate-spin" /></div>
+                        ) : activeJourneys.length === 0 ? (
+                          <div className="text-center py-10 text-zinc-500 dark:text-zinc-400 text-[15px] font-sans">
+                            No active journeys. <br/>Create a new one or join via code.
+                          </div>
+                        ) : (
+                          activeJourneys.map((journey) => (
+                            <ActiveJourneyCard 
+                              key={journey.id}
+                              journey={journey}
+                              isOwner={String(user?.id) === String(journey.creatorId)}
+                              isPending={journey.currentUserStatus?.role === 'PENDING'}
+                              hasPendingRequests={String(user?.id) === String(journey.creatorId) && alerts.journeyIdsWithRequests.has(journey.id)}
+                              canInvite={String(user?.id) === String(journey.creatorId) || journey.visibility === 'PUBLIC'}
+                              onEnter={handleEnterJourney}
+                              onInvite={(j) => { setSelectedJourney(j); setModalType('INVITE'); }}
+                              onSettings={(j) => { setSelectedJourney(j); setModalType('SETTINGS'); }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+               </div>
+
+           </div>
         </div>
       </div>
 
-      {/* Modals con */}
+      {/* CÁC MODAL CON */}
       {selectedJourney && modalType === 'SETTINGS' && (
         <JourneySettingsModal 
           isOpen={true}
-          journey={selectedJourney}
+          journey={selectedJourney as any} 
           onClose={() => { setModalType(null); setSelectedJourney(null); }}
           onUpdateSuccess={refreshAll} 
         />
@@ -299,19 +217,17 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
         <InviteMembersModal 
           isOpen={true}
           journeyId={selectedJourney.id}
-          inviteCode={selectedJourney.inviteCode}
+          inviteCode={selectedJourney.inviteCode} 
           onClose={() => { setModalType(null); setSelectedJourney(null); }}
         />
       )}
 
-      {/* [SỬA QUAN TRỌNG] Bắn event update sau khi tạo thành công */}
       <CreateJourneyModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={() => { 
             setIsCreateOpen(false); 
             refreshAll(); 
-            // [MỚI] Bắn sự kiện global để HomePage biết mà reload
             window.dispatchEvent(new Event('JOURNEY_UPDATED'));
         }}
       />

@@ -66,3 +66,12 @@ export interface CreateCheckinRequest {
   statusRequest?: 'NORMAL' | 'REST'; 
   visibility?: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
 }
+
+export interface MapMarkerResponse {
+  checkinId: string;
+  latitude: number;
+  longitude: number;
+  thumbnailUrl: string;
+  userAvatar: string;
+  fullname: string;
+}

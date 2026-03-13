@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader2, MapPin, Smile, Maximize, ChevronDown } from 'lucide-react';
+import { X, Loader2, MapPin, Smile, Maximize, ChevronDown, Search } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import Cropper from 'react-easy-crop';
 import { useCheckinModal, ACTIVITY_PRESETS } from '../hooks/useCheckinModal'; 
@@ -16,13 +16,17 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
   const { isOpen, onClose, file } = props;
 
   const {
-    caption, setCaption, location, setLocation, selectedActivity, setSelectedActivity,
+    caption, setCaption, selectedActivity, setSelectedActivity,
     customContext, setCustomContext, moodEmoji, setMoodEmoji, previewUrl, isSubmitting,
     showEmojiPicker, setShowEmojiPicker, pickerRef, handleSubmit,
     crop, setCrop, zoom, setZoom, aspect, setAspect, onCropComplete,
-    // Lấy thêm các biến quản lý Dropdown
     activeJourneys, selectedJourneyId, setSelectedJourneyId, 
-    isJourneyDropdownOpen, setIsJourneyDropdownOpen, journeyDropdownRef
+    isJourneyDropdownOpen, setIsJourneyDropdownOpen, journeyDropdownRef,
+    
+    // States Vị trí & Tìm kiếm
+    latitude, isLocating, handleAutoLocate,
+    locationSearch, handleLocationInputChange, locationSuggestions,
+    isSearchingLocation, handleSelectSuggestion, locationContainerRef
   } = useCheckinModal(props);
 
   const [showCropMenu, setShowCropMenu] = useState(false);
@@ -79,7 +83,6 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
                             <Maximize size={18} />
                         </button>
                         
-                        {/* Menu chọn tỷ lệ */}
                         {showCropMenu && (
                             <div className="absolute bottom-full left-0 mb-2 bg-black/80 backdrop-blur-lg border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-2xl">
                                 <button onClick={() => {setAspect(1); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 1 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>1:1 (Vuông)</button>
@@ -102,8 +105,8 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
             {/* CỘT PHẢI: NỘI DUNG VÀ SETTINGS (45%) */}
             <div className="w-full md:w-[45%] h-full bg-[#121212] overflow-y-auto custom-scrollbar flex flex-col">
                 
-                {/* [MỚI] CHỌN HÀNH TRÌNH ĐÍCH */}
-                <div className="p-4 border-b border-white/10 z-20" ref={journeyDropdownRef}>
+                {/* CHỌN HÀNH TRÌNH ĐÍCH */}
+                <div className="p-4 border-b border-white/10 z-10" ref={journeyDropdownRef}>
                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Đăng vào Hành trình</span>
                     <div className="relative">
                         <button 
@@ -126,7 +129,6 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
                             <ChevronDown size={18} className={`text-zinc-500 transition-transform ${isJourneyDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
 
-                        {/* Dropdown danh sách */}
                         {isJourneyDropdownOpen && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-[200px] overflow-y-auto custom-scrollbar">
                                 {activeJourneys.map(j => (
@@ -143,9 +145,6 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
                                         </div>
                                     </button>
                                 ))}
-                                {activeJourneys.length === 0 && (
-                                    <div className="px-4 py-4 text-sm text-zinc-500 text-center">Bạn chưa tham gia hành trình nào</div>
-                                )}
                             </div>
                         )}
                     </div>
@@ -167,15 +166,56 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
                     </div>
                 </div>
 
-                {/* Vị trí */}
-                <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-zinc-900/20 focus-within:bg-zinc-800/50 transition-colors">
-                    <MapPin size={20} className="text-zinc-400 shrink-0" />
-                    <input 
-                        value={location} 
-                        onChange={e => setLocation(e.target.value)} 
-                        placeholder="Thêm vị trí" 
-                        className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-                    />
+                {/* [CẬP NHẬT] Ô TÌM KIẾM VỊ TRÍ */}
+                <div className="relative p-4 border-b border-white/10 bg-zinc-900/20 focus-within:bg-zinc-800/50 transition-colors z-20" ref={locationContainerRef}>
+                    <div className="flex items-center gap-3">
+                        <MapPin size={20} className={latitude ? "text-blue-500 shrink-0" : "text-zinc-400 shrink-0"} />
+                        
+                        <div className="flex-1 relative">
+                            <input 
+                                value={locationSearch} 
+                                onChange={handleLocationInputChange} 
+                                placeholder="Tìm kiếm địa điểm (VD: Địa đạo Củ Chi)" 
+                                className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none py-1"
+                            />
+                        </div>
+
+                        {isSearchingLocation ? (
+                             <Loader2 size={16} className="text-zinc-400 animate-spin shrink-0" />
+                        ) : (
+                            <button 
+                                onClick={handleAutoLocate}
+                                disabled={isLocating}
+                                title="Định vị ngay"
+                                className="p-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors shrink-0"
+                            >
+                                {isLocating ? <Loader2 size={16} className="animate-spin" /> : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                )}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Danh sách Gợi ý địa điểm */}
+                    {locationSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-zinc-700 rounded-xl shadow-2xl overflow-hidden max-h-[250px] overflow-y-auto custom-scrollbar z-50">
+                            {locationSuggestions.map((suggestion, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => handleSelectSuggestion(suggestion)}
+                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 transition-colors flex items-start gap-3 border-b border-white/5 last:border-0"
+                                >
+                                    <MapPin size={16} className="text-zinc-500 mt-1 shrink-0" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-sm font-bold text-white truncate">{suggestion.name || suggestion.display_name.split(',')[0]}</span>
+                                        <span className="text-xs text-zinc-400 truncate mt-0.5">{suggestion.display_name}</span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Cảm xúc & Hoạt động */}

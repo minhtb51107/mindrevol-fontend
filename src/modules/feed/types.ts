@@ -34,7 +34,7 @@ export interface ReactionDetail {
   createdAt: string;
 }
 
-// [CẬP NHẬT] Thêm type discriminator
+// [CẬP NHẬT] Thêm type discriminator và isSaved
 export interface JourneyPost {
   type: 'POST'; // Cờ nhận biết
   id: string;
@@ -59,6 +59,7 @@ export interface JourneyPost {
   reactionCount?: number;
   commentCount?: number;
   isLiked?: boolean;
+  isSaved?: boolean; // [MỚI] Thêm cờ nhận biết bài đã lưu từ API trả về
   latestReactions: ReactionDetail[];
 }
 
@@ -92,15 +93,14 @@ export interface AdProps {
   brandLogo?: string;
 }
 
-// 4. UI Props (Dữ liệu truyền vào Component)
-// [CẬP NHẬT] PostProps kế thừa hoặc map từ JourneyPost
 export interface PostProps {
   type: 'POST';
   id: string;
-  userId: string; 
+  userId: string; // Vẫn giữ lại cho an toàn tương thích ngược
   user: { 
+    id: string; // [ĐÃ SỬA] Thêm id vào đây để HomeFeed không bị lỗi
     name: string; 
-    avatar: string 
+    avatar: string; 
   };
   image: string;
   caption: string;
@@ -119,6 +119,9 @@ export interface PostProps {
   reactionCount: number;
   commentCount: number;
   latestReactions: ReactionDetail[];
+
+  isLiked?: boolean; 
+  isSaved?: boolean; 
 }
 
 // [QUAN TRỌNG] Union Type dùng cho danh sách Feed

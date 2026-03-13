@@ -4,7 +4,8 @@ import {
     BoxResponse, 
     CreateBoxRequest, 
     UpdateBoxRequest, 
-    BoxMemberPageResponse 
+    BoxMemberPageResponse,
+    BoxInvitationResponse // [THÊM MỚI]
 } from '../types';
 
 export const boxService = {
@@ -53,6 +54,16 @@ export const boxService = {
         return response.data.data;
     },
 
+    // ==========================================
+    // CÁC API QUẢN LÝ LỜI MỜI (ĐÃ CHUẨN HÓA)
+    // ==========================================
+
+    // [THÊM MỚI] Lấy danh sách lời mời đang chờ
+    getMyPendingInvitations: async (): Promise<BoxInvitationResponse[]> => {
+        const response = await http.get(`/boxes/invitations/me`);
+        return response.data.data || [];
+    },
+
     inviteMember: async (boxId: string, targetUserId: string): Promise<string> => {
         const response = await http.post(`/boxes/${boxId}/invite`, null, {
             params: { targetUserId }
@@ -75,7 +86,6 @@ export const boxService = {
         return response.data.message;
     },
 
-    // [THÊM MỚI] Dùng chung API removeMember nhưng truyền ID của chính mình
     leaveBox: async (boxId: string, myUserId: string): Promise<string> => {
         const response = await http.delete(`/boxes/${boxId}/members/${myUserId}`);
         return response.data.message;
