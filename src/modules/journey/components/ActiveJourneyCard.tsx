@@ -24,12 +24,10 @@ export const ActiveJourneyCard: React.FC<Props> = ({
   onInvite,
   onSettings
 }) => {
-  // Hình nền
   const bgStyle = journey.themeColor?.includes('/') 
     ? { backgroundImage: `url('${journey.themeColor}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { backgroundColor: journey.themeColor || '#f4f4f5' };
 
-  // Dữ liệu hiển thị
   const avatars = journey.memberAvatars || [];
   const totalMembers = journey.totalMembers || journey.participantCount || 1;
   const extraCount = Math.max(0, totalMembers - Math.min(avatars.length, 3)); 
@@ -42,34 +40,28 @@ export const ActiveJourneyCard: React.FC<Props> = ({
       daysLeft = Math.ceil(diff / (1000 * 3600 * 24));
   }
 
-  // Tách riêng hàm xử lý click Card để không ảnh hưởng đến các nút con
-  const handleCardClick = (e: React.MouseEvent) => {
-    if (isPending) return;
-    
-    // Nếu người dùng click trúng các thẻ svg, button bên trong cụm Action, ta bỏ qua
-    const target = e.target as HTMLElement;
-    if (target.closest('.action-buttons-container')) {
-        return; 
-    }
-    
-    onEnter(journey.id);
-  };
-
   return (
     <div 
-      onClick={handleCardClick}
       className={cn(
           "group relative min-h-[130px] rounded-[24px] p-4 sm:p-5 transition-all overflow-hidden flex flex-col justify-between border-2 border-transparent select-none",
-          isPending ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02] hover:shadow-xl hover:border-white/50 active:scale-[0.98]"
+          isPending ? "opacity-60" : "hover:scale-[1.02] hover:shadow-xl hover:border-white/50 active:scale-[0.98]"
       )}
       style={bgStyle}
     >
-      {/* [SỬA LỖI HITBOX]: Cụm nút bấm được đặt riêng biệt với z-50, 
-        tăng p-2.5 để dễ bấm trên điện thoại.
-        Class 'action-buttons-container' dùng để check click chặn bong bóng sự kiện. 
-      */}
+      {/* [ĐÃ SỬA LỖI CLICK] 1. Lớp kính vô hình nhận lệnh "Vào Hành trình", bao phủ toàn thẻ */}
       {!isPending && (
-        <div className="absolute top-2 right-2 flex items-center gap-1 z-50 action-buttons-container drop-shadow-md">
+          <div 
+            className="absolute inset-0 z-10 cursor-pointer"
+            onClick={(e) => {
+                e.stopPropagation();
+                onEnter(journey.id);
+            }}
+          />
+      )}
+
+      {/* 2. CỤM NÚT THAO TÁC (Đẩy z-index lên 50 cao nhất để không bị đè) */}
+      {!isPending && (
+        <div className="absolute top-2 right-2 flex items-center gap-1 z-50 drop-shadow-md">
           {canInvite && (
             <button 
               type="button"
@@ -78,7 +70,7 @@ export const ActiveJourneyCard: React.FC<Props> = ({
                 e.stopPropagation(); 
                 onInvite(journey); 
               }}
-              className="p-2.5 text-zinc-800 bg-white/60 hover:bg-white rounded-full transition-all backdrop-blur-md active:scale-90"
+              className="p-2.5 text-zinc-800 bg-white/60 hover:bg-white rounded-full transition-all backdrop-blur-md active:scale-90 shadow-sm"
               title="Invite members"
             >
               <UserPlus className="w-[18px] h-[18px]" strokeWidth={2.5} />
@@ -93,7 +85,7 @@ export const ActiveJourneyCard: React.FC<Props> = ({
               onSettings(journey); 
             }}
             className={cn(
-                "p-2.5 rounded-full transition-all backdrop-blur-md relative active:scale-90",
+                "p-2.5 rounded-full transition-all backdrop-blur-md relative active:scale-90 shadow-sm",
                 hasPendingRequests 
                     ? "text-red-700 bg-red-100/90 hover:bg-red-200" 
                     : "text-zinc-800 bg-white/60 hover:bg-white"
@@ -108,8 +100,8 @@ export const ActiveJourneyCard: React.FC<Props> = ({
         </div>
       )}
 
-      {/* TEXT CONTENT */}
-      <div className="relative z-10 pr-20 mb-6 pointer-events-none">
+      {/* 3. NỘI DUNG (Dùng z-20 và pointer-events-none để tránh vô tình click nhầm chữ) */}
+      <div className="relative z-20 pr-20 mb-6 pointer-events-none">
         <div className="flex items-center gap-2">
           <h3 
             className="font-bold text-zinc-900 text-[22px] truncate drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]" 
@@ -126,9 +118,8 @@ export const ActiveJourneyCard: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* FOOTER: AVATARS & DAYS */}
-      <div className="relative z-10 flex items-end justify-between mt-auto drop-shadow-md pointer-events-none">
-        
+      {/* 4. FOOTER: AVATARS & DAYS (pointer-events-none) */}
+      <div className="relative z-20 flex items-end justify-between mt-auto drop-shadow-md pointer-events-none">
         <div className="flex items-center -space-x-2">
             {avatars.slice(0, 3).map((url: string, idx: number) => (
                 <Avatar key={idx} className="w-8 h-8 border-2 border-white/80 shadow-sm bg-white/50 backdrop-blur-sm">

@@ -5,6 +5,8 @@ export interface BoxResponse {
     avatar?: string;
     coverImage?: string;
     themeColor?: string;
+    textPosition?: string;   // [THÊM MỚI]
+    avatarPosition?: string; // [THÊM MỚI]
     ownerId: string;
     isArchived: boolean;
     memberCount: number;
@@ -40,11 +42,12 @@ export interface CreateBoxRequest {
     avatar?: string;
     coverImage?: string;
     themeColor?: string;
+    textPosition?: string;   // [THÊM MỚI]
+    avatarPosition?: string; // [THÊM MỚI]
 }
 
 export interface UpdateBoxRequest extends CreateBoxRequest {}
 
-// [THÊM MỚI] Interface cho Lời mời
 export interface BoxInvitationResponse {
     id: number;
     boxId: string;

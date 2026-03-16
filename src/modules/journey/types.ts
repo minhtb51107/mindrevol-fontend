@@ -218,6 +218,7 @@ export interface UserActiveJourneyResponse {
   totalMembers: number;
   daysRemaining: number;
   totalCheckins: number;
+  isProfileVisible: boolean; // Thêm dòng này
   checkins: any[]; 
   hasNewUpdates?: boolean;
 }

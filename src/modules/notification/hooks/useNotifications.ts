@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { notificationService, NotificationResponse } from '../services/notification.service';
-import { boxService } from '@/modules/box/services/box.service';
+// import { boxService } from '@/modules/box/services/box.service';
 // import { journeyService } from '@/modules/journey/services/journey.service'; // Chuẩn bị cho tương lai
 // import { friendshipService } from '@/modules/user/services/friendship.service'; // Chuẩn bị cho tương lai
 import { toast } from 'react-hot-toast';
@@ -67,8 +67,8 @@ export const useNotifications = (isOpen: boolean) => {
         try {
             if (noti.type === 'BOX_INVITE') {
                 action === 'ACCEPT' 
-                    ? await boxService.acceptInvite(noti.referenceId)
-                    : await boxService.rejectInvite(noti.referenceId);
+                    // ? await boxService.acceptInvite(noti.referenceId)
+                    // : await boxService.rejectInvite(noti.referenceId);
             } 
             else if (noti.type === 'JOURNEY_INVITE') {
                 // action === 'ACCEPT' ? await journeyService.acceptInvitation(noti.referenceId) : ...

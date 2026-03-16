@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Map, { Marker, Popup, NavigationControl } from 'react-map-gl';
-import mapboxgl from 'mapbox-gl'; // [ĐÃ SỬA] Import trực tiếp mapboxgl
+import mapboxgl from 'mapbox-gl'; 
 import 'mapbox-gl/dist/mapbox-gl.css'; 
 import { mapService } from '../services/map.service';
 import { MapMarkerResponse } from '@/modules/checkin/types';
 import { Loader2 } from 'lucide-react';
 
-// 👉 ĐỪNG QUÊN DÁN TOKEN CỦA BẠN VÀO ĐÂY
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
 
 interface JourneyMapProps {
@@ -47,7 +46,6 @@ export const JourneyMap: React.FC<JourneyMapProps> = ({ journeyId, boxId, userId
     }
   }, [journeyId, boxId, userId]);
 
-  // [ĐÃ SỬA] Thêm kiểu (e: any) và dùng mapboxgl.LngLatBounds
   const handleMapLoad = (e: any) => {
     if (markers.length > 0) {
       const map = e.target;
@@ -61,12 +59,13 @@ export const JourneyMap: React.FC<JourneyMapProps> = ({ journeyId, boxId, userId
     }
   };
 
-  const defaultClass = "w-full h-[500px] rounded-2xl overflow-hidden border border-white/10 relative z-0 mt-6 shadow-2xl";
+  // [ĐÃ SỬA]: Đổi h-[500px] mt-6 thành h-full w-full để Map luôn nằm ngoan ngoãn gọn gàng trong thẻ cha
+  const defaultClass = "w-full h-full min-h-[250px] rounded-[inherit] overflow-hidden relative z-0";
   const containerClass = className || defaultClass;
 
   if (loading) {
     return (
-      <div className={`${containerClass} flex items-center justify-center bg-[#1A1A1A] !border-none`}>
+      <div className={`${containerClass} flex items-center justify-center bg-zinc-100 dark:bg-[#1A1A1A] !border-none`}>
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
@@ -74,9 +73,9 @@ export const JourneyMap: React.FC<JourneyMapProps> = ({ journeyId, boxId, userId
 
   if (markers.length === 0) {
     return (
-      <div className={`${containerClass} flex flex-col items-center justify-center bg-[#1A1A1A] text-zinc-500 !border-none`}>
+      <div className={`${containerClass} flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#1A1A1A] text-zinc-500 !border-none`}>
         <span className="text-4xl mb-3">🗺️</span>
-        <p>Chưa có địa điểm nào được ghi lại trên bản đồ.</p>
+        <p className="text-sm font-medium">Chưa có địa điểm nào.</p>
       </div>
     );
   }
@@ -102,22 +101,22 @@ export const JourneyMap: React.FC<JourneyMapProps> = ({ journeyId, boxId, userId
             longitude={marker.longitude}
             latitude={marker.latitude}
             anchor="bottom"
-            onClick={(e: any) => { // [ĐÃ SỬA] Thêm kiểu (e: any)
+            onClick={(e: any) => { 
               e.originalEvent.stopPropagation();
               setSelectedMarker(marker);
             }}
           >
             <div className="relative cursor-pointer transition-transform hover:scale-110 group origin-bottom">
               <div 
-                className="w-12 h-12 rounded-full border-[3px] border-white shadow-[0_5px_15px_rgba(0,0,0,0.6)] bg-cover bg-center"
+                className="w-12 h-12 rounded-full border-[3px] border-white dark:border-zinc-800 shadow-[0_5px_15px_rgba(0,0,0,0.3)] bg-cover bg-center"
                 style={{ backgroundImage: `url('${marker.thumbnailUrl || marker.userAvatar}')` }}
               />
               <img 
                 src={marker.userAvatar} 
-                className="w-5 h-5 rounded-full absolute -bottom-1 -right-1 border-[2px] border-white object-cover"
+                className="w-5 h-5 rounded-full absolute -bottom-1 -right-1 border-[2px] border-white dark:border-zinc-800 object-cover"
                 alt="Avatar"
               />
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-white" />
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-white dark:border-t-zinc-800" />
             </div>
           </Marker>
         ))}
@@ -133,7 +132,7 @@ export const JourneyMap: React.FC<JourneyMapProps> = ({ journeyId, boxId, userId
             className="custom-mapbox-popup"
           >
             <div className="text-center p-1 w-36">
-                <p className="font-bold text-sm mb-1.5 truncate text-white">{selectedMarker.fullname}</p>
+                <p className="font-bold text-sm mb-1.5 truncate text-zinc-900">{selectedMarker.fullname}</p>
                 <img src={selectedMarker.thumbnailUrl} alt="Checkin" className="w-full h-36 object-cover rounded-xl mb-2 shadow-md" />
                 <a href={`/checkin/${selectedMarker.checkinId}`} className="inline-block bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-500 transition-colors w-full">
                     Xem bài viết

@@ -8,7 +8,6 @@ import { useJoinJourney } from '../hooks/useJoinJourney';
 import { journeyService } from '../services/journey.service';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { JourneyResponse, JourneyStatus, UserActiveJourneyResponse } from '../types';
-import { cn } from '@/lib/utils';
 
 // Import các Component con 
 import { JourneyListHeader } from './JourneyListHeader';
@@ -115,9 +114,13 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const handleEnterJourney = (journeyId: string) => {
+const handleEnterJourney = (journeyId: string) => {
     onClose();
+    // 1. Cập nhật URL
     navigate(`/?journeyId=${journeyId}`);
+    
+    // 2. Bắn sự kiện toàn cục để báo hiệu cho HomePage đổi dữ liệu ngay lập tức
+    window.dispatchEvent(new CustomEvent('JOURNEY_SELECTED', { detail: journeyId }));
   };
 
   const handleActionWhenLimitReached = () => {
@@ -128,7 +131,6 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
     return false;
   };
 
-  // [ĐÃ SỬA THIẾT KẾ] Cấu trúc UI hệt như CreateJourneyModal
   return createPortal(
     <>
       <div 
@@ -147,8 +149,8 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         {/* WRAPPER NỘI DUNG CUỘN */}
         <div className="relative min-h-full w-full flex flex-col items-center sm:py-12 pt-20 pb-4">
-           {/* HỘP MODAL CHÍNH */}
-           <div className="mt-auto sm:my-auto relative z-10 w-full max-w-[460px] mx-auto min-h-[85vh] sm:min-h-[80vh] flex flex-col px-4 sm:px-6 py-6 sm:py-8 bg-white/70 sm:bg-white/90 dark:bg-[#121212]/90 dark:sm:bg-[#121212]/80 rounded-t-[40px] sm:rounded-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] sm:shadow-2xl backdrop-blur-2xl sm:backdrop-blur-xl transition-colors duration-300 overflow-hidden animate-in fade-in slide-in-from-bottom-8">
+           {/* HỘP MODAL CHÍNH - ĐÃ XÓA KHUNG NỀN TRẮNG/ĐEN VÀ BÓNG ĐỔ */}
+           <div className="mt-auto sm:my-auto relative z-10 w-full max-w-[460px] mx-auto min-h-[85vh] sm:min-h-0 flex flex-col px-4 sm:px-6 py-6 sm:py-8 transition-colors duration-300 animate-in fade-in slide-in-from-bottom-8">
                
                <div className="flex flex-col h-full">
                   <JourneyListHeader 

@@ -1,122 +1,117 @@
 import React from 'react';
 import { UserActiveJourneyResponse } from '../types';
-import { Checkin } from '@/modules/checkin/types';
 import { format, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Heart, Calendar } from 'lucide-react'; // Thêm icon Calendar cho đẹp nếu muốn
+import { Plus, Images, Eye, EyeOff } from 'lucide-react'; 
+import { journeyService } from '../services/journey.service';
 
-// Helper format ngày an toàn
 const safeFormatDate = (dateString: string | undefined | null, pattern: string) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return isValid(date) ? format(date, pattern) : '';
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return isValid(date) ? format(date, pattern) : '';
 };
 
 interface Props {
-  journey: UserActiveJourneyResponse;
-  onCheckinClick: (checkin: Checkin) => void;
-  isMe?: boolean;
+    journey: UserActiveJourneyResponse;
+    isMe?: boolean;
+    onJourneyClick?: (journey: UserActiveJourneyResponse) => void;
+    // [THÊM MỚI] Hàm hứng sự kiện đổi Tab
+    onVisibilityToggle?: (journeyId: string, currentVisibility: boolean) => void;
 }
 
-export const JourneyGalleryCard: React.FC<Props> = ({ journey, onCheckinClick, isMe = false }) => {
-  const navigate = useNavigate();
+export const JourneyGalleryCard: React.FC<Props> = ({ journey, isMe = false, onJourneyClick, onVisibilityToggle }) => {
+    const navigate = useNavigate();
+    
+    // Đọc trực tiếp từ prop backend gửi lên, KHÔNG dùng useState nữa
+    const isProfileVisible = journey.isProfileVisible ?? true;
 
-  // [MỚI] Logic hiển thị ngày tháng
-  const renderDate = () => {
-    const startStr = safeFormatDate(journey.startDate, "dd 'thg' MM, yyyy");
-    const endStr = safeFormatDate(journey.endDate, "dd 'thg' MM, yyyy");
+    const renderDate = () => {
+        const startStr = safeFormatDate(journey.startDate, "dd/MM/yyyy");
+        const endStr = safeFormatDate(journey.endDate, "dd/MM/yyyy");
+        if (journey.endDate && endStr) return `${startStr} - ${endStr}`;
+        return `Từ ${startStr}`;
+    };
 
-    if (journey.endDate && endStr) {
-      // Nếu có ngày kết thúc: hiển thị khoảng thời gian (VD: 01 thg 01 - 05 thg 01, 2025)
-      // Để ngắn gọn, ta có thể bỏ chữ "Bắt đầu" khi hiển thị range
-      return `${startStr} - ${endStr}`;
-    }
-    // Nếu chưa kết thúc: hiển thị như cũ
-    return `Bắt đầu ${startStr}`;
-  };
+    const coverImage = journey.checkins && journey.checkins.length > 0 
+        ? journey.checkins[0].imageUrl 
+        : null;
 
-  return (
-    <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* --- HEADER --- */}
-      <div className="flex items-center justify-between px-2 mb-4">
+    const handleToggleVisibility = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            // 1. Cập nhật giao diện TỨC THÌ (Card sẽ bay sang tab khác ngay lập tức)
+            if (onVisibilityToggle) {
+                onVisibilityToggle(journey.id, isProfileVisible);
+            }
+            // 2. Gọi API ngầm lưu xuống database
+            await journeyService.toggleProfileVisibility(journey.id);
+        } catch (error) {
+            console.error("Lỗi khi cập nhật hiển thị", error);
+        }
+    };
+
+    return (
         <div 
-            onClick={() => navigate(`/journeys/${journey.id}`)}
-            className="group cursor-pointer flex flex-col"
+            onClick={() => onJourneyClick ? onJourneyClick(journey) : navigate(`/journey/${journey.id}`)}
+            className="group relative aspect-square rounded-[24px] md:rounded-[32px] overflow-hidden cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 bg-amber-50 dark:bg-zinc-900 transition-all hover:-translate-y-1.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.1)]"
         >
-            <div className="flex items-center gap-3">
-                <h3 className="text-2xl font-black text-white group-hover:text-purple-400 transition-colors tracking-tight">
+            {coverImage ? (
+                <img 
+                    src={coverImage} 
+                    alt={journey.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                />
+            ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-orange-50 dark:bg-[#2A1F1A]">
+                    <Images className="w-10 h-10 md:w-12 md:h-12 text-orange-200 dark:text-orange-900/50 mb-2" strokeWidth={1.5} />
+                    <span className="text-xs md:text-sm font-['Jua'] text-orange-300 dark:text-orange-800/50">Trống</span>
+                </div>
+            )}
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+
+            {/* NÚT ẨN HIỆN PROFILE */}
+            {isMe && (
+                <button
+                    onClick={handleToggleVisibility}
+                    className={`absolute top-3 left-3 md:top-4 md:left-4 w-8 h-8 md:w-10 md:h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center hover:bg-black/60 text-white transition-all border border-white/20 shadow-sm z-20 ${!isProfileVisible && 'bg-red-500/50 hover:bg-red-500/70 border-red-400'}`}
+                    title={isProfileVisible ? "Đang hiện trên Profile (Nhấn để Ẩn)" : "Đang ẩn (Nhấn để Hiện)"}
+                >
+                    {isProfileVisible ? <Eye className="w-4 h-4 md:w-5 md:h-5" /> : <EyeOff className="w-4 h-4 md:w-5 md:h-5 text-white/90" />}
+                </button>
+            )}
+
+            {isMe && journey.status !== 'COMPLETED' && (
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/journey/${journey.id}?action=add`);
+                    }}
+                    className="absolute top-3 right-3 md:top-4 md:right-4 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-blue-500 hover:text-white text-white transition-all border border-white/30 shadow-sm"
+                    title="Thêm ảnh mới"
+                >
+                    <Plus className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
+                </button>
+            )}
+
+            <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5 flex flex-col justify-end">
+                <div className="flex items-center gap-2 mb-1.5 md:mb-2 flex-wrap">
+                    <span className="bg-white/20 backdrop-blur-md text-white text-[10px] md:text-[11px] font-bold px-2 md:px-3 py-0.5 md:py-1 rounded-full border border-white/20 shadow-sm">
+                        {journey.totalCheckins ?? 0} ảnh
+                    </span>
+                    {journey.status === 'COMPLETED' && (
+                        <span className="bg-indigo-500/80 backdrop-blur-md text-white text-[10px] md:text-[11px] font-bold px-2 md:px-3 py-0.5 md:py-1 rounded-full border border-white/20 shadow-sm">
+                            Memories
+                        </span>
+                    )}
+                </div>
+                <h3 className="text-xl md:text-2xl font-normal text-white truncate drop-shadow-md mb-0.5 md:mb-1" style={{ fontFamily: '"Jua", sans-serif' }}>
                     {journey.name}
                 </h3>
-                <span className="bg-zinc-800 text-zinc-400 text-[10px] font-bold px-2 py-1 rounded-full border border-zinc-700">
-                    {journey.totalCheckins ?? 0}
-                </span>
+                <p className="text-[10px] md:text-xs font-medium text-white/80 truncate drop-shadow-sm uppercase tracking-wider">
+                    {renderDate()}
+                </p>
             </div>
-            {/* [SỬA] Hiển thị ngày tháng theo logic mới */}
-            <p className="text-xs font-medium text-zinc-500 mt-1 flex items-center gap-1.5">
-                {/* Optional: Thêm icon lịch nhỏ nếu thích */}
-                {/* <Calendar className="w-3 h-3 mb-0.5" /> */}
-                {renderDate()}
-            </p>
         </div>
-      </div>
-
-      {/* --- SLIDER ẢNH --- */}
-      <div className="flex gap-4 overflow-x-auto pb-6 px-2 snap-x [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700">
-        
-        {/* Chỉ hiện nút Thêm ảnh nếu là isMe */}
-        {isMe && (
-            <div 
-                onClick={() => navigate(`/journeys/${journey.id}`)}
-                className="flex-shrink-0 w-36 h-36 md:w-44 md:h-44 rounded-[2rem] bg-zinc-900 border-4 border-zinc-800 flex flex-col items-center justify-center cursor-pointer hover:border-zinc-600 hover:bg-zinc-800 transition-all snap-start group"
-            >
-                <div className="w-12 h-12 rounded-full bg-zinc-800 group-hover:bg-zinc-700 flex items-center justify-center mb-2 transition-colors">
-                    <Plus className="w-6 h-6 text-zinc-400 group-hover:text-white" />
-                </div>
-                <span className="text-xs font-bold text-zinc-500 group-hover:text-white">Thêm ảnh</span>
-            </div>
-        )}
-
-        {/* Danh sách ảnh Check-in */}
-        {journey.checkins && journey.checkins.length > 0 ? (
-            journey.checkins.map((checkin) => (
-                <div 
-                    key={checkin.id} 
-                    onClick={() => onCheckinClick(checkin)}
-                    className="flex-shrink-0 w-36 h-36 md:w-44 md:h-44 relative snap-start cursor-pointer group"
-                >
-                    <div className="w-full h-full rounded-[2rem] overflow-hidden border-4 border-zinc-950 shadow-lg relative z-10 transition-transform duration-200 group-hover:scale-95">
-                        <img 
-                            src={checkin.imageUrl} 
-                            className="w-full h-full object-cover" 
-                            loading="lazy"
-                            alt="checkin"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
-                    </div>
-                    
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-max pointer-events-none">
-                        <div className="bg-zinc-900/80 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full border border-white/10 shadow-sm">
-                             {safeFormatDate(checkin.checkinDate, 'dd/MM')}
-                        </div>
-                    </div>
-
-                    {checkin.reactionCount && checkin.reactionCount > 0 ? (
-                        <div className="absolute top-2 right-2 z-20 bg-red-500 text-white text-[10px] font-bold h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded-full border-2 border-zinc-950 shadow-md transform group-hover:scale-110 transition-transform">
-                            <Heart className="w-3 h-3 fill-white mr-0.5" />
-                            {checkin.reactionCount}
-                        </div>
-                    ) : null}
-                </div>
-            ))
-        ) : (
-            !isMe && (
-                <div className="flex items-center justify-center w-full py-10 text-zinc-600 text-sm italic">
-                    Chưa có ảnh check-in nào.
-                </div>
-            )
-        )}
-      </div>
-    </div>
-  );
+    );
 };

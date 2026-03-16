@@ -23,11 +23,11 @@ export interface JourneyAlertResponse {
 }
 
 interface PageResponse<T> {
-    content: T[];
-    totalPages: number;
-    totalElements: number;
-    size: number;
-    number: number;
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
 }
 
 export const journeyService = {
@@ -46,13 +46,21 @@ export const journeyService = {
     return response.data.data;
   },
 
+  // --- 1. Dùng cho Modal / Dashboard (Giữ nguyên logic cũ) ---
   getUserActiveJourneys: async (userId: string): Promise<UserActiveJourneyResponse[]> => {
     const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/active`);
     return response.data.data;
   },
 
-  getUserFinishedJourneys: async (userId: string): Promise<UserActiveJourneyResponse[]> => {
-    const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/finished`);
+  // --- 2. Dùng cho Profile (Tab Công khai) ---
+  getUserPublicJourneys: async (userId: string): Promise<UserActiveJourneyResponse[]> => {
+    const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/public`);
+    return response.data.data;
+  },
+
+  // --- 3. Dùng cho Profile (Tab Riêng tư) ---
+  getUserPrivateJourneys: async (userId: string): Promise<UserActiveJourneyResponse[]> => {
+    const response = await http.get<{ data: UserActiveJourneyResponse[] }>(`${JOURNEY_URL}/users/${userId}/private`);
     return response.data.data;
   },
 
@@ -145,5 +153,10 @@ export const journeyService = {
   getInvitableFriends: async (journeyId: string): Promise<UserSummary[]> => {
     const response = await http.get<{ data: UserSummary[] }>(`${JOURNEY_URL}/${journeyId}/friends-invitable`);
     return response.data.data;
+  },
+
+  // Cập nhật Profile Visibility
+  toggleProfileVisibility: async (journeyId: string): Promise<void> => {
+    await http.patch(`${JOURNEY_URL}/${journeyId}/profile-visibility`);
   },
 };

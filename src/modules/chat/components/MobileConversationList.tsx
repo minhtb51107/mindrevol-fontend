@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Search, Users, Edit } from 'lucide-react'; 
+import { Search, Users, Edit, ArrowLeft } from 'lucide-react'; // Thêm ArrowLeft
+import { useNavigate } from 'react-router-dom'; // Thêm useNavigate
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { useChatStore } from '../store/useChatStore';
@@ -11,6 +12,7 @@ import { chatService } from '../services/chat.service';
 export const MobileConversationList = () => {
   const { user } = useAuth();
   const { conversations, openChat, fetchConversations } = useChatStore();
+  const navigate = useNavigate(); // Khởi tạo navigate
 
   const [friendships, setFriendships] = useState<FriendshipResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,10 +72,25 @@ export const MobileConversationList = () => {
   return (
     <div className="flex flex-col h-full w-full bg-white">
       <div className="p-4 pb-3 shadow-[0px_4px_10px_rgba(0,0,0,0.02)] z-10">
+        
+        {/* --- HEADER --- */}
         <div className="flex justify-between items-center mb-4 px-1">
-          <h2 className="text-[28px] font-bold text-black" style={{ fontFamily: '"Jua", sans-serif' }}>Tin nhắn</h2>
-          <button className="text-black bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full transition-colors active:scale-95"><Edit className="w-5 h-5"/></button>
+          <div className="flex items-center gap-2">
+            {/* Nút quay lại trang chủ */}
+            <button 
+              onClick={() => navigate('/')} 
+              className="p-2 -ml-2 text-black hover:bg-zinc-100 rounded-full transition-colors active:scale-95"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h2 className="text-[28px] font-bold text-black" style={{ fontFamily: '"Jua", sans-serif' }}>Tin nhắn</h2>
+          </div>
+          <button className="text-black bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full transition-colors active:scale-95">
+            <Edit className="w-5 h-5"/>
+          </button>
         </div>
+
+        {/* --- TÌM KIẾM --- */}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Tìm kiếm bạn bè..." className="w-full bg-zinc-100 border border-transparent rounded-[20px] py-2.5 pl-10 pr-4 text-[15px] text-black focus:outline-none focus:bg-white focus:border-black focus:ring-2 focus:ring-black/5 transition-all placeholder:text-zinc-400" style={{ fontFamily: '"Jua", sans-serif' }} />

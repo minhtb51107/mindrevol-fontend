@@ -78,7 +78,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
         <DesktopNavItem to="/box" icon={Box} label="Box" isExpanded={isExpanded} />
         <DesktopNavItem to="/chat" icon={MessageCircle} label="Messages" badge={totalUnread} isExpanded={isExpanded} />
-        <DesktopNavItem to="/map" icon={MapIcon} label="Map" isExpanded={isExpanded} />
+        {/* <DesktopNavItem to="/map" icon={MapIcon} label="Map" isExpanded={isExpanded} /> */}
         
         {/* Nút Thông báo */}
         <button 
