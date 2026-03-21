@@ -3,6 +3,8 @@ import { X, Images } from 'lucide-react';
 import { UserActiveJourneyResponse } from '../types';
 import { Checkin } from '@/modules/checkin/types';
 
+import { LivePhotoViewer } from '@/components/ui/LivePhotoViewer';
+
 interface Props {
     journey: UserActiveJourneyResponse | null;
     onClose: () => void;
@@ -11,7 +13,6 @@ interface Props {
 
 export const JourneyAlbumModal: React.FC<Props> = ({ journey, onClose, onCheckinClick }) => {
     
-    // Khóa cuộn màn hình nền khi mở Modal
     useEffect(() => {
         if (journey) document.body.style.overflow = 'hidden';
         else document.body.style.overflow = 'auto';
@@ -21,10 +22,8 @@ export const JourneyAlbumModal: React.FC<Props> = ({ journey, onClose, onCheckin
     if (!journey) return null;
 
     return (
-        // Nền đen tuyền, full màn hình, z-[100] đè lên Sidebar
         <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-md animate-in fade-in duration-200">
             
-            {/* --- HEADER TỐI GIẢN --- */}
             <div className="flex items-center justify-between p-4 md:px-8 md:py-5 border-b border-white/10 shrink-0">
                 <div>
                     <h2 className="text-xl md:text-2xl font-normal text-white tracking-wide" style={{ fontFamily: '"Jua", sans-serif' }}>
@@ -42,7 +41,6 @@ export const JourneyAlbumModal: React.FC<Props> = ({ journey, onClose, onCheckin
                 </button>
             </div>
 
-            {/* --- BODY (LƯỚI ẢNH TỐI GIẢN) --- */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-1 md:p-6 lg:p-8">
                 {journey.checkins && journey.checkins.length > 0 ? (
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 md:gap-3 max-w-7xl mx-auto">
@@ -52,16 +50,16 @@ export const JourneyAlbumModal: React.FC<Props> = ({ journey, onClose, onCheckin
                                 onClick={() => onCheckinClick(checkin)}
                                 className="group relative aspect-square overflow-hidden cursor-pointer md:rounded-xl bg-zinc-900"
                             >
-                                <img 
-                                    src={checkin.imageUrl} 
-                                    alt="Checkin" 
-                                    // Chỉ giữ lại hiệu ứng phóng to nhẹ cho mượt, không hiện thêm bất kỳ icon nào
+                                <LivePhotoViewer 
+                                    imageUrl={checkin.imageUrl} 
+                                    videoUrl={checkin.videoUrl} 
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                    loading="lazy"
                                 />
                                 
-                                {/* Một lớp sương mờ siêu mỏng khi hover để biết là đang chĩa chuột vào */}
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 pointer-events-none" />
+                                {/* [ĐÃ SỬA] Thêm lớp vô hình bọc lên trên cùng để bắt sự kiện CLICK dứt khoát */}
+                                <div className="absolute inset-0 z-10" />
+
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 pointer-events-none z-20" />
                             </div>
                         ))}
                     </div>

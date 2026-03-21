@@ -32,14 +32,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   return (
     <div className={cn(
       "fixed z-50 top-0 left-0 h-full transition-all duration-300 ease-in-out font-sans",
-      // Thiết kế mềm mại hơn: Viền mỏng 1px, màu sắc nhã nhặn
       "bg-white dark:bg-[#121212] border-r border-zinc-200 dark:border-white/10", 
       "flex flex-col py-8",
       isExpanded ? "w-[260px] px-5" : "w-[88px] px-3", 
       "hidden md:flex" 
     )}>
       
-      {/* Nút Kéo ra / Thu vào (Tinh tế hơn) */}
       <button
         onClick={toggleSidebar}
         className="absolute -right-4 top-12 w-8 h-8 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-white/5 transition-all z-50 shadow-sm active:scale-95"
@@ -47,7 +45,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {isExpanded ? <ChevronLeft className="w-5 h-5 ml-0.5" /> : <ChevronRight className="w-5 h-5 ml-1" />}
       </button>
 
-      {/* 1. Tên nền tảng */}
       <div className={cn("mb-6 transition-all flex items-center", isExpanded ? "px-3 justify-start" : "justify-center")}>
         <span className="text-[28px] font-normal text-black dark:text-white tracking-wide select-none" style={{ fontFamily: '"Jua", sans-serif' }}>
           {isExpanded ? "MindRevol" : "M."}
@@ -56,13 +53,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
       <div className="w-full h-px bg-zinc-200 dark:bg-white/10 mb-6 shrink-0" />
 
-      {/* 2. Menu Items (Tiếng Anh, Hover nhẹ nhàng, Dark mode không bị âm bản) */}
       <div className="flex-1 flex flex-col gap-1.5">
         <DesktopNavItem to="/" icon={Home} label="Home" isExpanded={isExpanded} />
         
         <button 
           onClick={onJourneyClick}
-          title={!isExpanded ? "Journeys" : undefined}
           className={cn(
             "flex items-center rounded-[16px] transition-all group relative border border-transparent",
             isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
@@ -78,12 +73,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
         <DesktopNavItem to="/box" icon={Box} label="Box" isExpanded={isExpanded} />
         <DesktopNavItem to="/chat" icon={MessageCircle} label="Messages" badge={totalUnread} isExpanded={isExpanded} />
-        {/* <DesktopNavItem to="/map" icon={MapIcon} label="Map" isExpanded={isExpanded} /> */}
         
-        {/* Nút Thông báo */}
         <button 
           onClick={onNotificationClick}
-          title={!isExpanded ? "Notifications" : undefined}
           className={cn(
             "flex items-center rounded-[16px] transition-all relative group border",
             isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
@@ -99,7 +91,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {/* Nút Đăng bài */}
         <button 
             onClick={triggerUpload}
-            title={!isExpanded ? "Post" : undefined}
             className={cn(
                 "flex items-center rounded-[16px] transition-all group border border-transparent mt-1",
                 isExpanded ? "w-full gap-4 px-4 py-3 justify-start" : "w-full px-0 py-3 justify-center",
@@ -113,11 +104,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         <DesktopNavItem to="/profile" icon={User} label="Profile" isExpanded={isExpanded} />
       </div>
 
-      {/* 3. Cài đặt */}
       <div className="mt-auto pt-4 shrink-0 border-t border-zinc-200 dark:border-white/10">
         <button 
           onClick={onSettingsClick}
-          title={!isExpanded ? "Settings" : undefined}
           className={cn(
             "flex items-center rounded-[16px] transition-all relative group border border-transparent w-full",
             isExpanded ? "px-4 py-3 gap-4 justify-start" : "px-0 py-3 justify-center",
@@ -132,11 +121,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   );
 };
 
-// Component con: DesktopNavItem
 const DesktopNavItem = ({ to, icon: Icon, label, badge, isExpanded }: any) => (
     <NavLink 
       to={to} 
-      title={!isExpanded ? label : undefined}
       className={({ isActive }) => cn(
         "flex items-center rounded-[16px] transition-all relative group border",
         isExpanded ? "px-4 py-3 gap-4 justify-start" : "px-0 py-3 justify-center",

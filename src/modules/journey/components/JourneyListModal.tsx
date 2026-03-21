@@ -9,7 +9,6 @@ import { journeyService } from '../services/journey.service';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { JourneyResponse, JourneyStatus, UserActiveJourneyResponse } from '../types';
 
-// Import các Component con 
 import { JourneyListHeader } from './JourneyListHeader';
 import { ActiveJourneyCard } from './ActiveJourneyCard';
 import { JourneySettingsModal } from './JourneySettingsModal';
@@ -21,6 +20,8 @@ interface MergedJourney extends JourneyResponse {
   memberAvatars?: (string | null)[];
   daysRemaining?: number;
   totalMembers?: number;
+  thumbnailUrl?: string; 
+  previewImages?: string[];
 }
 
 interface Props {
@@ -32,19 +33,16 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // UI State
   const [activeTab, setActiveTab] = useState<'MY_JOURNEYS' | 'INVITATIONS'>('MY_JOURNEYS');
   const [selectedJourney, setSelectedJourney] = useState<MergedJourney | null>(null);
   const [modalType, setModalType] = useState<'SETTINGS' | 'INVITE' | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // Data State
   const [journeys, setJourneys] = useState<MergedJourney[]>([]);
   const [listLoading, setListLoading] = useState(false);
 
   const { inviteCode, setInviteCode, handleJoin, isLoading: joinLoading } = useJoinJourney(() => refreshAll());
 
-  // Alert State
   const [alerts, setAlerts] = useState({
     invitations: 0,
     requests: 0,
@@ -61,13 +59,23 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           const merged: MergedJourney[] = myList.map((journey: JourneyResponse) => {
               const extraData = activeList.find((a: UserActiveJourneyResponse) => a.id === journey.id);
+              
+              // Lấy toàn bộ ảnh bài đăng của các thành viên để nạp vào Calendar Grid
+              const checkinImages = extraData?.checkins
+                  ?.filter((c: any) => c.imageUrl)
+                  .map((c: any) => c.imageUrl as string) || [];
+
               return {
                   ...journey,
                   memberAvatars: extraData?.memberAvatars || [],
                   daysRemaining: extraData?.daysRemaining,
                   totalMembers: extraData?.totalMembers || journey.participantCount || 1,
                   themeColor: extraData?.themeColor || journey.themeColor,
-                  avatar: extraData?.avatar || journey.avatar
+                  avatar: extraData?.avatar || journey.avatar,
+                  thumbnailUrl: extraData?.thumbnailUrl,
+                  previewImages: checkinImages.length > 0 
+                      ? checkinImages 
+                      : (extraData?.thumbnailUrl ? [extraData.thumbnailUrl] : [])
               };
           });
           
@@ -114,12 +122,9 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-const handleEnterJourney = (journeyId: string) => {
+  const handleEnterJourney = (journeyId: string) => {
     onClose();
-    // 1. Cập nhật URL
     navigate(`/?journeyId=${journeyId}`);
-    
-    // 2. Bắn sự kiện toàn cục để báo hiệu cho HomePage đổi dữ liệu ngay lập tức
     window.dispatchEvent(new CustomEvent('JOURNEY_SELECTED', { detail: journeyId }));
   };
 
@@ -137,7 +142,6 @@ const handleEnterJourney = (journeyId: string) => {
         className="fixed inset-0 z-[9990] overflow-y-auto custom-scrollbar bg-white dark:bg-[#0a0a0a] transition-colors duration-500 flex flex-col font-sans"
         style={{ fontFamily: '"Jua", sans-serif' }}
       >
-        {/* NỀN BLUR TỔNG THỂ */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden flex justify-center z-0">
            <div className="w-full max-w-[1000px] h-full relative">
               <div className="absolute -top-10 -left-20 w-[400px] h-[300px] bg-blue-200/80 dark:bg-blue-600/10 blur-[100px] rounded-full transition-colors duration-500" />
@@ -147,9 +151,7 @@ const handleEnterJourney = (journeyId: string) => {
            </div>
         </div>
 
-        {/* WRAPPER NỘI DUNG CUỘN */}
         <div className="relative min-h-full w-full flex flex-col items-center sm:py-12 pt-20 pb-4">
-           {/* HỘP MODAL CHÍNH - ĐÃ XÓA KHUNG NỀN TRẮNG/ĐEN VÀ BÓNG ĐỔ */}
            <div className="mt-auto sm:my-auto relative z-10 w-full max-w-[460px] mx-auto min-h-[85vh] sm:min-h-0 flex flex-col px-4 sm:px-6 py-6 sm:py-8 transition-colors duration-300 animate-in fade-in slide-in-from-bottom-8">
                
                <div className="flex flex-col h-full">
@@ -200,12 +202,10 @@ const handleEnterJourney = (journeyId: string) => {
                     )}
                   </div>
                </div>
-
            </div>
         </div>
       </div>
 
-      {/* CÁC MODAL CON */}
       {selectedJourney && modalType === 'SETTINGS' && (
         <JourneySettingsModal 
           isOpen={true}

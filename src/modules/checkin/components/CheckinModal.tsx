@@ -26,7 +26,10 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
     // States Vị trí & Tìm kiếm
     latitude, isLocating, handleAutoLocate,
     locationSearch, handleLocationInputChange, locationSuggestions,
-    isSearchingLocation, handleSelectSuggestion, locationContainerRef
+    isSearchingLocation, handleSelectSuggestion, locationContainerRef,
+    
+    // State nhận biết Live Photo
+    isVideo 
   } = useCheckinModal(props);
 
   const [showCropMenu, setShowCropMenu] = useState(false);
@@ -58,48 +61,66 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
         <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
             
             {/* CỘT TRÁI: ẢNH VÀ CROP (60%) */}
-            <div className="w-full md:w-[55%] h-[50vh] md:h-full bg-black relative group flex items-center justify-center border-b md:border-b-0 md:border-r border-white/10">
+            <div className="w-full md:w-[55%] h-[50vh] md:h-full bg-black relative group flex items-center justify-center border-b md:border-b-0 md:border-r border-white/10 overflow-hidden">
                 {previewUrl ? (
-                    <Cropper
-                        image={previewUrl}
-                        crop={crop}
-                        zoom={zoom}
-                        aspect={aspect}
-                        onCropChange={setCrop}
-                        onCropComplete={onCropComplete}
-                        onZoomChange={setZoom}
-                        classes={{ containerClassName: 'bg-black' }}
-                    />
+                    isVideo ? (
+                        // NẾU LÀ VIDEO/LIVE PHOTO -> PHÁT PREVIEW NGAY LẬP TỨC
+                        <video 
+                            src={previewUrl} 
+                            autoPlay 
+                            loop 
+                            muted 
+                            playsInline 
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        // NẾU LÀ ẢNH -> MỞ GIAO DIỆN CROP CŨ
+                        <Cropper
+                            image={previewUrl}
+                            crop={crop}
+                            zoom={zoom}
+                            aspect={aspect}
+                            onCropChange={setCrop}
+                            onCropComplete={onCropComplete}
+                            onZoomChange={setZoom}
+                            classes={{ containerClassName: 'bg-black' }}
+                        />
+                    )
                 ) : (
                     <Loader2 className="w-8 h-8 text-zinc-500 animate-spin" />
                 )}
 
-                <div className="absolute bottom-4 left-4 flex items-center gap-3">
-                    <div className="relative">
-                        <button 
-                            onClick={() => setShowCropMenu(!showCropMenu)}
-                            className="p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-colors shadow-lg border border-white/10"
-                        >
-                            <Maximize size={18} />
-                        </button>
-                        
-                        {showCropMenu && (
-                            <div className="absolute bottom-full left-0 mb-2 bg-black/80 backdrop-blur-lg border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-2xl">
-                                <button onClick={() => {setAspect(1); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 1 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>1:1 (Vuông)</button>
-                                <button onClick={() => {setAspect(4/5); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 4/5 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>4:5 (Dọc)</button>
-                                <button onClick={() => {setAspect(16/9); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 16/9 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>16:9 (Ngang)</button>
+                {/* Ẩn công cụ Crop nếu là Video */}
+                {!isVideo && (
+                    <>
+                        <div className="absolute bottom-4 left-4 flex items-center gap-3">
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setShowCropMenu(!showCropMenu)}
+                                    className="p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white transition-colors shadow-lg border border-white/10"
+                                >
+                                    <Maximize size={18} />
+                                </button>
+                                
+                                {showCropMenu && (
+                                    <div className="absolute bottom-full left-0 mb-2 bg-black/80 backdrop-blur-lg border border-white/10 rounded-xl p-2 flex flex-col gap-1 shadow-2xl">
+                                        <button onClick={() => {setAspect(1); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 1 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>1:1 (Vuông)</button>
+                                        <button onClick={() => {setAspect(4/5); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 4/5 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>4:5 (Dọc)</button>
+                                        <button onClick={() => {setAspect(16/9); setShowCropMenu(false)}} className={`text-xs font-medium px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${aspect === 16/9 ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10'}`}>16:9 (Ngang)</button>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </div>
+                        </div>
 
-                <div className="absolute bottom-4 right-4 w-32 hidden md:block">
-                    <input 
-                        type="range" value={zoom} min={1} max={3} step={0.1}
-                        onChange={(e) => setZoom(Number(e.target.value))}
-                        className="w-full accent-white"
-                    />
-                </div>
+                        <div className="absolute bottom-4 right-4 w-32 hidden md:block">
+                            <input 
+                                type="range" value={zoom} min={1} max={3} step={0.1}
+                                onChange={(e) => setZoom(Number(e.target.value))}
+                                className="w-full accent-white"
+                            />
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* CỘT PHẢI: NỘI DUNG VÀ SETTINGS (45%) */}
@@ -166,7 +187,7 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
                     </div>
                 </div>
 
-                {/* [CẬP NHẬT] Ô TÌM KIẾM VỊ TRÍ */}
+                {/* Ô TÌM KIẾM VỊ TRÍ */}
                 <div className="relative p-4 border-b border-white/10 bg-zinc-900/20 focus-within:bg-zinc-800/50 transition-colors z-20" ref={locationContainerRef}>
                     <div className="flex items-center gap-3">
                         <MapPin size={20} className={latitude ? "text-blue-500 shrink-0" : "text-zinc-400 shrink-0"} />
@@ -230,7 +251,7 @@ export const CheckinModal: React.FC<CheckinModalProps> = (props) => {
                                 {moodEmoji}
                             </button>
                             {showEmojiPicker && (
-                                <div className="absolute top-full right-0 mt-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-white/10">
+                                <div className="absolute top-full right-0 mt-2 z-50 shadow-2xl rounded-2xl overflow-hidden border border-white/10 bg-zinc-900">
                                     <EmojiPicker onEmojiClick={(d) => { setMoodEmoji(d.emoji); setShowEmojiPicker(false); }} theme={Theme.DARK} width={280} height={320} previewConfig={{ showPreview: false }} />
                                 </div>
                             )}

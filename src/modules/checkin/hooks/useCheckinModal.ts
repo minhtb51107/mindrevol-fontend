@@ -3,7 +3,7 @@ import { checkinService } from '@/modules/checkin/services/checkin.service';
 import { journeyService } from '@/modules/journey/services/journey.service'; 
 import { UserActiveJourneyResponse } from '@/modules/journey/types'; 
 import imageCompression from 'browser-image-compression';
-import { Emotion } from '@/modules/feed/types';
+import { Emotion } from '@/modules/checkin/types';
 import { trackEvent } from '@/lib/analytics';
 import { toast } from 'react-hot-toast'; 
 import exifr from 'exifr'; 
@@ -57,7 +57,7 @@ export const ACTIVITY_PRESETS = [
   { type: UIActivityType.TRAVELING, label: 'Du lịch', emoji: '✈️', color: 'bg-sky-500' },
 ];
 
-const mapEmojiToEmotion = (emoji: string): Emotion => Emotion.NORMAL;
+const mapEmojiToEmotion = (emoji: string): Emotion => "NORMAL";
 
 interface UseCheckinModalProps {
   file: File | null;
@@ -95,7 +95,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
   const [customContext, setCustomContext] = useState('');
   const [moodEmoji, setMoodEmoji] = useState('✨');
 
-  // [TỌA ĐỘ VÀ TÌM KIẾM ĐỊA ĐIỂM]
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -106,6 +105,9 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  const [isVideo, setIsVideo] = useState(false);
+  
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const [activeJourneys, setActiveJourneys] = useState<UserActiveJourneyResponse[]>([]);
@@ -114,7 +116,7 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
   
   const journeyDropdownRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const locationContainerRef = useRef<HTMLDivElement>(null); // Ref để đóng dropdown tìm kiếm
+  const locationContainerRef = useRef<HTMLDivElement>(null);
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -138,30 +140,30 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
     if (file) {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      
+      const isVideoFile = file.type.startsWith('video/');
+      setIsVideo(isVideoFile);
 
-      const extractExifLocation = async () => {
-          setIsLocating(true);
-          try {
-              const gps = await exifr.gps(file);
-              if (gps && gps.latitude && gps.longitude) {
-                  setLatitude(gps.latitude);
-                  setLongitude(gps.longitude);
-                  const locName = await fetchLocationName(gps.latitude, gps.longitude);
-                  setLocation(locName);
-                  toast.success("Đã tìm thấy vị trí gốc của ảnh!");
-              } else {
-                  setLatitude(null);
-                  setLongitude(null);
-                  setLocation('');
+      if (!isVideoFile) {
+          const extractExifLocation = async () => {
+              setIsLocating(true);
+              try {
+                  const gps = await exifr.gps(file);
+                  if (gps && gps.latitude && gps.longitude) {
+                      setLatitude(gps.latitude);
+                      setLongitude(gps.longitude);
+                      const locName = await fetchLocationName(gps.latitude, gps.longitude);
+                      setLocation(locName);
+                      toast.success("Đã tìm thấy vị trí gốc của ảnh!");
+                  }
+              } catch (error) {
+                  // Ignore
+              } finally {
+                  setIsLocating(false);
               }
-          } catch (error) {
-              console.warn("Không thể đọc EXIF GPS", error);
-          } finally {
-              setIsLocating(false);
-          }
-      };
-
-      extractExifLocation();
+          };
+          extractExifLocation();
+      }
       return () => URL.revokeObjectURL(url);
     }
   }, [file]);
@@ -180,21 +182,17 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  // [THÊM MỚI] Xử lý khi gõ tìm kiếm địa điểm
   const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
       setLocation(val);
 
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-
       if (!val.trim()) {
           setLocationSuggestions([]);
           setLatitude(null);
           setLongitude(null);
           return;
       }
-
-      // Đợi 500ms sau khi ngừng gõ mới gọi API để tránh lag
       searchTimeoutRef.current = setTimeout(async () => {
           setIsSearchingLocation(true);
           try {
@@ -209,7 +207,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
       }, 500);
   };
 
-  // [THÊM MỚI] Khi bấm chọn 1 gợi ý địa điểm
   const handleSelectSuggestion = (suggestion: any) => {
       const shortName = suggestion.name || suggestion.display_name.split(',')[0];
       setLocation(shortName);
@@ -251,14 +248,17 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
       setIsSubmitting(true);
       
       let fileToUpload = file;
-      if (croppedAreaPixels) {
-          const croppedImage = await getCroppedImg(previewUrl, croppedAreaPixels);
-          if (croppedImage) fileToUpload = croppedImage;
-      }
+      
+      if (!isVideo) {
+          if (croppedAreaPixels) {
+              const croppedImage = await getCroppedImg(previewUrl, croppedAreaPixels);
+              if (croppedImage) fileToUpload = croppedImage;
+          }
 
-      const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, fileType: 'image/jpeg' };
-      if (fileToUpload.size > 1024 * 1024) {
-        try { fileToUpload = await imageCompression(fileToUpload, options); } catch (e) { console.warn(e); }
+          const options = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true, fileType: 'image/jpeg' };
+          if (fileToUpload.size > 1024 * 1024) {
+            try { fileToUpload = await imageCompression(fileToUpload, options); } catch (e) { console.warn(e); }
+          }
       }
 
       const isCustom = !!customContext;
@@ -279,12 +279,12 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
       await checkinService.createCheckin(payload);
       
-      trackEvent('checkin_completed', { journey_id: selectedJourneyId, has_photo: true, has_location: !!latitude });
+      trackEvent('checkin_completed', { journey_id: selectedJourneyId, is_video: isVideo });
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error(error);
-      alert("Lỗi khi đăng bài");
+      toast.error(error.response?.data?.message || "Lỗi khi đăng bài");
     } finally {
       setIsSubmitting(false);
     }
@@ -298,9 +298,8 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
     activeJourneys, selectedJourneyId, setSelectedJourneyId, 
     isJourneyDropdownOpen, setIsJourneyDropdownOpen, journeyDropdownRef,
     latitude, isLocating, handleAutoLocate,
-    
-    // Xuất thêm state xử lý tìm kiếm
     locationSearch: location, handleLocationInputChange, locationSuggestions, 
-    isSearchingLocation, handleSelectSuggestion, locationContainerRef
+    isSearchingLocation, handleSelectSuggestion, locationContainerRef,
+    isVideo
   };
 };

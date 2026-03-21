@@ -33,7 +33,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const urlJourneyId = searchParams.get('journeyId');
   const activeJourneyId = urlJourneyId || defaultJourneyId;
 
-  // [ĐÃ SỬA] Thêm kiểm tra xem có phải Trang chủ không
   const isHomePage = location.pathname === '/';
   const isChatPage = location.pathname.startsWith('/chat');
   const isProfilePage = location.pathname.startsWith('/profile');
@@ -91,9 +90,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       />
 
       <main className={cn(
-        "relative w-full flex flex-col", 
+        "relative w-full flex flex-col z-0", // [QUAN TRỌNG]: Thêm z-0 để nhốt các z-index của Feed bên trong, không đè lên Sidebar
         "transition-all duration-300 ease-in-out",
-        // [LOGIC ĐÚNG CHUẨN]: Chỉ khóa chiều cao nếu là trang chủ. Còn lại cho phép dài ra tự nhiên.
         isHomePage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]",
         isChatPage ? "pb-0" : "pb-[72px] md:pb-0", 
         isSidebarExpanded ? "md:pl-[260px]" : "md:pl-[80px]"

@@ -13,14 +13,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTheme } from '@/contexts/ThemeContext'; 
 
 import { checkinService } from '@/modules/checkin/services/checkin.service';
-
 import { ActivityModal } from './ActivityModal';
 import { ShareModal } from './ShareModal'; 
 
+// [THÊM MỚI] Import LivePhotoViewer
+import { LivePhotoViewer } from '@/components/ui/LivePhotoViewer';
+
 interface JourneyPostCardProps {
-  post: PostProps;
+  post: PostProps & { videoUrl?: string }; // Nhận thêm videoUrl
   isActive: boolean;
-  headerTarget?: HTMLDivElement | null; // Nơi sẽ nhận Header
+  headerTarget?: HTMLDivElement | null; 
   onDelete?: (postId: string) => void;
   onUpdate?: (postId: string, newCaption: string) => void;
 }
@@ -57,13 +59,9 @@ export const JourneyPostCard = ({ post, isActive, headerTarget, onDelete, onUpda
     }
   };
 
-  // ==============================================
-  // GIAO DIỆN HEADER SẼ ĐƯỢC CỐ ĐỊNH TRÊN CÙNG
-  // ==============================================
   const HeaderContent = (
     <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col pointer-events-auto">
       <div className="flex items-center justify-between px-2 pb-3">
-        {/* Góc trái: Avatar & Thông tin */}
         <div className="flex items-center gap-3">
           <Avatar className="w-11 h-11 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <AvatarImage src={post.user.avatar} />
@@ -88,7 +86,6 @@ export const JourneyPostCard = ({ post, isActive, headerTarget, onDelete, onUpda
           </div>
         </div>
 
-        {/* Góc phải: Menu 3 chấm */}
         <div className="relative">
           <button 
             onClick={toggleMenu} 
@@ -130,7 +127,6 @@ export const JourneyPostCard = ({ post, isActive, headerTarget, onDelete, onUpda
         </div>
       </div>
       
-      {/* [ĐÃ THÊM] Thẻ hr cắt ngang ngay bên dưới Avatar */}
       <hr className="w-full border-zinc-200 dark:border-white/10" />
     </div>
   );
@@ -138,54 +134,51 @@ export const JourneyPostCard = ({ post, isActive, headerTarget, onDelete, onUpda
   return (
     <div className="w-full relative flex flex-col">
 
-      {/* Bắn Header lên khung cố định nếu bài này đang lọt vào khung hình */}
       {isActive && headerTarget ? createPortal(HeaderContent, headerTarget) : null}
 
-      {/* KHỐI VUÔNG CHỈ CHỨA ẢNH & CAPTION ĐỂ CUỘN */}
       <div className="relative w-full aspect-square z-10 mt-1">
         
-        {/* Lớp Ảnh nền */}
+        {/* [ĐÃ SỬA] Thay thế <img /> bằng LivePhotoViewer */}
         <div className="absolute inset-0 rounded-[28px] overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-sm border border-zinc-200 dark:border-white/10">
-          <img 
-            src={post.image} 
-            alt="Post content" 
-            className="w-full h-full object-cover" 
-            draggable={false} 
+          <LivePhotoViewer 
+             imageUrl={post.image} 
+             videoUrl={post.videoUrl} 
+             className="w-full h-full" 
           />
           <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
         </div>
 
-        {/* Caption nằm đè trên ảnh */}
-        <div className="absolute bottom-4 left-4 max-w-[80%] z-10">
-          {isEditing ? (
-            <div className="flex flex-col gap-2 bg-black/50 backdrop-blur-lg rounded-2xl p-3 border border-white/10 w-[300px]">
-              <textarea 
-                value={editCaption} 
-                onChange={(e) => setEditCaption(e.target.value)} 
-                className="w-full bg-transparent p-0 text-sm text-white placeholder:text-white/50 focus:outline-none resize-none min-h-[60px]" 
-                placeholder="Viết ghi chú..."
-                autoFocus 
-              />
-              <div className="flex justify-end gap-1.5 pt-1">
-                <button onClick={handlers.handleCancelEdit} className="px-3 py-1 text-white/80 text-xs font-medium hover:text-white transition-colors">Hủy</button>
-                <button onClick={handlers.handleSaveEdit} disabled={isSaving} className="px-3 py-1 bg-white text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">Lưu</button>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-black/40 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/10 shadow-inner">
-              <p className="text-[14px] text-white font-medium leading-relaxed whitespace-pre-line line-clamp-3">
-                {post.caption ? (
-                   typeof post.caption === 'string' ? post.caption : (post.caption as any).caption || ''
-                ) : (
-                   <span className="italic text-white/60 text-sm">Không có ghi chú...</span>
-                )}
-              </p>
-            </div>
-          )}
+        <div className="absolute bottom-4 left-4 max-w-[80%] z-10 pointer-events-none">
+          <div className="pointer-events-auto">
+              {isEditing ? (
+                <div className="flex flex-col gap-2 bg-black/50 backdrop-blur-lg rounded-2xl p-3 border border-white/10 w-[300px]">
+                  <textarea 
+                    value={editCaption} 
+                    onChange={(e) => setEditCaption(e.target.value)} 
+                    className="w-full bg-transparent p-0 text-sm text-white placeholder:text-white/50 focus:outline-none resize-none min-h-[60px]" 
+                    placeholder="Viết ghi chú..."
+                    autoFocus 
+                  />
+                  <div className="flex justify-end gap-1.5 pt-1">
+                    <button onClick={handlers.handleCancelEdit} className="px-3 py-1 text-white/80 text-xs font-medium hover:text-white transition-colors">Hủy</button>
+                    <button onClick={handlers.handleSaveEdit} disabled={isSaving} className="px-3 py-1 bg-white text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">Lưu</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-black/40 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/10 shadow-inner">
+                  <p className="text-[14px] text-white font-medium leading-relaxed whitespace-pre-line line-clamp-3">
+                    {post.caption ? (
+                        typeof post.caption === 'string' ? post.caption : (post.caption as any).caption || ''
+                    ) : (
+                        <span className="italic text-white/60 text-sm">Không có ghi chú...</span>
+                    )}
+                  </p>
+                </div>
+              )}
+          </div>
         </div>
       </div>
 
-      {/* Các Modals */}
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} targetId={post.id} targetType={ReportTargetType.CHECKIN} />
       {isActivityModalOpen && <ActivityModal isOpen={isActivityModalOpen} onClose={() => setIsActivityModalOpen(false)} postId={post.id} />}
       {isShareModalOpen && <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} postId={post.id} postImage={post.image} />}

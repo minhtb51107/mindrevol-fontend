@@ -24,7 +24,6 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
   const pickerRef = useRef<HTMLDivElement>(null);
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
 
-  // Đóng bảng Emoji khi bấm ra ngoài
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
@@ -82,10 +81,9 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
   return (
     <div className="relative w-full h-full bg-zinc-50 dark:bg-black flex flex-col font-sans transition-colors duration-300">
       
-      {/* [ĐÃ SỬA] VÙNG PORTAL CỐ ĐỊNH HEADER */}
-      {/* Thêm nền bg-zinc-50 dark:bg-black để làm một "bức tường" che khuất ảnh khi cuộn qua đường hr */}
+      {/* VÙNG PORTAL CỐ ĐỊNH HEADER */}
       <div 
-        className="absolute top-0 left-0 w-full z-[50] bg-zinc-50 dark:bg-black pt-16 md:pt-6 pb-2 pointer-events-none transition-colors duration-300"
+        className="absolute top-0 left-0 w-full z-20 bg-zinc-50 dark:bg-black pt-16 md:pt-6 pb-2 pointer-events-none transition-colors duration-300"
       >
         <div ref={setHeaderTarget}></div>
       </div>
@@ -96,8 +94,8 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
           <div 
             key={post.id} 
             data-post-id={post.id} 
-            // Thêm pt-24 để bức ảnh lùi xuống một chút, không bị cấn vào cái Header
-            className="snap-post-container snap-always snap-center h-full w-full flex flex-col items-center justify-center shrink-0 px-4 pt-24 pb-20"
+            // [ĐÃ SỬA] Đổi pb-20 thành pb-12 md:pb-20 để khung ảnh bớt bị đẩy lên cao trên mobile
+            className="snap-post-container snap-always snap-center h-full w-full flex flex-col items-center justify-center shrink-0 px-4 pt-24 pb-12 md:pb-20"
           >
             <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] relative transition-all duration-300">
               <JourneyPostCard post={post} isActive={activePostId === post.id} headerTarget={headerTarget} />
@@ -107,12 +105,13 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
       </div>
 
       {/* THANH NHẬP LIỆU BÁM ĐÁY */}
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-zinc-50 via-zinc-50/90 dark:from-black dark:via-black/90 to-transparent pt-20 pb-4 md:pb-6 px-4 z-[60] pointer-events-none transition-all duration-300">
+      {/* [ĐÃ SỬA] Đổi pt-20 thành pt-8 md:pt-20, pb-4 thành pb-2 md:pb-6 để giảm vùng gradient dư thừa trên mobile */}
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-zinc-50 via-zinc-50/90 dark:from-black dark:via-black/90 to-transparent pt-8 pb-2 md:pt-20 md:pb-6 px-4 z-30 pointer-events-none transition-all duration-300">
         <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col gap-3 pointer-events-auto relative">
             
             {/* Bảng Emoji Picker */}
             {showEmojiPicker && (
-              <div ref={pickerRef} className="absolute bottom-full left-0 mb-3 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
+              <div ref={pickerRef} className="absolute bottom-full left-0 mb-3 z-40 animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10">
                 <EmojiPicker theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} onEmojiClick={handleSelectEmoji} lazyLoadEmojis={true} searchDisabled={true} skinTonesDisabled={true} height={350} />
               </div>
             )}

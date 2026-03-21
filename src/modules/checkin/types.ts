@@ -1,14 +1,11 @@
 export enum CheckinStatus {
   NORMAL = 'NORMAL',
   REST = 'REST',
-  // Các status cũ như LATE, COMEBACK, FAILED có thể giữ để tương thích data cũ, 
-  // nhưng logic tạo mới sẽ không dùng nữa.
   FAILED = 'FAILED', 
   LATE = 'LATE',
   COMEBACK = 'COMEBACK'
 }
 
-// [MỚI] Enum loại hoạt động (Khớp với Backend)
 export enum ActivityType {
   DEFAULT = 'DEFAULT',
   LEARNING = 'LEARNING',
@@ -24,18 +21,21 @@ export enum ActivityType {
   CUSTOM = 'CUSTOM'
 }
 
+export type Emotion = string;
+
 export interface Checkin {
   id: string;
-  userId: string; // Backend trả về String UUID
+  userId: string; 
   userFullName: string;
   userAvatar: string;
   journeyId: string;
   
   imageUrl: string;
   thumbnailUrl: string;
+  // [THÊM MỚI] Thuộc tính cho Live Photo
+  videoUrl?: string; 
   caption: string;
   
-  // [MỚI] Context Info
   activityType: ActivityType;
   activityName?: string;
   locationName?: string;
@@ -56,10 +56,9 @@ export interface CreateCheckinRequest {
   file: File;
   caption?: string;
   
-  // [MỚI] Các trường Platform
-  emotion?: string;       // Emoji (🔥, 🌿...)
+  emotion?: string;       
   activityType?: ActivityType;
-  activityName?: string;  // Tên hiển thị ("Học bài", "Chill")
+  activityName?: string;  
   locationName?: string;
   tags?: string[];
   
