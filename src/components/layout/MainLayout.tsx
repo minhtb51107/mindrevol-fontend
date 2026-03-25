@@ -3,6 +3,7 @@ import { Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { Navigation } from './Navigation'; 
 import { CreateJourneyModal } from '@/modules/journey/components/CreateJourneyModal';
 import { CheckinModal } from '@/modules/checkin/components/CheckinModal';
+import { CameraModal } from '@/modules/checkin/components/CameraModal'; // [THÊM MỚI]
 import { JourneyListModal } from '@/modules/journey/components/JourneyListModal'; 
 import { SettingsModal } from '@/modules/user/components/SettingsModal'; 
 import { journeyService } from '@/modules/journey/services/journey.service';
@@ -17,9 +18,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [searchParams] = useSearchParams();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [isJourneyListOpen, setIsJourneyListOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); 
+
+  // [THÊM MỚI] Tách riêng 2 Modal Camera và Checkin
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
+  const [checkinFile, setCheckinFile] = useState<File | null>(null);
 
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() => {
       const saved = localStorage.getItem('sidebar_expanded');
@@ -27,7 +32,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   });
 
   const [navRefreshKey, setNavRefreshKey] = useState(0);
-  const [checkinFile, setCheckinFile] = useState<File | null>(null);
   const [defaultJourneyId, setDefaultJourneyId] = useState<string | null>(null);
 
   const urlJourneyId = searchParams.get('journeyId');
@@ -60,9 +64,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     fetchDefaultJourney();
   }, []);
 
-  const handleCheckinClick = (file: File) => {
+  // [ĐÃ SỬA] Khi nhấn dấu Cộng (+) -> Mở Camera Modal
+  const handleCheckinClick = () => {
+    setIsCameraModalOpen(true);
+  };
+
+  // [THÊM MỚI] Khi Camera chụp xong hoặc Thư viện chọn xong -> Mở Checkin Modal
+  const handleCaptureComplete = (file: File) => {
     setCheckinFile(file);
-    setIsCheckinModalOpen(true);
+    setIsCameraModalOpen(false);
+    setTimeout(() => setIsCheckinModalOpen(true), 150); 
   };
 
   const handleDataRefresh = () => {
@@ -76,7 +87,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#fcfcfc] dark:bg-[#121212] text-zinc-900 dark:text-white font-sans relative flex transition-colors duration-300 ease-in-out">
+    <div className={cn(
+      "min-h-[100dvh] w-full text-zinc-900 dark:text-white font-sans relative flex transition-colors duration-300 ease-in-out",
+      isHomePage ? "bg-zinc-50 dark:bg-black" : "bg-[#fcfcfc] dark:bg-[#121212]"
+    )}>
       
       <Navigation 
         onCheckinClick={handleCheckinClick} 
@@ -90,7 +104,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       />
 
       <main className={cn(
-        "relative w-full flex flex-col z-0", // [QUAN TRỌNG]: Thêm z-0 để nhốt các z-index của Feed bên trong, không đè lên Sidebar
+        "relative w-full flex flex-col z-0", 
         "transition-all duration-300 ease-in-out",
         isHomePage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]",
         isChatPage ? "pb-0" : "pb-[72px] md:pb-0", 
@@ -113,10 +127,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onClose={() => setIsJourneyListOpen(false)}
       />
 
-      {activeJourneyId && (
+      {/* [THÊM MỚI] MÀN HÌNH CAMERA */}
+      <CameraModal 
+         isOpen={isCameraModalOpen}
+         onClose={() => setIsCameraModalOpen(false)}
+         onCapture={handleCaptureComplete}
+      />
+
+      {/* MÀN HÌNH GHI CHÚ BÀI ĐĂNG */}
+      {activeJourneyId && isCheckinModalOpen && (
           <CheckinModal 
             isOpen={isCheckinModalOpen} 
-            onClose={() => setIsCheckinModalOpen(false)} 
+            onClose={() => {
+               setIsCheckinModalOpen(false);
+               setCheckinFile(null);
+            }} 
             file={checkinFile} 
             journeyId={activeJourneyId} 
             onSuccess={() => {
