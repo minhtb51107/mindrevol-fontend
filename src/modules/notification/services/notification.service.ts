@@ -11,6 +11,15 @@ export interface NotificationResponse {
     createdAt: string;
     senderId: string;
     senderName: string;
+
+    // --- Sprint 2 additions (supports clearing the red badge in NotificationItem.tsx) ---
+    isSeen?: boolean;
+    messageKey?: string;
+    messageArgs?: string | string[];
+    actionStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    actorsCount?: number;
+    actorNames?: string[];
+    actorAvatars?: string[];
 }
 
 interface PageResponse<T> {
@@ -24,12 +33,12 @@ interface PageResponse<T> {
 export const notificationService = {
     getMyNotifications: async (page = 0, size = 30): Promise<PageResponse<NotificationResponse>> => {
         const response = await http.get(`/notifications?page=${page}&size=${size}`);
-        return response.data.data;
+        return response.data?.data ?? response.data;
     },
 
     getUnreadCount: async (): Promise<number> => {
         const response = await http.get('/notifications/unread-count');
-        return response.data.data;
+        return response.data?.data ?? response.data;
     },
 
     markAsRead: async (id: string): Promise<void> => {
@@ -40,12 +49,15 @@ export const notificationService = {
         await http.patch('/notifications/read-all');
     },
 
-    // [THÊM MỚI] Xóa 1 thông báo
+    // [Sprint 2 addition] Mark as seen (clear the red badge on the bell)
+    markAllAsSeen: async (): Promise<void> => {
+        await http.patch('/notifications/seen-all');
+    },
+
     deleteNotification: async (id: string): Promise<void> => {
         await http.delete(`/notifications/${id}`);
     },
 
-    // [THÊM MỚI] Xóa tất cả thông báo
     deleteAllNotifications: async (): Promise<void> => {
         await http.delete('/notifications/all');
     }

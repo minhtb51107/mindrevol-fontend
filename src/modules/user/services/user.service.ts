@@ -8,6 +8,9 @@ export interface CalendarRecap {
 }
 
 // 1. Interface đầy đủ cho Profile User
+// src/modules/user/services/user.service.ts
+
+// 1. Interface đầy đủ cho Profile User
 export interface UserProfile {
   id: string;
   email?: string;
@@ -22,7 +25,7 @@ export interface UserProfile {
   friendCount: number;
   journeyCount?: number;
   
-  // --- THÊM 3 DÒNG NÀY VÀO ĐÂY ---
+  // --- THÊM CÁC DÒNG NÀY ---
   currentStreak?: number; 
   createdAt?: string;      
   totalCheckins?: number;  
@@ -33,6 +36,9 @@ export interface UserProfile {
   isBlockedByMe?: boolean;
   isBlockedByThem?: boolean;
   isMe?: boolean;
+
+  // [THÊM MỚI] Sửa lỗi đỏ TypeScript ở DesktopSidebar
+  accountType?: 'FREE' | 'GOLD' | string;
 }
 
 // 2. Interface rút gọn cho Search/List
@@ -46,12 +52,33 @@ export interface UserSummary {
 
 // 3. Interface cho Settings
 export interface NotificationSettings {
+  pushEnabled: boolean;           // Bật/tắt toàn bộ push
+  emailEnabled: boolean;          // Bật/tắt email
+  inAppEnabled: boolean;          // Bật/tắt thông báo trong ứng dụng (THÊM MỚI)
   emailDailyReminder: boolean;
   emailUpdates: boolean;
-  pushFriendRequest: boolean;
-  pushNewComment: boolean;
-  pushJourneyInvite: boolean;
-  pushReaction: boolean;
+  pushFriendRequest: boolean;     // Bạn bè
+  pushNewComment: boolean;        // Bình luận
+  pushJourneyInvite: boolean;     // Lời mời
+  pushReaction: boolean;          // Tương tác (Reaction)
+
+  // Optional fine-grained settings (task-201) - backend may rollout incrementally
+  pushMessage?: boolean;
+  inAppFriendRequest?: boolean;
+  inAppNewComment?: boolean;
+  inAppJourneyInvite?: boolean;
+  inAppReaction?: boolean;
+  inAppMessage?: boolean;
+  emailFriendRequest?: boolean;
+  emailNewComment?: boolean;
+  emailJourneyInvite?: boolean;
+  emailReaction?: boolean;
+  emailMessage?: boolean;
+
+  // DND Mode
+  dndEnabled: boolean;
+  dndStartHour: number;
+  dndEndHour: number;
 }
 
 export interface LinkedAccount {
@@ -133,12 +160,14 @@ class UserService {
 
   async getNotificationSettings(): Promise<NotificationSettings> {
     const response = await http.get<{ data: NotificationSettings }>('/users/settings/notifications');
-    return response.data.data;
+    const payload = response.data as unknown as { data?: NotificationSettings } | NotificationSettings;
+    return 'data' in payload && payload.data ? payload.data : (payload as NotificationSettings);
   }
 
   async updateNotificationSettings(data: Partial<NotificationSettings>): Promise<NotificationSettings> {
     const response = await http.put<{ data: NotificationSettings }>('/users/settings/notifications', data);
-    return response.data.data;
+    const payload = response.data as unknown as { data?: NotificationSettings } | NotificationSettings;
+    return 'data' in payload && payload.data ? payload.data : (payload as NotificationSettings);
   }
 
   async getLinkedAccounts(): Promise<LinkedAccount[]> {

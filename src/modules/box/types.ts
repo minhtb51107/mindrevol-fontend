@@ -1,16 +1,42 @@
+// Thêm định nghĩa BoxTab
+export type BoxTab = 'all' | 'personal' | 'friends' | 'invitations';
+
 export interface BoxResponse {
     id: string;
     name: string;
     description?: string;
-    avatar?: string;
-    coverImage?: string;
-    themeColor?: string;
-    textPosition?: string;   // [THÊM MỚI]
-    avatarPosition?: string; // [THÊM MỚI]
-    ownerId: string;
-    isArchived: boolean;
+    avatar: string;
+    themeSlug?: string;
+    textPosition?: string;
+    avatarPosition?: string;
+    ownerId?: string;
+    isArchived?: boolean;
     memberCount: number;
-    createdAt: string;
+    previewMemberAvatars?: string[];
+    createdAt?: string;
+    lastActivityAt?: string;
+}
+
+export interface JourneyResponse {
+    id: string;
+    name: string;
+    status: string;
+}
+
+export interface BoxDetailResponse {
+    id: string;
+    name: string;
+    description: string;
+    themeSlug: string;
+    avatar: string;
+    textPosition: string;
+    avatarPosition?: string;
+    memberCount: number;
+    myRole: string; // 'ADMIN' | 'MEMBER'
+    ongoingJourneys: JourneyResponse[];
+    endedJourneys: JourneyResponse[];
+    mapData?: any;
+    moodBubbleData?: any;
 }
 
 export interface BoxMemberResponse {
@@ -40,16 +66,21 @@ export interface CreateBoxRequest {
     name: string;
     description?: string;
     avatar?: string;
-    coverImage?: string;
-    themeColor?: string;
-    textPosition?: string;   // [THÊM MỚI]
-    avatarPosition?: string; // [THÊM MỚI]
+    themeSlug: string;
+    textPosition?: string;
+    inviteUserIds?: string[];
 }
 
-export interface UpdateBoxRequest extends CreateBoxRequest {}
+export interface UpdateBoxRequest {
+    name?: string;
+    description?: string;
+    themeSlug?: string;
+    avatar?: string;
+    textPosition?: string;
+}
 
 export interface BoxInvitationResponse {
-    id: number;
+    id: number; 
     boxId: string;
     boxName: string;
     boxAvatar?: string;

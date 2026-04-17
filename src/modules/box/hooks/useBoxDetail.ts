@@ -1,29 +1,81 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { boxService } from '../services/box.service';
-import { BoxResponse } from '../types';
 import { toast } from 'react-hot-toast';
+import { boxService } from '../services/box.service';
+import { journeyService } from '@/modules/journey/services/journey.service';
+import { BoxDetailResponse } from '../types';
+import { UserActiveJourneyResponse } from '@/modules/journey/types';
 
 export const useBoxDetail = (boxId: string | undefined, currentUserId: string | undefined) => {
     const navigate = useNavigate();
-
-    // --- STATES DỮ LIỆU ---
-    const [box, setBox] = useState<BoxResponse | null>(null);
+    const [box, setBox] = useState<BoxDetailResponse | null>(null);
     const [journeys, setJourneys] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isOwner, setIsOwner] = useState(false);
 
-    // --- STATES GIAO DIỆN (UI) ---
-    const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('timeline');
+    // States giao diện
+    const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    
-    // --- STATES MODALS ---
-    const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-    const [isCreateJourneyModalOpen, setIsCreateJourneyModalOpen] = useState(false); 
-    const [isUpdateBoxModalOpen, setIsUpdateBoxModalOpen] = useState(false); 
-
     const menuRef = useRef<HTMLDivElement>(null);
+    
+    // States quản lý Modals
+    const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+    const [isCreateJourneyModalOpen, setIsCreateJourneyModalOpen] = useState(false);
+    const [isUpdateBoxModalOpen, setIsUpdateBoxModalOpen] = useState(false);
 
-    // --- EFFECT: Xử lý click ra ngoài menu ---
+    const fetchBoxData = useCallback(async (id: string) => {
+        setLoading(true);
+        try {
+            // 1. Kéo thông tin Box
+            const boxData = await boxService.getBoxDetails(id);
+            setBox(boxData);
+            
+            // ĐÃ SỬA LỖI: Sử dụng myRole thay vì role
+            setIsOwner(boxData.myRole === 'OWNER' || boxData.myRole === 'ADMIN');
+
+            // 2. Kéo danh sách Hành trình trong Box (Data thô chưa có ảnh)
+            const journeysData = await boxService.getBoxJourneys(id);
+            let rawJourneys = journeysData.content || [];
+
+            // 3. ĐỒNG BỘ ẢNH & ICON TỪ API ACTIVE JOURNEYS
+            try {
+                const activeList = await journeyService.getUserActiveJourneys("me");
+                rawJourneys = rawJourneys.map((j: any) => {
+                    const extraData = activeList.find((a: UserActiveJourneyResponse) => a.id === j.id);
+                    
+                    // Lọc ra các ảnh từ bài đăng (Checkins)
+                    const checkinImages = extraData?.checkins
+                        ?.filter((c: any) => c.imageUrl)
+                        .map((c: any) => c.imageUrl) || [];
+
+                    return {
+                        ...j,
+                        // Bổ sung Icon (Avatar) và Màu sắc
+                        avatar: extraData?.avatar || j.avatar,
+                        themeColor: extraData?.themeColor || j.themeColor,
+                        // Bổ sung danh sách ảnh (Preview)
+                        previewImages: checkinImages.length > 0 
+                            ? checkinImages 
+                            : (extraData?.thumbnailUrl ? [extraData.thumbnailUrl] : [])
+                    };
+                });
+            } catch (e) {
+                console.error("Lỗi đồng bộ dữ liệu ảnh Hành trình:", e);
+            }
+
+            setJourneys(rawJourneys);
+        } catch (error) {
+            console.error("Không thể tải chi tiết Box:", error);
+            navigate('/boxes'); // Lỗi thì đá ra ngoài
+        } finally {
+            setLoading(false);
+        }
+    }, [navigate]);
+
+    useEffect(() => {
+        if (boxId) fetchBoxData(boxId);
+    }, [boxId, fetchBoxData]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -34,81 +86,44 @@ export const useBoxDetail = (boxId: string | undefined, currentUserId: string | 
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // --- EFFECT: Load dữ liệu khi vào trang ---
-    useEffect(() => {
-        if (boxId) fetchBoxData(boxId);
-    }, [boxId]);
-
-    // --- LOGIC: Gọi API lấy dữ liệu Box và Journey ---
-    const fetchBoxData = async (id: string) => {
-        try {
-            setLoading(true);
-            const [boxRes, journeysRes] = await Promise.all([
-                boxService.getBoxDetails(id),
-                boxService.getBoxJourneys(id, 0, 50) 
-            ]);
-            setBox(boxRes);
-            
-            // Sắp xếp hành trình từ mới đến cũ
-            const sortedJourneys = (journeysRes.content || []).sort((a: any, b: any) => 
-                new Date(b.createdAt || b.startDate).getTime() - new Date(a.createdAt || a.startDate).getTime()
-            );
-            setJourneys(sortedJourneys);
-            
-        } catch (error) {
-            console.error("Lỗi khi tải chi tiết Không gian:", error);
-            toast.error("Không thể tải thông tin Không gian");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // --- LOGIC: Các hành động của Box ---
     const handleArchiveBox = async () => {
-        if (!box || !window.confirm("Bạn có chắc chắn muốn lưu trữ Không gian này? Nó sẽ bị ẩn khỏi danh sách chính.")) return;
-        try {
-            await boxService.archiveBox(box.id);
-            toast.success("Đã lưu trữ Không gian");
-            navigate('/box');
-        } catch (error) {
-            toast.error("Lỗi khi lưu trữ");
-        }
+        toast.success("Tính năng lưu trữ Không gian đang được phát triển.");
+        setIsMenuOpen(false);
     };
 
     const handleDisbandBox = async () => {
-        if (!box || !window.confirm("CẢNH BÁO: Hành động này không thể hoàn tác! Toàn bộ dữ liệu trong Box sẽ bị xóa vĩnh viễn. Bạn có chắc chắn không?")) return;
-        try {
-            await boxService.disbandBox(box.id);
-            toast.success("Đã giải tán Không gian");
-            navigate('/box');
-        } catch (error) {
-            toast.error("Lỗi khi giải tán");
+        if (!boxId) return;
+        if (window.confirm("Bạn có chắc chắn muốn giải tán Không gian này? Mọi Hành trình và dữ liệu sẽ bị xóa vĩnh viễn.")) {
+            try {
+                await boxService.disbandBox(boxId);
+                toast.success("Đã giải tán Không gian.");
+                navigate('/boxes');
+            } catch (error: any) {
+                toast.error("Lỗi khi giải tán Không gian.");
+            }
         }
+        setIsMenuOpen(false);
     };
 
-    // --- HELPER QUYỀN TRUY CẬP ---
-    const isOwner = currentUserId === box?.ownerId;
-
     return {
-        // Data
-        box,
-        journeys,
-        loading,
-        isOwner,
-        
-        // UI States
-        viewMode, setViewMode,
-        isMenuOpen, setIsMenuOpen, menuRef,
-        
-        // Modal States
-        isMembersModalOpen, setIsMembersModalOpen,
-        isCreateJourneyModalOpen, setIsCreateJourneyModalOpen,
-        isUpdateBoxModalOpen, setIsUpdateBoxModalOpen,
-        
-        // Actions
-        fetchBoxData,
-        handleArchiveBox,
-        handleDisbandBox,
-        navigate
+        box, 
+        journeys, 
+        loading, 
+        isOwner, 
+        navigate,
+        viewMode, 
+        setViewMode, 
+        isMenuOpen, 
+        setIsMenuOpen, 
+        menuRef,
+        isMembersModalOpen, 
+        setIsMembersModalOpen,
+        isCreateJourneyModalOpen, 
+        setIsCreateJourneyModalOpen,
+        isUpdateBoxModalOpen, 
+        setIsUpdateBoxModalOpen,
+        fetchBoxData, 
+        handleArchiveBox, 
+        handleDisbandBox
     };
 };
