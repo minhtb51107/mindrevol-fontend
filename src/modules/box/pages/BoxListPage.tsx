@@ -7,7 +7,7 @@ import { CreateBoxModal } from '../components/CreateBoxModal';
 import { BoxCard } from '../components/BoxCard';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { enUS } from 'date-fns/locale';
+import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 // Component Icon Ngôi sao 4 cánh
@@ -165,22 +165,26 @@ const BoxListPage: React.FC = () => {
                                             {invitations.map(invite => (
                                                 <div key={invite.id} className="bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.03)] border border-white/50 dark:border-white/5 rounded-[32px] p-6 flex flex-col justify-between transition-all hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)] hover:-translate-y-1">
                                                     <div className="flex items-center gap-4 overflow-hidden mb-6">
-                                                        <div className="w-14 h-14 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[20px] flex items-center justify-center shrink-0 shadow-inner">
+                                                        <div className="w-14 h-14 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[20px] flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
                                                             {invite.boxAvatar ? (
-                                                                <span className="text-2xl drop-shadow-sm">{invite.boxAvatar}</span>
+                                                                (invite.boxAvatar.includes('/') || invite.boxAvatar.startsWith('http')) ? (
+                                                                    <img src={invite.boxAvatar} alt="Box Avatar" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <span className="text-2xl drop-shadow-sm">{invite.boxAvatar}</span>
+                                                                )
                                                             ) : invite.inviterAvatar ? (
-                                                                <img src={invite.inviterAvatar} alt="" className="w-full h-full rounded-[20px] object-cover" />
+                                                                <img src={invite.inviterAvatar} alt="Inviter Avatar" className="w-full h-full object-cover" />
                                                             ) : (
                                                                 <Package size={24} className="text-[#8A8580] dark:text-[#A09D9A]" strokeWidth={2.5} />
                                                             )}
                                                         </div>
                                                         <div className="truncate">
                                                             <p className="text-[0.9rem] text-[#8A8580] dark:text-[#A09D9A] truncate mb-0.5 font-semibold">
-                                                                <span className="font-extrabold text-[#1A1A1A] dark:text-white">{invite.inviterName}</span> mời bạn vào
+                                                                <span className="font-extrabold text-[#1A1A1A] dark:text-white">{invite.inviterName}</span> mời bạn vào Không gian
                                                             </p>
                                                             <p className="text-[1.1rem] font-black text-[#1A1A1A] dark:text-white truncate">{invite.boxName}</p>
                                                             <p className="text-[0.8rem] text-[#A09D9A] mt-0.5 font-bold tracking-wide uppercase">
-                                                                {formatDistanceToNow(new Date(invite.sentAt), { addSuffix: true, locale: enUS })}
+                                                                {formatDistanceToNow(new Date(invite.sentAt), { addSuffix: true, locale: vi })}
                                                             </p>
                                                         </div>
                                                     </div>

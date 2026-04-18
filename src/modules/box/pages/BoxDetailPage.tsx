@@ -18,6 +18,10 @@ import { BoxJourneyListMobile } from '../components/BoxJourneyListMobile';
 import { BoxMoodPage } from '@/modules/mood/pages/BoxMoodPage'; 
 import { useBoxMoods } from '@/modules/mood/hooks/useBoxMoods'; 
 
+// BỔ SUNG IMPORT
+import { boxService } from '../services/box.service';
+import { toast } from 'react-hot-toast';
+
 const BoxDetailPage: React.FC = () => {
     const { boxId } = useParams<{ boxId: string }>();
     const { user } = useAuth();
@@ -33,6 +37,19 @@ const BoxDetailPage: React.FC = () => {
 
     const { moods, handleReact } = useBoxMoods(boxId, user?.id);
     const [isMoodPageOpen, setIsMoodPageOpen] = useState(false);
+
+    // BỔ SUNG: Hàm xử lý rời khỏi Không gian dành cho Member
+    const handleLeaveBox = async () => {
+        if (box && window.confirm("Bạn có chắc chắn muốn rời khỏi Không gian này?")) {
+            try {
+                await boxService.leaveBox(box.id);
+                toast.success("Đã rời khỏi Không gian");
+                navigate('/box'); // Quay lại trang danh sách Box
+            } catch (error) {
+                toast.error("Có lỗi xảy ra khi rời Không gian");
+            }
+        }
+    };
 
     if (loading) {
         return (
@@ -58,7 +75,19 @@ const BoxDetailPage: React.FC = () => {
                 
                 <div className="relative z-10 max-w-[1024px] mx-auto px-5 md:px-8 pt-10 md:pt-14">
                     
-                    <BoxHeader box={box} isOwner={isOwner} navigate={navigate} menuRef={menuRef} isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} setIsUpdateBoxModalOpen={setIsUpdateBoxModalOpen} handleArchiveBox={handleArchiveBox} handleDisbandBox={handleDisbandBox} setIsMembersModalOpen={setIsMembersModalOpen} />
+                    <BoxHeader 
+                        box={box} 
+                        isOwner={isOwner} 
+                        navigate={navigate} 
+                        menuRef={menuRef} 
+                        isMenuOpen={isMenuOpen} 
+                        setIsMenuOpen={setIsMenuOpen} 
+                        setIsUpdateBoxModalOpen={setIsUpdateBoxModalOpen} 
+                        handleArchiveBox={handleArchiveBox} 
+                        handleDisbandBox={handleDisbandBox} 
+                        setIsMembersModalOpen={setIsMembersModalOpen}
+                        handleLeaveBox={handleLeaveBox} // BỔ SUNG PROP RỜI BOX VÀO ĐÂY
+                    />
 
                     {/* --- KHU VỰC MAP & MOOD --- */}
                     <div className="mt-10 md:mt-12 mb-12 md:mb-16 grid grid-cols-2 gap-5 md:gap-8">

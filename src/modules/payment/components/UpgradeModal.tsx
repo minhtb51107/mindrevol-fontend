@@ -192,7 +192,8 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
                     )}
                 </div>
 
-                <div className="p-4 sm:p-5 bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 mt-auto shrink-0 z-20">
+                {/* ĐÃ SỬA DÒNG NÀY: Thêm pb-24 (khoảng trống dưới 6rem cho mobile) và sm:pb-5 (trở lại bt trên màn hình lớn) */}
+                <div className="p-4 pb-24 sm:p-5 sm:pb-5 bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 mt-auto shrink-0 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)]">
                     {!qrUrl ? (
                         <Button 
                             onClick={onPayClick} 

@@ -22,10 +22,15 @@ export const useAuthLogic = () => {
 
   // --- HELPERS ---
   const handleAuthSuccess = (response: any) => {
-      // Backend mới cập nhật đã trả về isNewUser
-      const { accessToken, refreshToken, isNewUser } = response.data.data;
+      // Thêm log để bạn dễ debug nếu Backend đổi cấu trúc
+      console.log("Dữ liệu login trả về:", response.data);
       
-      if (isNewUser) {
+      // Phòng hờ BE trả về ở response.data thay vì response.data.data
+      const responseData = response.data.data || response.data;
+      const { accessToken, refreshToken, isNewUser } = responseData;
+      
+      // Ép kiểu chặt chẽ để bắt đúng user mới
+      if (isNewUser === true || isNewUser === "true") {
           // Là user mới từ mạng xã hội -> Lưu tạm token, bắt setup handle/thông tin
           setTempToken({ accessToken, refreshToken });
           setCurrentStep('SOCIAL_SETUP');
@@ -101,7 +106,9 @@ export const useAuthLogic = () => {
         if (userData.hasPassword) {
             setCurrentStep('PASSWORD_LOGIN');
         } else {
-            await goToOtp();
+            // [ĐÃ SỬA]: Chỉ chuyển view sang form OTP hoặc nhắc nhở, KHÔNG gọi `await goToOtp()`
+            setCurrentStep('OTP_INPUT');
+            toast('Tài khoản chưa có mật khẩu, hãy đăng nhập bằng mạng xã hội hoặc dùng OTP', { icon: 'ℹ️' });
         }
       } else {
         setUserInfo(null);
