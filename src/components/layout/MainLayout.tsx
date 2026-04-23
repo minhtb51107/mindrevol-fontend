@@ -1,4 +1,4 @@
-// src/components/layout/MainLayout.tsx
+// File: src/components/layout/MainLayout.tsx
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { Navigation } from './Navigation'; 
@@ -9,7 +9,6 @@ import { JourneyListModal } from '@/modules/journey/components/JourneyListModal'
 import { SettingsModal } from '@/modules/user/components/SettingsModal'; 
 import { journeyService } from '@/modules/journey/services/journey.service';
 import { cn } from '@/lib/utils';
-// [THÊM MỚI] Import hook thanh toán
 import { usePaymentSuccessHandler } from '@/modules/payment/hooks/usePaymentSuccessHandler';
 
 interface MainLayoutProps {
@@ -17,7 +16,6 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  // [THÊM MỚI] Khởi tạo lắng nghe Webhook Thanh toán
   usePaymentSuccessHandler();
 
   const location = useLocation();
@@ -136,7 +134,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
          onCapture={handleCaptureComplete}
       />
 
-      {activeJourneyId && isCheckinModalOpen && (
+      {/* [ĐÃ SỬA] Bỏ điều kiện activeJourneyId &&, cho phép mở modal kể cả khi chưa có hành trình */}
+      {isCheckinModalOpen && (
           <CheckinModal 
             isOpen={isCheckinModalOpen} 
             onClose={() => {
@@ -144,7 +143,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                setCheckinFile(null);
             }} 
             file={checkinFile} 
-            journeyId={activeJourneyId} 
+            // Nếu không có hành trình nào thì truyền chuỗi rỗng để Modal chọn "Lưu trữ cá nhân"
+            journeyId={activeJourneyId || ''} 
             onSuccess={() => {
                 handleDataRefresh();
                 window.location.reload(); 

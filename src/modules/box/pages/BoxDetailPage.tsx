@@ -18,38 +18,22 @@ import { BoxJourneyListMobile } from '../components/BoxJourneyListMobile';
 import { BoxMoodPage } from '@/modules/mood/pages/BoxMoodPage'; 
 import { useBoxMoods } from '@/modules/mood/hooks/useBoxMoods'; 
 
-// BỔ SUNG IMPORT
-import { boxService } from '../services/box.service';
-import { toast } from 'react-hot-toast';
-
 const BoxDetailPage: React.FC = () => {
     const { boxId } = useParams<{ boxId: string }>();
     const { user } = useAuth();
     
+    // Đã gọi handleLeaveBox từ Hook
     const {
         box, journeys, loading, isOwner, navigate,
         viewMode, setViewMode, isMenuOpen, setIsMenuOpen, menuRef,
         isMembersModalOpen, setIsMembersModalOpen,
         isCreateJourneyModalOpen, setIsCreateJourneyModalOpen,
         isUpdateBoxModalOpen, setIsUpdateBoxModalOpen,
-        fetchBoxData, handleArchiveBox, handleDisbandBox
+        fetchBoxData, handleArchiveBox, handleDisbandBox, handleLeaveBox
     } = useBoxDetail(boxId, user?.id);
 
     const { moods, handleReact } = useBoxMoods(boxId, user?.id);
     const [isMoodPageOpen, setIsMoodPageOpen] = useState(false);
-
-    // BỔ SUNG: Hàm xử lý rời khỏi Không gian dành cho Member
-    const handleLeaveBox = async () => {
-        if (box && window.confirm("Bạn có chắc chắn muốn rời khỏi Không gian này?")) {
-            try {
-                await boxService.leaveBox(box.id);
-                toast.success("Đã rời khỏi Không gian");
-                navigate('/box'); // Quay lại trang danh sách Box
-            } catch (error) {
-                toast.error("Có lỗi xảy ra khi rời Không gian");
-            }
-        }
-    };
 
     if (loading) {
         return (
@@ -72,7 +56,6 @@ const BoxDetailPage: React.FC = () => {
     return (
         <MainLayout>
             <div className="w-full min-h-screen bg-gradient-to-b from-[#F4EBE1] to-[#FFFFFF] dark:from-[#121212] dark:to-[#0A0A0A] relative overflow-hidden pb-24 transition-colors duration-500 font-quicksand">
-                
                 <div className="relative z-10 max-w-[1024px] mx-auto px-5 md:px-8 pt-10 md:pt-14">
                     
                     <BoxHeader 
@@ -86,12 +69,11 @@ const BoxDetailPage: React.FC = () => {
                         handleArchiveBox={handleArchiveBox} 
                         handleDisbandBox={handleDisbandBox} 
                         setIsMembersModalOpen={setIsMembersModalOpen}
-                        handleLeaveBox={handleLeaveBox} // BỔ SUNG PROP RỜI BOX VÀO ĐÂY
+                        handleLeaveBox={handleLeaveBox}
                     />
 
                     {/* --- KHU VỰC MAP & MOOD --- */}
                     <div className="mt-10 md:mt-12 mb-12 md:mb-16 grid grid-cols-2 gap-5 md:gap-8">
-                        
                         {/* 1. BẢN ĐỒ KỶ NIỆM */}
                         <div className="flex flex-col w-full aspect-square md:aspect-[4/3]">
                             <h2 className="text-[#1A1A1A] dark:text-white text-[1.1rem] md:text-[1.25rem] font-extrabold mb-3 pl-1 shrink-0 tracking-tight">
@@ -114,7 +96,6 @@ const BoxDetailPage: React.FC = () => {
                             </h2>
                             <div onClick={() => setIsMoodPageOpen(true)} className="flex-1 min-h-0 w-full bg-white/60 dark:bg-[#1A1A1A]/60 backdrop-blur-md rounded-[28px] md:rounded-[36px] shadow-[0_8px_24px_rgba(0,0,0,0.03)] border border-white/50 dark:border-white/5 overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-[0_16px_32px_rgba(0,0,0,0.08)] transition-all duration-300 group relative">
                                 
-                                {/* GIAO DIỆN MOBILE */}
                                 <div className="flex md:hidden w-full h-full items-center justify-center relative">
                                     {moods.length > 0 ? (
                                         <>
@@ -140,11 +121,9 @@ const BoxDetailPage: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* GIAO DIỆN DESKTOP */}
                                 <div className="hidden md:flex flex-col w-full h-full p-6 relative">
                                     {latestMood ? (
                                         <div className="flex flex-col h-full justify-between">
-                                            {/* Top: Info & Avatar stack */}
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
                                                     <img src={latestMood.avatarUrl} className="w-12 h-12 rounded-[16px] object-cover bg-[#E2D9CE] shadow-sm" />
@@ -172,7 +151,6 @@ const BoxDetailPage: React.FC = () => {
                                                 )}
                                             </div>
 
-                                            {/* Middle: Icon & Message */}
                                             <div className="flex items-center gap-6 my-auto ml-2">
                                                 <div className="text-[5rem] drop-shadow-xl group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">{latestMood.icon}</div>
                                                 {latestMood.message && (
@@ -183,7 +161,6 @@ const BoxDetailPage: React.FC = () => {
                                                 )}
                                             </div>
 
-                                            {/* 🔥 ĐÃ SỬA: KHÔNG HIỆN THANH REACTION NẾU LÀ MOOD CỦA MÌNH */}
                                             {latestMood.userId !== user?.id ? (
                                                 <div className="flex items-center gap-2.5 bg-white/50 dark:bg-[#121212]/50 backdrop-blur-md p-1.5 rounded-[20px] w-max">
                                                     {['👍', '❤️', '😂', '🥺'].map(emoji => (
@@ -211,12 +188,10 @@ const BoxDetailPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-
                     </div>
 
                     <BoxJourneyListDesktop journeys={journeys} viewMode={viewMode} setViewMode={setViewMode} setIsCreateJourneyModalOpen={setIsCreateJourneyModalOpen} navigate={navigate} boxName={box.name} />
                     <BoxJourneyListMobile journeys={journeys} setIsCreateJourneyModalOpen={setIsCreateJourneyModalOpen} navigate={navigate} />
-
                 </div>
             </div>
 

@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, Sparkles, BookOpen } from 'lucide-react';
-import { toast } from 'react-hot-toast'; 
+import { Loader2, Plus, BookOpen } from 'lucide-react';
 
 import { useJoinJourney } from '../hooks/useJoinJourney'; 
-import { journeyService } from '../services/journey.service';
-import { useAuth } from '@/modules/auth/store/AuthContext';
-import { JourneyResponse, JourneyStatus, UserActiveJourneyResponse } from '../types';
+import { useJourneyList } from '../hooks/useJourneyList';
 
 import { JourneyListHeader } from './JourneyListHeader';
 import { ActiveJourneyCard } from './ActiveJourneyCard';
@@ -17,126 +13,29 @@ import { CreateJourneyModal } from './CreateJourneyModal';
 import { InvitationList } from './InvitationList';
 import { PendingRequestsList } from './PendingRequestsList';
 
-import { cn } from '@/lib/utils';
-
-interface MergedJourney extends JourneyResponse {
-  memberAvatars?: (string | null)[];
-  daysRemaining?: number;
-  totalMembers?: number;
-  thumbnailUrl?: string; 
-  previewImages?: string[];
-}
-
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
 export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  
-  const [activeTab, setActiveTab] = useState<'MY_JOURNEYS' | 'INVITATIONS'>('MY_JOURNEYS');
-  const [selectedJourney, setSelectedJourney] = useState<MergedJourney | null>(null);
-  const [modalType, setModalType] = useState<'SETTINGS' | 'INVITE' | 'REQUESTS' | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // Lấy toàn bộ logic từ Custom Hook
+  const {
+      user,
+      activeTab, setActiveTab,
+      selectedJourney, setSelectedJourney,
+      modalType, setModalType,
+      isCreateOpen, setIsCreateOpen,
+      listLoading, activeJourneys,
+      alerts, refreshAll,
+      MAX_JOURNEYS, currentCount, isLimitReached,
+      handleEnterJourney, handleActionWhenLimitReached
+  } = useJourneyList(isOpen, onClose);
 
-  const [journeys, setJourneys] = useState<MergedJourney[]>([]);
-  const [listLoading, setListLoading] = useState(false);
-
-  const { inviteCode, setInviteCode, handleJoin, isLoading: joinLoading } = useJoinJourney(() => refreshAll());
-
-  const [alerts, setAlerts] = useState({
-    invitations: 0,
-    requests: 0,
-    journeyIdsWithRequests: new Set<string>()
-  });
-
-  const fetchJourneys = async () => {
-      setListLoading(true);
-      try {
-          const [myList, activeList] = await Promise.all([
-              journeyService.getMyJourneys(),
-              journeyService.getUserActiveJourneys("me")
-          ]);
-
-          const merged: MergedJourney[] = myList.map((journey: JourneyResponse) => {
-              const extraData = activeList.find((a: UserActiveJourneyResponse) => a.id === journey.id);
-              
-              const checkinImages = extraData?.checkins
-                  ?.filter((c: any) => c.imageUrl)
-                  .map((c: any) => c.imageUrl as string) || [];
-
-              return {
-                  ...journey,
-                  memberAvatars: extraData?.memberAvatars || [],
-                  daysRemaining: extraData?.daysRemaining,
-                  totalMembers: extraData?.totalMembers || journey.participantCount || 1,
-                  themeColor: extraData?.themeColor || journey.themeColor,
-                  avatar: extraData?.avatar || journey.avatar,
-                  thumbnailUrl: extraData?.thumbnailUrl,
-                  previewImages: checkinImages.length > 0 
-                      ? checkinImages 
-                      : (extraData?.thumbnailUrl ? [extraData.thumbnailUrl] : [])
-              };
-          });
-          
-          setJourneys(merged);
-      } catch (error) {
-          console.error("Failed to load active journeys", error);
-      } finally {
-          setListLoading(false);
-      }
-  };
-
-  const fetchAlerts = async () => {
-    try {
-      const data = await journeyService.getAlerts();
-      setAlerts({
-        invitations: data.journeyPendingInvitations,
-        requests: data.waitingApprovalRequests,
-        journeyIdsWithRequests: new Set(data.journeyIdsWithRequests)
-      });
-    } catch (e) {
-      console.error("Failed to fetch alerts", e);
-    }
-  };
-
-  const refreshAll = async () => {
-    fetchJourneys();
-    fetchAlerts();
-  };
-
-  useEffect(() => {
-    if (isOpen) refreshAll();
-  }, [isOpen]);
-
-  const activeJourneys = useMemo(() => {
-    if (!journeys) return [];
-    return journeys.filter(j => 
-      [JourneyStatus.ACTIVE, JourneyStatus.ONGOING, JourneyStatus.UPCOMING].includes(j.status as JourneyStatus)
-    );
-  }, [journeys]);
-
-  const MAX_JOURNEYS = 5;
-  const currentCount = activeJourneys.length;
-  const isLimitReached = currentCount >= MAX_JOURNEYS;
+  // Hook xử lý nhập code Tham gia
+  const { inviteCode, setInviteCode, handleJoin, isLoading: joinLoading } = useJoinJourney(refreshAll);
 
   if (!isOpen) return null;
-
-  const handleEnterJourney = (journeyId: string) => {
-    onClose();
-    navigate(`/?journeyId=${journeyId}`);
-    window.dispatchEvent(new CustomEvent('JOURNEY_SELECTED', { detail: journeyId }));
-  };
-
-  const handleActionWhenLimitReached = () => {
-    if (isLimitReached) {
-        toast.error(`Bạn đã đạt giới hạn ${MAX_JOURNEYS} Hành trình đang hoạt động.`);
-        return true;
-    }
-    return false;
-  };
 
   return createPortal(
     <>
@@ -153,7 +52,6 @@ export const JourneyListModal: React.FC<Props> = ({ isOpen, onClose }) => {
         <div className="relative min-h-full w-full flex flex-col items-center pt-16 md:pt-20 pb-10">
            <div className="relative z-10 w-full max-w-[640px] mx-auto flex flex-col px-4 md:px-0 transition-colors duration-300 animate-in fade-in slide-in-from-bottom-8">
                
-               {/* Gọi Component Header (Nếu bạn cần sửa Header cũng hãy sửa nó theo tone màu Beige/Dark) */}
                <JourneyListHeader 
                   currentCount={currentCount}
                   maxJourneys={MAX_JOURNEYS}

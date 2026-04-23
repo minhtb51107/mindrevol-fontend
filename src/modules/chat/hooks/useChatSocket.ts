@@ -15,7 +15,7 @@ export const useChatSocket = (conversationId: string | null) => {
     // 1. Kênh nhận tin nhắn (Tin mới, Sửa, Thu hồi, React đều bắn vào đây)
     const topic = `/topic/chat.${conversationId}`;
     const msgSub = socket.subscribe(topic, (msg: Message) => {
-        addMessage(msg); // Hàm addMessage bên store đã xử lý: nếu tồn tại thì update, chưa thì add
+        addMessage(msg); 
     });
 
     // 2. Kênh đang gõ (Typing)

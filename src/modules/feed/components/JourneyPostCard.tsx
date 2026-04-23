@@ -1,3 +1,4 @@
+// File: src/modules/feed/components/JourneyPostCard.tsx
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom'; 
 import { 

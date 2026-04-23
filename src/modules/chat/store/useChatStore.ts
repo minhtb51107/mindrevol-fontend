@@ -17,7 +17,7 @@ interface ChatState {
   editingMessage: Message | null; 
   forwardingMessage: Message | null; 
   typingStatus: Record<string, boolean>;
-  isViewingHistory: Record<string, boolean>; // [THÊM MỚI] Cờ báo hiệu đang xem lịch sử
+  isViewingHistory: Record<string, boolean>; 
 
   setReplyingTo: (msg: Message | null) => void;
   setEditingMessage: (msg: Message | null) => void;
@@ -42,7 +42,6 @@ interface ChatState {
   hideConversation: (convId: string) => Promise<void>;
   fetchPinnedMessages: (convId: string) => Promise<void>;
 
-  // [THÊM MỚI] Hàm xử lý nhảy đến tin nhắn cũ và quay lại
   jumpToMessage: (convId: string, msgId: string) => Promise<void>;
   backToPresent: (convId: string) => Promise<void>;
 }
@@ -122,6 +121,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   }),
 
   updateMessage: (updatedMsg) => set((state) => {
+    // [FIX THU HỒI] - Nếu tin nhắn bị xoá, clear data reactions
+    if (updatedMsg.isDeleted) {
+        updatedMsg.reactions = {};
+    }
+
     const msgs = state.messages[updatedMsg.conversationId] || [];
     const newMsgs = msgs.map(m => (m.id === updatedMsg.id || m.clientSideId === updatedMsg.clientSideId) ? updatedMsg : m);
     
@@ -248,7 +252,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
   },
 
-  // [MỚI] Gọi API Jump và thay thế List Tin nhắn
   jumpToMessage: async (convId, msgId) => {
     try {
         const cursorPage = await chatService.jumpToMessage(convId, msgId, 50);
@@ -262,12 +265,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
             messages: { ...state.messages, [convId]: Array.from(uniqueMap.values()) },
             cursors: { ...state.cursors, [convId]: cursorPage.nextCursor },
             hasMoreMessages: { ...state.hasMoreMessages, [convId]: cursorPage.hasNext },
-            isViewingHistory: { ...state.isViewingHistory, [convId]: true } // Bật cờ lịch sử
+            isViewingHistory: { ...state.isViewingHistory, [convId]: true } 
         }));
     } catch (e) { console.error(e); }
   },
 
-  // [MỚI] Trở về thực tại
   backToPresent: async (convId) => {
     try {
         const cursorPage = await chatService.getMessages(convId, null, 50);
@@ -281,7 +283,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             messages: { ...state.messages, [convId]: Array.from(uniqueMap.values()) },
             cursors: { ...state.cursors, [convId]: cursorPage.nextCursor },
             hasMoreMessages: { ...state.hasMoreMessages, [convId]: cursorPage.hasNext },
-            isViewingHistory: { ...state.isViewingHistory, [convId]: false } // Tắt cờ lịch sử
+            isViewingHistory: { ...state.isViewingHistory, [convId]: false } 
         }));
     } catch (e) { console.error(e); }
   }

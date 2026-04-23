@@ -1,3 +1,4 @@
+// File: src/modules/feed/components/HomeFeed.tsx
 import React, { useEffect, useState, useMemo } from 'react';
 import { feedService } from '../services/feed.service';
 import { FeedItem } from '../types';

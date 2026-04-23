@@ -1,3 +1,4 @@
+// File: src/components/layout/Navigation/DesktopSidebar.tsx
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
@@ -7,8 +8,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UpgradeModal } from '@/modules/payment/components/UpgradeModal'; 
-import { useGlobalAuth } from '@/modules/auth/hooks/useGlobalAuth'; 
-// THÊM DÒNG NÀY:
 import { useAuth } from '@/modules/auth/store/AuthContext';
 
 interface DesktopSidebarProps {
@@ -35,7 +34,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   onSettingsClick 
 }) => {
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
- const { user } = useAuth();
+  const { user } = useAuth();
   const isGold = user?.accountType === 'GOLD'; 
 
   return (
@@ -55,7 +54,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           {isExpanded ? <ChevronLeft className="w-5 h-5 ml-0.5" /> : <ChevronRight className="w-5 h-5 ml-1" />}
         </button>
 
-        {/* HEADER LOGO & TEXT */}
         <div className={cn("mb-6 transition-all flex items-center", isExpanded ? "px-2 justify-start gap-3" : "justify-center")}>
           <div className="w-10 h-10 shrink-0 drop-shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
               <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">

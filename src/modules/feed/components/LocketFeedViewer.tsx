@@ -1,3 +1,4 @@
+// File: src/modules/feed/components/LocketFeedViewer.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import { JourneyPostCard } from './JourneyPostCard';
 import { FeedAdCard } from './FeedAdCard';
@@ -33,7 +34,6 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
   const pickerRef = useRef<HTMLDivElement>(null);
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
 
-  // Xác định Item đang hiển thị
   const activeItem = posts.find(p => p.id === activePostId) || posts[0];
   const activePost = activeItem?.type === 'POST' ? (activeItem as PostProps) : null;
   const isOwner = activePost?.userId === currentUser?.id || activePost?.user?.id === currentUser?.id;
@@ -152,7 +152,6 @@ export const LocketFeedViewer: React.FC<LocketFeedProps> = ({ posts }) => {
         })}
       </div>
 
-      {/* Chỉ hiển thị thanh nhập text nếu item đang xem là POST (Không phải Ad) */}
       {activePost && (
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-zinc-50 via-zinc-50/90 dark:from-black dark:via-black/90 to-transparent pt-8 pb-2 md:pt-20 md:pb-6 px-4 z-30 pointer-events-none transition-all duration-300">
           <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col gap-3 pointer-events-auto relative">

@@ -18,7 +18,7 @@ export const useBoxDetail = (boxId: string | undefined, currentUserId: string | 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     
-    // States quản lý Modals
+    // States Modals
     const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
     const [isCreateJourneyModalOpen, setIsCreateJourneyModalOpen] = useState(false);
     const [isUpdateBoxModalOpen, setIsUpdateBoxModalOpen] = useState(false);
@@ -26,37 +26,23 @@ export const useBoxDetail = (boxId: string | undefined, currentUserId: string | 
     const fetchBoxData = useCallback(async (id: string) => {
         setLoading(true);
         try {
-            // 1. Kéo thông tin Box
             const boxData = await boxService.getBoxDetails(id);
             setBox(boxData);
-            
-            // ĐÃ SỬA LỖI: Sử dụng myRole thay vì role
             setIsOwner(boxData.myRole === 'OWNER' || boxData.myRole === 'ADMIN');
 
-            // 2. Kéo danh sách Hành trình trong Box (Data thô chưa có ảnh)
             const journeysData = await boxService.getBoxJourneys(id);
             let rawJourneys = journeysData.content || [];
 
-            // 3. ĐỒNG BỘ ẢNH & ICON TỪ API ACTIVE JOURNEYS
             try {
                 const activeList = await journeyService.getUserActiveJourneys("me");
                 rawJourneys = rawJourneys.map((j: any) => {
                     const extraData = activeList.find((a: UserActiveJourneyResponse) => a.id === j.id);
-                    
-                    // Lọc ra các ảnh từ bài đăng (Checkins)
-                    const checkinImages = extraData?.checkins
-                        ?.filter((c: any) => c.imageUrl)
-                        .map((c: any) => c.imageUrl) || [];
-
+                    const checkinImages = extraData?.checkins?.filter((c: any) => c.imageUrl).map((c: any) => c.imageUrl) || [];
                     return {
                         ...j,
-                        // Bổ sung Icon (Avatar) và Màu sắc
                         avatar: extraData?.avatar || j.avatar,
                         themeColor: extraData?.themeColor || j.themeColor,
-                        // Bổ sung danh sách ảnh (Preview)
-                        previewImages: checkinImages.length > 0 
-                            ? checkinImages 
-                            : (extraData?.thumbnailUrl ? [extraData.thumbnailUrl] : [])
+                        previewImages: checkinImages.length > 0 ? checkinImages : (extraData?.thumbnailUrl ? [extraData.thumbnailUrl] : [])
                     };
                 });
             } catch (e) {
@@ -66,7 +52,7 @@ export const useBoxDetail = (boxId: string | undefined, currentUserId: string | 
             setJourneys(rawJourneys);
         } catch (error) {
             console.error("Không thể tải chi tiết Box:", error);
-            navigate('/boxes'); // Lỗi thì đá ra ngoài
+            navigate('/boxes'); 
         } finally {
             setLoading(false);
         }
@@ -105,25 +91,25 @@ export const useBoxDetail = (boxId: string | undefined, currentUserId: string | 
         setIsMenuOpen(false);
     };
 
+    const handleLeaveBox = async () => {
+        if (!boxId) return;
+        if (window.confirm("Bạn có chắc chắn muốn rời khỏi Không gian này?")) {
+            try {
+                await boxService.leaveBox(boxId);
+                toast.success("Đã rời khỏi Không gian");
+                navigate('/box');
+            } catch (error) {
+                toast.error("Có lỗi xảy ra khi rời Không gian");
+            }
+        }
+    };
+
     return {
-        box, 
-        journeys, 
-        loading, 
-        isOwner, 
-        navigate,
-        viewMode, 
-        setViewMode, 
-        isMenuOpen, 
-        setIsMenuOpen, 
-        menuRef,
-        isMembersModalOpen, 
-        setIsMembersModalOpen,
-        isCreateJourneyModalOpen, 
-        setIsCreateJourneyModalOpen,
-        isUpdateBoxModalOpen, 
-        setIsUpdateBoxModalOpen,
-        fetchBoxData, 
-        handleArchiveBox, 
-        handleDisbandBox
+        box, journeys, loading, isOwner, navigate,
+        viewMode, setViewMode, isMenuOpen, setIsMenuOpen, menuRef,
+        isMembersModalOpen, setIsMembersModalOpen,
+        isCreateJourneyModalOpen, setIsCreateJourneyModalOpen,
+        isUpdateBoxModalOpen, setIsUpdateBoxModalOpen,
+        fetchBoxData, handleArchiveBox, handleDisbandBox, handleLeaveBox
     };
 };

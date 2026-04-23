@@ -1,74 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { UserX, Unlock } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { blockService } from '../services/block.service'; // Dùng đúng service này
-import { UserSummary } from '../services/user.service';
+import React from 'react';
+import { UserX, Unlock, Loader2 } from 'lucide-react';
+import { useBlockedUsers } from '../hooks/useBlockedUsers';
 
-// [FIX] This component is now a child view and does not need isOpen/onClose props
 export const BlockedUsersModal = () => {
-  const [blockedUsers, setBlockedUsers] = useState<UserSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadBlockList();
-  }, []);
-
-  const loadBlockList = async () => {
-    try {
-      setLoading(true);
-      const data = await blockService.getBlockList();
-      setBlockedUsers(data);
-    } catch (error) {
-      console.error("Failed to load blocked users list:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUnblock = async (userId: string) => {
-    if (confirm("Are you sure you want to unblock this user?")) {
-      try {
-        await blockService.unblockUser(userId);
-        // Refresh list
-        setBlockedUsers(prev => prev.filter(user => user.id !== userId));
-      } catch (error) {
-        alert("An error occurred while unblocking the user.");
-      }
-    }
-  };
+  const { blockedUsers, loading, handleUnblock } = useBlockedUsers();
 
   return (
-    <div className="flex-1 overflow-y-auto p-1 custom-scrollbar max-h-[400px]">
+    <div className="flex-1 overflow-y-auto p-2 custom-scrollbar font-quicksand pb-10">
         {loading ? (
-            <div className="text-center text-zinc-500 py-10 text-sm">Loading...</div>
+            <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-[#8A8580]" /></div>
         ) : blockedUsers.length === 0 ? (
-            <div className="text-center text-zinc-500 py-10 flex flex-col items-center">
-                <UserX className="w-10 h-10 mb-2 opacity-50" />
-                <span className="text-sm">You have not blocked anyone yet.</span>
+            <div className="flex flex-col items-center justify-center py-12 opacity-70">
+                <UserX className="w-12 h-12 mb-4 text-[#A09D9A]" />
+                <span className="text-[1.05rem] font-bold text-[#8A8580] dark:text-[#A09D9A]">Danh sách chặn trống.</span>
             </div>
         ) : (
             <div className="space-y-3">
                 {blockedUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-zinc-800">
-                        <div className="flex items-center gap-3">
+                    <div key={user.id} className="flex items-center justify-between p-4 bg-white dark:bg-[#1A1A1A] rounded-[20px] border border-[#F4EBE1] dark:border-white/5 shadow-sm">
+                        <div className="flex items-center gap-4">
                             <img 
-                                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.fullname}`} 
-                                className="w-10 h-10 rounded-full object-cover border border-zinc-700" 
-                                    alt="Avatar"
+                                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.fullname}&background=random`} 
+                                className="w-12 h-12 rounded-[16px] object-cover bg-[#E2D9CE] border border-[#F4EBE1] dark:border-[#2B2A29]" 
+                                alt="Avatar"
                             />
                             <div>
-                                <h4 className="text-sm font-bold text-white">{user.fullname}</h4>
-                                <p className="text-xs text-zinc-500">@{user.handle}</p>
+                                <h4 className="text-[1.05rem] font-black text-[#1A1A1A] dark:text-white leading-tight">{user.fullname}</h4>
+                                <p className="text-[0.8rem] font-bold text-[#8A8580] dark:text-[#A09D9A]">@{user.handle}</p>
                             </div>
                         </div>
-                        <Button 
-                            size="sm"
-                            variant="secondary"
+                        <button 
                             onClick={() => handleUnblock(user.id)}
-                            className="h-8 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
+                            className="px-4 h-[40px] flex items-center justify-center gap-2 bg-[#F4EBE1]/50 dark:bg-[#2B2A29] hover:bg-[#E2D9CE] dark:hover:bg-[#3A3734] text-[#1A1A1A] dark:text-white rounded-[14px] font-bold text-[0.85rem] transition-all active:scale-95 border border-transparent dark:border-white/5"
                         >
-                            <Unlock className="w-3 h-3 mr-1"/> Unblock
-                        </Button>
+                            <Unlock className="w-4 h-4" strokeWidth={2.5}/> Bỏ chặn
+                        </button>
                     </div>
                 ))}
             </div>

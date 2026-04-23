@@ -127,7 +127,8 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
         <div className={cn("flex flex-col max-w-[75%] relative", isMe ? "items-end" : "items-start")}>
           
           {!message.isDeleted && (
-              <div className={cn("absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-20", isMe ? "-left-[72px]" : "-right-[72px]")}>
+              // [FIX MOBILE] Đổi từ opacity-0 thành opacity-100 md:opacity-0 để trên điện thoại luôn hiện nút bấm
+              <div className={cn("absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-20", isMe ? "-left-[72px]" : "-right-[72px]")}>
                 
                 <div className="relative" ref={reactRef}>
                     <button onClick={() => setShowReacts(!showReacts)} className="p-1.5 bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-700 rounded-full text-zinc-400 hover:text-yellow-500 active:scale-90" title="Thả cảm xúc"><SmilePlus className="w-4 h-4" /></button>
@@ -173,7 +174,8 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
                            : "bg-[#FFF5E8] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100 rounded-[24px] rounded-bl-[6px] border border-[#FFF5E8] dark:border-zinc-700 font-sans font-semibold" 
                     )} style={{ fontFamily: '"Nunito", sans-serif' }}>
                       
-                      {!isMe && isGroup && message.type !== 'IMAGE' && <div className="text-[11px] text-[#9288AD] mb-0.5 font-bold">{message.senderName || "Thành viên"}</div>}
+                      {/* [FIX SHOW NAME] Bỏ isGroup, luôn hiện tên nếu không phải là mình */}
+                      {!isMe && message.type !== 'IMAGE' && <div className="text-[11px] text-[#9288AD] mb-0.5 font-bold">{message.senderName || "Thành viên"}</div>}
                       
                       {message.type === 'IMAGE' ? (
                           <div className="rounded-[20px] overflow-hidden border border-zinc-200 dark:border-zinc-700 max-w-[250px]">

@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Shield, Trash2, Loader2, Search, Check, Crown } from 'lucide-react';
-import { boxService } from '../services/box.service';
-import { BoxMemberResponse } from '../types';
-import { useAuth } from '@/modules/auth/store/AuthContext';
-import { toast } from 'react-hot-toast';
-import { friendService } from '@/modules/user/services/friend.service'; 
+import React from 'react';
 import { createPortal } from 'react-dom';
+import { X, Shield, Trash2, Loader2, Search, Check, Crown } from 'lucide-react';
+import { useAuth } from '@/modules/auth/store/AuthContext';
+import { useBoxMembers } from '../hooks/useBoxMembers';
 
 interface BoxMembersModalProps {
     isOpen: boolean;
@@ -21,98 +18,18 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
     const { user } = useAuth();
     const isOwner = user?.id === ownerId;
 
-    const [members, setMembers] = useState<BoxMemberResponse[]>([]);
-    const [friends, setFriends] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set()); 
-
-    useEffect(() => {
-        if (isOpen && boxId) {
-            fetchData();
-        }
-    }, [isOpen, boxId]);
-
-    const fetchData = async () => {
-        try {
-            setIsLoading(true);
-            const [membersData, friendsResponse] = await Promise.all([
-                boxService.getBoxMembers(boxId, 0, 50),
-                friendService.getMyFriends()
-            ]);
-            setMembers(membersData.content || []);
-            const extractedFriends = (friendsResponse || []).map(item => item.friend);
-            setFriends(extractedFriends);
-        } catch (error) {
-            console.error("Lỗi tải dữ liệu", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const invitableFriends = useMemo(() => {
-        return friends.filter(friend => !members.some(m => m.userId === friend.id));
-    }, [friends, members]);
-
-    const filteredFriends = useMemo(() => {
-        if (!searchQuery.trim()) return invitableFriends;
-        return invitableFriends.filter(f => 
-            f.fullname.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            (f.handle && f.handle.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
-    }, [invitableFriends, searchQuery]);
-
-    const handleInvite = async (friendId: string) => {
-        try {
-            setInvitedIds(prev => new Set(prev).add(friendId));
-            await boxService.inviteMember(boxId, friendId); 
-            toast.success("Đã gửi lời mời!");
-        } catch (err: any) {
-            setInvitedIds(prev => {
-                const next = new Set(prev);
-                next.delete(friendId);
-                return next;
-            });
-            toast.error(err?.response?.data?.message || "Lỗi khi gửi lời mời.");
-        }
-    };
-
-    const handleRemoveMember = async (userIdToRemove: string) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xóa thành viên này khỏi Box không?")) return;
-        try {
-            await boxService.removeMember(boxId, userIdToRemove);
-            await fetchData();
-            onMemberChange();
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Lỗi khi xóa thành viên.");
-        }
-    };
-
-    const handleTransferOwnership = async (newOwnerId: string, newOwnerName: string) => {
-        if (!window.confirm(`Chuyển quyền chủ Box cho ${newOwnerName}? Bạn sẽ trở thành thành viên bình thường.`)) return;
-        
-        try {
-            await boxService.transferOwnership(boxId, newOwnerId);
-            toast.success(`Đã chuyển quyền cho ${newOwnerName}`);
-            onClose(); 
-            onMemberChange(); 
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Lỗi khi chuyển quyền.");
-        }
-    };
+    const {
+        members, isLoading, searchQuery, setSearchQuery, 
+        filteredFriends, invitedIds,
+        handleInvite, handleRemoveMember, handleTransferOwnership
+    } = useBoxMembers({ boxId, isOpen, onClose, onMemberChange });
 
     if (!isOpen) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center p-0 md:p-6">
-            
-            <div 
-                className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" 
-                onClick={onClose} 
-            />
-
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" onClick={onClose} />
             <div className="relative w-full md:w-[500px] bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-[32px] overflow-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-2xl flex flex-col h-[85vh] md:h-[650px] md:max-h-[85vh] animate-in slide-in-from-bottom-1/2 md:slide-in-from-bottom-0 md:zoom-in-95 duration-300">
-                
                 <div className="w-full flex justify-center pt-3 pb-1 md:hidden shrink-0">
                     <div className="w-12 h-1.5 bg-zinc-300 rounded-full"></div>
                 </div>
@@ -144,7 +61,6 @@ export const BoxMembersModal: React.FC<BoxMembersModalProps> = ({
                         <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-[#A09D9A]" /></div>
                     ) : (
                         <div className="space-y-6">
-                            
                             {/* KHỐI GỢI Ý MỜI */}
                             {isOwner && filteredFriends.length > 0 && (
                                 <div>

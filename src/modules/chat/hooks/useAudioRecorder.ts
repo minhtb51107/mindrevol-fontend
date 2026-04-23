@@ -1,4 +1,4 @@
-//src/hooks/useAudioRecorder
+// File: src/modules/chat/hooks/useAudioRecorder.ts
 import { useState, useRef, useCallback } from 'react';
 
 export const useAudioRecorder = () => {
@@ -10,10 +10,7 @@ export const useAudioRecorder = () => {
 
   const startRecording = useCallback(async () => {
     try {
-      // 1. Xin quyền truy cập Microphone
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // 2. Khởi tạo MediaRecorder
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -28,7 +25,6 @@ export const useAudioRecorder = () => {
       setIsRecording(true);
       setRecordingTime(0);
 
-      // 3. Đếm thời gian ghi âm
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
@@ -47,17 +43,12 @@ export const useAudioRecorder = () => {
       }
 
       mediaRecorderRef.current.onstop = () => {
-        // Gom các mảnh data lại thành 1 file âm thanh
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        
-        // Tạo File object để chuẩn bị gửi lên server
         const file = new File([audioBlob], `voice-message-${Date.now()}.webm`, {
           type: 'audio/webm'
         });
 
-        // Tắt mic
         mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
-        
         resolve(file);
       };
 

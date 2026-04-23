@@ -1,13 +1,10 @@
-// File: src/modules/chat/components/ChatWindow.tsx
-import React, { useMemo, useRef } from 'react';
-import { useChatStore } from '../store/useChatStore';
-import { useChat } from '../hooks/useChat';
-import { useVoiceCall } from '../hooks/useVoiceCall';
+import React from 'react';
 import { ChatHeader } from './ChatHeader';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { VoiceCallModal } from './VoiceCallModal';
-import { ForwardMessageModal } from './ForwardMessageModal'; // [IMPORT MỚI]
+import { ForwardMessageModal } from './ForwardMessageModal';
+import { useChatWindow } from '../hooks/useChatWindow';
 
 interface ChatWindowProps {
   isSidebarOpen?: boolean;
@@ -16,22 +13,10 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ isSidebarOpen, toggleSidebar, onBackMobile }) => {
-  const { activeConversationId, conversations, forwardingMessage, setForwardingMessage } = useChatStore();
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const activeConv = useMemo(() => {
-      const existingConv = conversations.find(c => c.id === activeConversationId);
-      if (existingConv) return existingConv;
-      if (activeConversationId && activeConversationId.startsWith('friend_')) {
-          const friendId = activeConversationId.split('_')[1];
-          return { id: activeConversationId, partner: { id: friendId, fullname: 'Người dùng mới', avatarUrl: '' }, isVirtual: true } as any;
-      }
-      return null;
-  }, [activeConversationId, conversations]);
-
-  const { messages, sendMessage, editMessage, blockUser, unfriendUser, currentUserId, loadMoreMessages, hasMore, isLoadingMore } = useChat(activeConversationId, activeConv?.partner?.id);
-  
-  const { startCall, endCall, incomingCall, outgoingCall, isInCall, setIsInCall, initWebRTC, sendSignal } = useVoiceCall(currentUserId || '', remoteAudioRef);
+  const {
+      activeConv, forwardingMessage, setForwardingMessage,
+      remoteAudioRef, chatData, callData, handleAcceptCall
+  } = useChatWindow();
 
   const scrollbarStyles = `
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -54,17 +39,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isSidebarOpen, toggleSid
     );
   }
 
-  const handleAcceptCall = async () => {
-    if (!incomingCall) return;
-    const isReady = await initWebRTC(incomingCall.senderId); 
-    if (isReady) { sendSignal({ type: 'call-accept', targetId: incomingCall.senderId, senderId: currentUserId }); setIsInCall(true); }
-  };
-
   return (
     <div className="flex flex-col h-full w-full relative overflow-hidden bg-[#F0EFF5] dark:bg-[#121212]">
       <style>{scrollbarStyles}</style>
 
-      {/* [THÊM MỚI] Modal Chuyển tiếp tin nhắn */}
       <ForwardMessageModal 
         isOpen={!!forwardingMessage} 
         onClose={() => setForwardingMessage(null)} 
@@ -72,8 +50,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isSidebarOpen, toggleSid
 
       <ChatHeader 
         partner={activeConv.partner} 
-        onBlock={blockUser}        
-        onUnfriend={unfriendUser} 
+        onBlock={chatData.blockUser}        
+        onUnfriend={chatData.unfriendUser} 
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         onBackMobile={onBackMobile} 
@@ -81,23 +59,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isSidebarOpen, toggleSid
 
       <div className="flex-1 min-h-0 relative">
           <MessageList 
-            messages={messages}
-            currentUserId={currentUserId}
+            messages={chatData.messages}
+            currentUserId={chatData.currentUserId}
             partnerAvatar={activeConv.partner?.avatarUrl}
-            onLoadMore={loadMoreMessages} 
-            hasMore={hasMore}            
-            isLoadingMore={isLoadingMore} 
+            onLoadMore={chatData.loadMoreMessages} 
+            hasMore={chatData.hasMore}            
+            isLoadingMore={chatData.isLoadingMore} 
           />
       </div>
 
-      <ChatInput onSend={sendMessage} onEdit={editMessage} />
+      <ChatInput onSend={chatData.sendMessage} onEdit={chatData.editMessage} />
 
       <VoiceCallModal 
-        incomingCall={incomingCall} outgoingCall={outgoingCall} isInCall={isInCall} partnerName={activeConv.partner?.fullname || 'Bạn bè'} remoteAudioRef={remoteAudioRef} 
+        incomingCall={callData.incomingCall} 
+        outgoingCall={callData.outgoingCall} 
+        isInCall={callData.isInCall} 
+        partnerName={activeConv.partner?.fullname || 'Bạn bè'} 
+        remoteAudioRef={remoteAudioRef} 
         onAccept={handleAcceptCall}
-        onReject={() => { if (incomingCall) sendSignal({ type: 'call-reject', targetId: incomingCall.senderId, senderId: currentUserId }); endCall(); }}
-        onEndCall={() => { const target = incomingCall ? incomingCall.senderId : outgoingCall?.targetId; if (target) sendSignal({ type: 'end-call', targetId: target, senderId: currentUserId }); endCall(); }}
-        onCancelCall={() => { if (outgoingCall) sendSignal({ type: 'end-call', targetId: outgoingCall.targetId, senderId: currentUserId }); endCall(); }}
+        onReject={() => { if (callData.incomingCall) callData.sendSignal({ type: 'call-reject', targetId: callData.incomingCall.senderId, senderId: chatData.currentUserId }); callData.endCall(); }}
+        onEndCall={() => { const target = callData.incomingCall ? callData.incomingCall.senderId : callData.outgoingCall?.targetId; if (target) callData.sendSignal({ type: 'end-call', targetId: target, senderId: chatData.currentUserId }); callData.endCall(); }}
+        onCancelCall={() => { if (callData.outgoingCall) callData.sendSignal({ type: 'end-call', targetId: callData.outgoingCall.targetId, senderId: chatData.currentUserId }); callData.endCall(); }}
       />
     </div>
   );

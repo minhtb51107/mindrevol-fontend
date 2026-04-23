@@ -1,6 +1,7 @@
+// File: src/modules/notification/hooks/useNotifications.ts
 import { useState, useEffect } from 'react';
 import { resolveNotificationCategory } from '../constants';
-// Read per-category on/off state from localStorage
+
 type CategorySettings = Record<'COMMENT' | 'REACTION' | 'MESSAGE' | 'JOURNEY' | 'FRIEND', boolean>;
 const getCategorySettingsFromStorage = (): CategorySettings => {
   try {
@@ -122,10 +123,8 @@ export const useNotifications = (isOpen: boolean) => {
         }
     };
 
-    // [Sprint 2] Update isSeen state and call the API
     const markAllAsSeen = async () => {
         try {
-            // Optimistic UI: update immediately for a smoother experience
             setNotifications(prev => prev.map(n => ({ ...n, isSeen: true })));
             await notificationService.markAllAsSeen();
         } catch (e) {
@@ -153,13 +152,9 @@ export const useNotifications = (isOpen: boolean) => {
         }
     };
 
-    // ==========================================
-    // TRUNG TÂM XỬ LÝ HÀNH ĐỘNG (STRATEGY HUB)
-    // ==========================================
     const handleAction = async (action: 'ACCEPT' | 'REJECT', noti: NotificationResponse): Promise<boolean> => {
         try {
             if (noti.type === 'BOX_INVITE') {
-                // FIX: Ép kiểu sang số vì boxService yêu cầu number
                 const inviteId = parseNumericReferenceId(noti.referenceId);
                 if (inviteId === null) {
                     throw new Error('ID lời mời box không hợp lệ');
@@ -182,7 +177,6 @@ export const useNotifications = (isOpen: boolean) => {
                     await journeyService.rejectInvitation(invitationId);
                 }
             } else if (noti.type === 'FRIEND_REQUEST') {
-                // friendService dùng string nên gọi trực tiếp
                 if (action === 'ACCEPT') {
                     await friendService.acceptRequest(noti.referenceId);
                 } else {
@@ -215,20 +209,18 @@ export const useNotifications = (isOpen: boolean) => {
         }
     };
 
-    // Filter by settings
     const categorySettings = getCategorySettingsFromStorage();
     let filteredNotifications = notifications;
-    // Filter by category on/off state
     filteredNotifications = filteredNotifications.filter(noti => {
       const cat = resolveNotificationCategory(noti.type);
       if (cat === 'OTHER') return true;
       return categorySettings[cat];
     });
-    // Filter unread items if needed
+    
     if (filter === 'UNREAD') {
       filteredNotifications = filteredNotifications.filter(n => !n.isRead);
     }
-    // Sort newest first
+    
     filteredNotifications = filteredNotifications.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return {

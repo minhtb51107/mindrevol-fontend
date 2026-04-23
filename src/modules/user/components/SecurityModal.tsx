@@ -1,12 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, ShieldCheck, Mail, KeyRound, ArrowRight, ShieldAlert } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/modules/auth/store/AuthContext';
-import { userService } from '../services/user.service';
-import { BlockedUsersModal } from './BlockedUsersModal';
-import { toast } from 'react-hot-toast'; 
+import { X, ShieldCheck, Mail, ArrowLeft, Loader2, KeyRound } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useSecurity } from '../hooks/useSecurity';
 
 interface Props {
   isOpen: boolean;
@@ -14,244 +10,131 @@ interface Props {
 }
 
 export const SecurityModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
-  
-  // Main view state
-  const [view, setView] = useState<'MENU' | 'PASSWORD' | 'BLOCK'>('MENU');
-  
-  // OTP flow state in the PASSWORD view
-  const [otpStep, setOtpStep] = useState<'INIT' | 'VERIFY'>('INIT');
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Form data
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  // Reset state when closing or switching tabs
-  const resetForm = () => {
-    setOtpStep('INIT');
-    setOtp('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setIsLoading(false);
-  };
-
-  // --- SEND OTP FLOW ---
-  const handleSendOtp = async () => {
-    if (!user?.email) return toast.error("User email not found");
-    
-    setIsLoading(true);
-    try {
-      await userService.sendOtp(user.email);
-      toast.success(`Verification code has been sent to ${user.email}`);
-      setOtpStep('VERIFY');
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Failed to send the code. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // --- PASSWORD UPDATE FLOW ---
-  const handleSubmit = async () => {
-    if (newPassword !== confirmPassword) {
-        return toast.error("Confirmation password does not match");
-    }
-    if (newPassword.length < 6) {
-        return toast.error("Password must be at least 6 characters long");
-    }
-    if (otp.length < 6) {
-        return toast.error("Please enter the 6-digit OTP code");
-    }
-
-    setIsLoading(true);
-    try {
-        await userService.updatePasswordWithOtp({ 
-            otp, 
-            newPassword 
-        });
-        toast.success("Password updated successfully!");
-        resetForm();
-        setView('MENU'); // Return to the menu after success
-    } catch (error: any) {
-        toast.error(error.response?.data?.message || "Update failed. Please check the OTP code again.");
-    } finally {
-        setIsLoading(false);
-    }
-  };
+  const {
+      user, otpStep, isLoading,
+      otp, setOtp, newPassword, setNewPassword, confirmPassword, setConfirmPassword,
+      handleSendOtp, handleSubmit, handleBack
+  } = useSecurity(onClose);
 
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="w-full max-w-md bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center p-0 md:p-6 font-quicksand">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[4px] animate-in fade-in duration-300" onClick={onClose} />
+
+      <div className="relative w-full md:w-[480px] bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-[40px] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom-1/2 md:slide-in-from-bottom-0 md:zoom-in-95 duration-300">
         
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-2">
-             {view !== 'MENU' && (
-                <button 
-                    onClick={() => {
-                        if (view === 'PASSWORD' && otpStep === 'VERIFY') {
-                            setOtpStep('INIT'); // Nếu đang ở bước Verify thì back về Init
-                        } else {
-                            setView('MENU'); // Nếu không thì về Menu chính
-                            resetForm();
-                        }
-                    }} 
-                    className="text-zinc-400 hover:text-white"
-                >
-                    <ArrowRight className="w-5 h-5 rotate-180" />
-                </button>
-             )}
-             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                 {view === 'PASSWORD' ? "Password management" : (view === 'BLOCK' ? "Blocked users" : "Security")}
-             </h2>
+        {/* HEADER ĐỒNG BỘ */}
+        <div className="w-full flex justify-center pt-3 pb-1 md:hidden shrink-0">
+            <div className="w-12 h-1.5 bg-[#D6CFC7] dark:bg-[#3A3734] rounded-full"></div>
+        </div>
+
+        <div className="flex items-center justify-between px-6 md:px-8 py-5 border-b border-[#F4EBE1] dark:border-[#2B2A29] shrink-0">
+          <div className="flex items-center gap-3">
+              <button onClick={handleBack} className="p-2 -ml-2 hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] rounded-xl text-[#8A8580] dark:text-[#A09D9A] transition-colors">
+                  <ArrowLeft size={20} strokeWidth={2.5} />
+              </button>
+              <div className="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-[14px] flex items-center justify-center shadow-sm">
+                  <KeyRound className="w-5 h-5 text-blue-500" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-[1.4rem] font-black text-[#1A1A1A] dark:text-white tracking-tight">Bảo mật</h2>
           </div>
-          <button onClick={onClose}><X className="w-5 h-5 text-zinc-400" /></button>
+          <button onClick={onClose} className="p-2.5 bg-[#F4EBE1] dark:bg-[#2B2A29] hover:bg-[#E2D9CE] dark:hover:bg-[#3A3734] rounded-[16px] text-[#8A8580] dark:text-[#A09D9A] transition-colors active:scale-95">
+              <X size={20} strokeWidth={2.5} />
+          </button>
         </div>
 
-        <div className="p-4 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-gradient-to-b from-[#F4EBE1]/30 to-white dark:from-[#1A1A1A]/30 dark:to-[#0A0A0A]">
             
-            {/* --- MAIN MENU VIEW --- */}
-            {view === 'MENU' && (
-                <div className="space-y-2">
-                    <button 
-                        onClick={() => setView('PASSWORD')}
-                        className="w-full flex items-center justify-between p-4 bg-zinc-900 hover:bg-zinc-800 rounded-xl transition-colors text-left group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <KeyRound className="w-5 h-5 text-blue-400" />
-                            <div>
-                                <div className="font-bold text-white">Password</div>
-                                <div className="text-xs text-zinc-500 group-hover:text-zinc-400">
-                                    Set up or change your login password
-                                </div>
-                            </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-zinc-600" />
-                    </button>
+            {otpStep === 'INIT' ? (
+                <div className="text-center space-y-6">
+                    <div className="w-20 h-20 bg-blue-50 dark:bg-blue-500/10 rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-sm border border-blue-100 dark:border-blue-500/20">
+                        <ShieldCheck className="w-10 h-10 text-blue-500" strokeWidth={2} />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <h3 className="text-[1.3rem] font-black text-[#1A1A1A] dark:text-white">Xác thực thay đổi</h3>
+                        <p className="text-[#8A8580] dark:text-[#A09D9A] text-[0.95rem] font-semibold px-4 leading-relaxed">
+                            Để bảo vệ tài khoản, chúng tôi cần gửi một mã xác nhận (OTP) đến email của bạn trước khi đổi mật khẩu.
+                        </p>
+                    </div>
 
-                    <button 
-                        onClick={() => setView('BLOCK')}
-                        className="w-full flex items-center justify-between p-4 bg-zinc-900 hover:bg-zinc-800 rounded-xl transition-colors text-left group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <ShieldAlert className="w-5 h-5 text-red-400" />
-                            <div>
-                                <div className="font-bold text-white">Blocked users</div>
-                                <div className="text-xs text-zinc-500 group-hover:text-zinc-400">
-                                    Manage the users you have blocked
-                                </div>
+                    <div className="bg-white dark:bg-[#1A1A1A] p-4 rounded-[20px] flex items-center gap-4 border border-[#D6CFC7]/50 dark:border-[#3A3734] shadow-sm mt-8">
+                        <div className="p-3 bg-[#F4EBE1] dark:bg-[#2B2A29] rounded-[14px] shrink-0">
+                            <Mail className="w-6 h-6 text-[#8A8580] dark:text-[#A09D9A]" />
+                        </div>
+                        <div className="text-left overflow-hidden min-w-0">
+                            <div className="text-[0.75rem] font-extrabold uppercase tracking-widest text-[#8A8580] dark:text-[#A09D9A] mb-0.5">Email nhận mã</div>
+                            <div className="text-[1rem] font-bold text-[#1A1A1A] dark:text-white truncate" title={user?.email}>
+                                {user?.email}
                             </div>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-zinc-600" />
-                    </button>
+                    </div>
                 </div>
-            )}
+            ) : (
+                <div className="space-y-6">
+                    <div className="text-center mb-8">
+                        <h3 className="text-[1.3rem] font-black text-[#1A1A1A] dark:text-white mb-2">Tạo mật khẩu mới</h3>
+                        <p className="text-[0.95rem] text-[#8A8580] dark:text-[#A09D9A] font-semibold">Nhập mã OTP đã gửi đến email của bạn</p>
+                    </div>
 
-            {/* --- VIEW: PASSWORD (Logic OTP) --- */}
-            {view === 'PASSWORD' && (
-                <div className="animate-in slide-in-from-right-4 duration-300">
-                    {otpStep === 'INIT' ? (
-                        // STEP 1: Send OTP
-                        <div className="text-center space-y-6 py-4">
-                            <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <ShieldCheck className="w-8 h-8 text-blue-500" />
-                            </div>
-                            
-                            <div className="space-y-2">
-                                <h3 className="text-xl font-bold text-white">Security verification</h3>
-                                <p className="text-zinc-400 text-sm px-4">
-                                    To keep your account safe, we need to send a verification code to your email before changing the password.
-                                </p>
-                            </div>
+                    <div>
+                        <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">Mã xác nhận (OTP)</label>
+                        <input 
+                            value={otp} 
+                            onChange={e => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0,6))}
+                            className="w-full h-[60px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] rounded-[20px] text-center text-[1.4rem] tracking-[0.5em] font-black text-[#1A1A1A] dark:text-white focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] outline-none transition-all shadow-sm" 
+                            placeholder="000000"
+                            autoFocus
+                        />
+                    </div>
 
-                            <div className="bg-zinc-900 p-4 rounded-xl flex items-center gap-3 border border-white/5 mx-2">
-                                <div className="p-2 bg-zinc-800 rounded-lg shrink-0">
-                                    <Mail className="w-5 h-5 text-zinc-400" />
-                                </div>
-                                <div className="text-left overflow-hidden min-w-0">
-                                    <div className="text-xs text-zinc-500">Code delivery email</div>
-                                    <div className="text-sm font-medium text-white truncate" title={user?.email}>
-                                        {user?.email}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Button 
-                                onClick={handleSendOtp} 
-                                isLoading={isLoading}
-                                className="w-full h-11 font-bold text-base mt-4"
-                            >
-                                Send verification code
-                                <ArrowRight className="w-4 h-4 ml-2" />
-                            </Button>
+                    <div className="space-y-4 pt-4">
+                        <div>
+                            <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">Mật khẩu mới</label>
+                            <input 
+                                type="password" 
+                                value={newPassword} 
+                                onChange={e => setNewPassword(e.target.value)} 
+                                className="w-full h-[52px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] rounded-[16px] px-5 font-bold text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] outline-none transition-all"
+                                placeholder="Nhập mật khẩu..."
+                            />
                         </div>
-                    ) : (
-                        // STEP 2: Enter OTP and new password
-                        <div className="space-y-5">
-                            <div className="text-center mb-6">
-                                <h3 className="text-lg font-bold text-white">Set a new password</h3>
-                                <p className="text-xs text-zinc-500">
-                                    Enter the OTP code sent to your email
-                                </p>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-zinc-400 ml-1">Verification code (OTP)</label>
-                                <Input 
-                                    value={otp} 
-                                    onChange={e => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0,6))}
-                                    className="bg-zinc-900 text-center text-lg tracking-[0.5em] font-mono border-zinc-700 focus:border-blue-500 h-12" 
-                                    placeholder="000000"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div className="grid gap-4 pt-2">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-zinc-400 ml-1">New password</label>
-                                    <Input 
-                                        type="password" 
-                                        value={newPassword} 
-                                        onChange={e => setNewPassword(e.target.value)} 
-                                        className="bg-zinc-900 border-zinc-700 focus:border-blue-500"
-                                        placeholder="Enter new password..."
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-zinc-400 ml-1">Confirm password</label>
-                                    <Input 
-                                        type="password" 
-                                        value={confirmPassword} 
-                                        onChange={e => setConfirmPassword(e.target.value)} 
-                                        className="bg-zinc-900 border-zinc-700 focus:border-blue-500"
-                                        placeholder="Re-enter password..."
-                                    />
-                                </div>
-                            </div>
-
-                            <Button 
-                                onClick={handleSubmit} 
-                                isLoading={isLoading} 
-                                disabled={!otp || !newPassword || !confirmPassword}
-                                className="w-full h-11 font-bold mt-4"
-                            >
-                                Save changes
-                            </Button>
+                        <div>
+                            <label className="text-[#8A8580] dark:text-[#A09D9A] text-[0.75rem] font-extrabold uppercase tracking-widest block mb-2 pl-1">Xác nhận lại</label>
+                            <input 
+                                type="password" 
+                                value={confirmPassword} 
+                                onChange={e => setConfirmPassword(e.target.value)} 
+                                className="w-full h-[52px] bg-[#F4EBE1]/50 dark:bg-[#1A1A1A] border border-[#D6CFC7]/50 dark:border-[#2B2A29] rounded-[16px] px-5 font-bold text-[#1A1A1A] dark:text-white placeholder:text-[#A09D9A] focus:border-[#1A1A1A] dark:focus:border-white focus:bg-white dark:focus:bg-[#1A1A1A] outline-none transition-all"
+                                placeholder="Nhập lại mật khẩu..."
+                            />
                         </div>
-                    )}
+                    </div>
                 </div>
-            )}
-
-            {/* --- VIEW: BLOCK LIST --- */}
-            {view === 'BLOCK' && (
-                <BlockedUsersModal />
             )}
         </div>
+
+        <div className="p-6 md:p-8 border-t border-[#F4EBE1] dark:border-[#2B2A29] bg-white dark:bg-[#121212] shrink-0">
+            {otpStep === 'INIT' ? (
+                <button 
+                    onClick={handleSendOtp} 
+                    disabled={isLoading}
+                    className="w-full h-[60px] bg-[#1A1A1A] dark:bg-white text-white dark:text-[#1A1A1A] rounded-[24px] font-black text-[1.1rem] flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-[0.98] transition-all disabled:opacity-50 shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
+                >
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Gửi mã xác nhận'}
+                </button>
+            ) : (
+                <button 
+                    onClick={handleSubmit} 
+                    disabled={isLoading || !otp || !newPassword || !confirmPassword}
+                    className={cn("w-full h-[60px] rounded-[24px] font-black text-[1.1rem] flex items-center justify-center gap-2 transition-all", (isLoading || !otp || !newPassword || !confirmPassword) ? "bg-[#E2D9CE] dark:bg-[#2B2A29] text-[#8A8580] dark:text-[#A09D9A] cursor-not-allowed" : "bg-blue-600 text-white hover:-translate-y-1 active:scale-[0.98] shadow-[0_8px_24px_rgba(37,99,235,0.25)]")}
+                >
+                    {isLoading && <Loader2 className="w-5 h-5 animate-spin" />} Cập nhật mật khẩu
+                </button>
+            )}
+        </div>
+
       </div>
     </div>,
     document.body

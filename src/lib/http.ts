@@ -3,12 +3,9 @@ import axios from 'axios';
 
 console.log(">>> VITE_API_URL:", import.meta.env.VITE_API_URL);
 console.log(">>> CURRENT DOMAIN:", import.meta.env.VITE_API_URL || 'http://localhost:8080');
-// 1. Định nghĩa các hằng số URL và EXPORT chúng
-// DOMAIN: Là địa chỉ gốc của server (dùng cho Socket, ảnh...)
-// src/lib/http.ts
+
 export const DOMAIN = import.meta.env.VITE_API_URL || 'http://localhost:8080'; 
 export const API_URL = `${DOMAIN}/api/v1`;
-// ...
 
 export const http = axios.create({
   baseURL: API_URL,
@@ -49,11 +46,13 @@ http.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Bắt mã 401 (Unauthorized)
     if (error.response?.status === 401 && !originalRequest._retry) {
       
-      // Nếu lỗi 401 ngay tại API refresh -> Logout luôn
-      if (originalRequest.url.includes('/auth/refresh-token')) {
-        localStorage.clear();
+      // Nếu lỗi 401 ngay tại API refresh -> Token hỏng hoàn toàn -> Logout
+      if (originalRequest.url.includes('/auth/refresh-token') || originalRequest.url.includes('/auth/login')) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -77,6 +76,7 @@ http.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken');
 
       if (!refreshToken) {
+        localStorage.removeItem('accessToken');
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -90,7 +90,6 @@ http.interceptors.response.use(
         const { accessToken, refreshToken: newRefreshToken } = response.data.data;
 
         localStorage.setItem('accessToken', accessToken);
-        // Backend có thể trả về refreshToken mới hoặc không
         if (newRefreshToken) {
           localStorage.setItem('refreshToken', newRefreshToken);
         }
@@ -105,7 +104,8 @@ http.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
         isRefreshing = false;
-        localStorage.clear();
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         window.location.href = '/login';
         return Promise.reject(err);
       }

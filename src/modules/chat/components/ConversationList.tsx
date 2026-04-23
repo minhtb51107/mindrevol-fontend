@@ -1,129 +1,19 @@
-// File: src/modules/chat/components/ConversationList.tsx
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Search, ArrowLeft, Pin, BellOff, MoreHorizontal, Trash2 } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/modules/auth/store/AuthContext';
-import { useChatStore } from '../store/useChatStore';
-import { friendService, FriendshipResponse } from '@/modules/user/services/friend.service';
-import { chatService } from '../services/chat.service';
+import { useConversationList } from '../hooks/useConversationList';
 
-interface ConversationListProps {}
-
-type TabType = 'ALL' | 'UNREAD' | 'GROUP';
-
-export const ConversationList: React.FC<ConversationListProps> = () => {
+export const ConversationList: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { conversations, activeConversationId, openChat, fetchConversations, togglePin, toggleMute, hideConversation } = useChatStore();
-
-  const [friendships, setFriendships] = useState<FriendshipResponse[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const [activeTab, setActiveTab] = useState<TabType>('ALL');
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpenId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    friendService.getMyFriends({ page: 0, size: 100 }).then(setFriendships).finally(() => setIsLoading(false));
-  }, []);
-
-  const displayList = useMemo(() => {
-    let friendListItems = friendships.map(f => {
-      const existingConv = conversations.find(c => !c.boxId && String(c.partner?.id) === String(f.friend.id));
-      return {
-        id: existingConv ? existingConv.id : `friend_${f.friend.id}`, 
-        isGroup: false, 
-        userId: f.friend.id,
-        name: f.friend.fullname || 'Người dùng', 
-        avatar: f.friend.avatarUrl, 
-        isOnline: f.friend.isOnline,
-        conversationId: existingConv?.id || null, 
-        lastMessage: existingConv?.lastMessageContent || "Bắt đầu trò chuyện",
-        lastMessageAt: existingConv?.lastMessageAt, 
-        unreadCount: existingConv?.unreadCount || 0,
-        isSelfSender: existingConv ? String(existingConv.lastSenderId) === String(user?.id) : false,
-        isPinned: existingConv?.isPinned || false,
-        isMuted: existingConv?.isMuted || false
-      };
-    });
-
-    const boxConversations = conversations.filter(c => c.boxId && c.boxName).map(c => ({
-        id: c.id, 
-        isGroup: true, 
-        boxId: c.boxId, 
-        name: c.boxName || 'Không gian', 
-        avatar: c.boxAvatar || null,
-        isOnline: false, 
-        conversationId: c.id, 
-        lastMessage: c.lastMessageContent || "Chưa có tin nhắn",
-        lastMessageAt: c.lastMessageAt, 
-        unreadCount: c.unreadCount || 0, 
-        isSelfSender: String(c.lastSenderId) === String(user?.id),
-        isPinned: c.isPinned || false,
-        isMuted: c.isMuted || false
-    }));
-
-    const friendIds = new Set(friendships.map(f => String(f.friend.id)));
-    const otherConversations = conversations.filter(c => !c.boxId && c.partner && !friendIds.has(String(c.partner.id))).map(c => ({
-        id: c.id, 
-        isGroup: false, 
-        userId: c.partner!.id, 
-        name: c.partner!.fullname || 'Người dùng',
-        avatar: c.partner!.avatarUrl, 
-        isOnline: false, 
-        conversationId: c.id, 
-        lastMessage: c.lastMessageContent || "Chưa có tin nhắn",
-        lastMessageAt: c.lastMessageAt, 
-        unreadCount: c.unreadCount || 0, 
-        isSelfSender: String(c.lastSenderId) === String(user?.id),
-        isPinned: c.isPinned || false,
-        isMuted: c.isMuted || false
-    }));
-
-    let merged = [...boxConversations, ...friendListItems, ...otherConversations].sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        return (b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0) - (a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0);
-    });
-
-    if (searchTerm.trim()) {
-        merged = merged.filter(item => (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-
-    if (activeTab === 'UNREAD') {
-        merged = merged.filter(item => item.unreadCount > 0 && !item.isMuted);
-    } else if (activeTab === 'GROUP') {
-        merged = merged.filter(item => item.isGroup);
-    }
-
-    return merged;
-  }, [friendships, conversations, searchTerm, activeTab, user?.id]);
-
-  const handleItemClick = async (item: any) => {
-    if (item.conversationId) { await openChat(item.conversationId); } 
-    else {
-      try {
-        const newConv = await chatService.getOrCreateConversation(item.userId);
-        if (newConv?.id) { await fetchConversations(); await openChat(newConv.id); }
-      } catch (error) { console.error(error); }
-    }
-  };
+  const {
+      searchTerm, setSearchTerm, activeTab, setActiveTab,
+      isLoading, displayList, activeConversationId,
+      menuOpenId, menuRef, toggleMenu,
+      handleItemClick, togglePin, toggleMute, hideConversation
+  } = useConversationList();
 
   return (
     <div className="flex flex-col h-full w-full bg-[#F7F6FA]/60 dark:bg-[#121212]/80 backdrop-blur-xl transition-colors border-r border-[#E1DDE8] dark:border-zinc-800">
@@ -147,34 +37,13 @@ export const ConversationList: React.FC<ConversationListProps> = () => {
         </div>
 
         <div className="flex items-center gap-2 mt-4 px-1 pb-2 overflow-x-auto custom-scrollbar">
-          <button
-            onClick={() => setActiveTab('ALL')}
-            className={cn(
-              "px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap",
-              activeTab === 'ALL' ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            )}
-            style={{ fontFamily: '"Nunito", sans-serif' }}
-          >
+          <button onClick={() => setActiveTab('ALL')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'ALL' ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
             Tất cả
           </button>
-          <button
-            onClick={() => setActiveTab('UNREAD')}
-            className={cn(
-              "px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap",
-              activeTab === 'UNREAD' ? "bg-blue-500 text-white shadow-sm shadow-blue-500/20" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            )}
-            style={{ fontFamily: '"Nunito", sans-serif' }}
-          >
+          <button onClick={() => setActiveTab('UNREAD')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'UNREAD' ? "bg-blue-500 text-white shadow-sm shadow-blue-500/20" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
             Chưa đọc
           </button>
-          <button
-            onClick={() => setActiveTab('GROUP')}
-            className={cn(
-              "px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap",
-              activeTab === 'GROUP' ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            )}
-            style={{ fontFamily: '"Nunito", sans-serif' }}
-          >
+          <button onClick={() => setActiveTab('GROUP')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'GROUP' ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
             Nhóm chat
           </button>
         </div>
@@ -235,7 +104,7 @@ export const ConversationList: React.FC<ConversationListProps> = () => {
                   {item.conversationId && (
                       <div className={cn("absolute right-2 top-1/2 -translate-y-1/2 transition-opacity z-10", menuOpenId === item.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                           <button 
-                            onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === item.id ? null : item.id); }} 
+                            onClick={(e) => { e.stopPropagation(); toggleMenu(item.id); }} 
                             className="p-2 bg-white dark:bg-zinc-700 rounded-full shadow-md hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-300"
                           >
                               <MoreHorizontal className="w-4 h-4" />
@@ -243,10 +112,10 @@ export const ConversationList: React.FC<ConversationListProps> = () => {
                           
                           {menuOpenId === item.id && (
                               <div ref={menuRef} className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-[#1E1E24] shadow-xl border border-zinc-100 dark:border-zinc-800 rounded-xl py-1.5 z-[100] animate-in fade-in zoom-in-95 origin-top-right">
-                                  <button onClick={(e) => { e.stopPropagation(); togglePin(item.conversationId!); setMenuOpenId(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"><Pin className="w-4 h-4 text-zinc-400"/> {item.isPinned ? 'Bỏ ghim' : 'Ghim hội thoại'}</button>
-                                  <button onClick={(e) => { e.stopPropagation(); toggleMute(item.conversationId!); setMenuOpenId(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"><BellOff className="w-4 h-4 text-zinc-400"/> {item.isMuted ? 'Bật thông báo' : 'Tắt thông báo'}</button>
+                                  <button onClick={(e) => { e.stopPropagation(); togglePin(item.conversationId!); toggleMenu(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"><Pin className="w-4 h-4 text-zinc-400"/> {item.isPinned ? 'Bỏ ghim' : 'Ghim hội thoại'}</button>
+                                  <button onClick={(e) => { e.stopPropagation(); toggleMute(item.conversationId!); toggleMenu(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"><BellOff className="w-4 h-4 text-zinc-400"/> {item.isMuted ? 'Bật thông báo' : 'Tắt thông báo'}</button>
                                   <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1"></div>
-                                  <button onClick={(e) => { e.stopPropagation(); hideConversation(item.conversationId!); setMenuOpenId(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"><Trash2 className="w-4 h-4"/> Xóa đoạn chat</button>
+                                  <button onClick={(e) => { e.stopPropagation(); hideConversation(item.conversationId!); toggleMenu(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"><Trash2 className="w-4 h-4"/> Xóa đoạn chat</button>
                               </div>
                           )}
                       </div>

@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { X, Archive, Sparkles } from 'lucide-react';
-import { Checkin } from '@/modules/checkin/types';
+import { Checkin } from '../types';
 import { LivePhotoViewer } from '@/components/ui/LivePhotoViewer';
-import { CheckinDetailModal } from '@/modules/checkin/components/CheckinDetailModal';
+import { CheckinDetailModal } from './CheckinDetailModal';
+import { useArchivedCheckins } from '../hooks/useArchivedCheckins';
 
 interface ArchivedCheckinsModalProps {
   isOpen: boolean;
@@ -15,38 +16,11 @@ export const ArchivedCheckinsModal: React.FC<ArchivedCheckinsModalProps> = ({
   onClose, 
   checkins 
 }) => {
-  const [selectedCheckin, setSelectedCheckin] = useState<Checkin | null>(null);
-
-  // ==========================================
-  // GESTURE: KÉO ĐỂ ĐÓNG (DRAG TO DISMISS)
-  // ==========================================
-  const [dragY, setDragY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartY = useRef(0);
-
-  const onDragStart = (clientY: number) => {
-    dragStartY.current = clientY;
-    setIsDragging(true);
-  };
-
-  const onDragMove = (clientY: number) => {
-    if (!isDragging) return;
-    const delta = clientY - dragStartY.current;
-    // Chỉ cho phép kéo xuống (delta > 0)
-    if (delta > 0) {
-      setDragY(delta);
-    }
-  };
-
-  const onDragEnd = () => {
-    setIsDragging(false);
-    if (dragY > 150) { // Nếu kéo xuống hơn 150px thì đóng luôn
-      onClose();
-      setTimeout(() => setDragY(0), 300); // Reset sau khi animation kết thúc
-    } else {
-      setDragY(0); // Trôi ngược về vị trí cũ nếu kéo chưa đủ lực
-    }
-  };
+  const {
+      selectedCheckin, setSelectedCheckin,
+      dragY, isDragging,
+      onDragStart, onDragMove, onDragEnd
+  } = useArchivedCheckins({ onClose });
 
   if (!isOpen) return null;
 
@@ -65,9 +39,7 @@ export const ArchivedCheckinsModal: React.FC<ArchivedCheckinsModalProps> = ({
             style={{ transform: dragY > 0 ? `translateY(${dragY}px)` : 'none' }}
         >
             
-            {/* =====================================
-                KHU VỰC NẮM ĐỂ KÉO (DRAG HANDLE)
-                ===================================== */}
+            {/* KHU VỰC NẮM ĐỂ KÉO (DRAG HANDLE) */}
             <div 
                 className="w-full shrink-0 bg-white dark:bg-[#121212] cursor-grab active:cursor-grabbing touch-none z-30"
                 onTouchStart={(e) => onDragStart(e.touches[0].clientY)}
@@ -105,7 +77,7 @@ export const ArchivedCheckinsModal: React.FC<ArchivedCheckinsModalProps> = ({
                 </div>
             </div>
 
-            {/* BODY & IMAGE GRID (Nội dung cuộn bên dưới) */}
+            {/* BODY & IMAGE GRID */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-gradient-to-b from-[#F4EBE1]/30 to-white dark:from-[#121212] dark:to-[#0A0A0A]">
               {checkins && checkins.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5 animate-in fade-in duration-500 pb-[80px] md:pb-0">
