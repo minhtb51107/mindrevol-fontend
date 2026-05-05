@@ -22,63 +22,64 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onEdit }) => {
   } = useChatInput(onSend, onEdit);
 
   return (
-    <div className="absolute bottom-5 left-0 right-0 px-4 sm:px-10 z-20 pointer-events-none flex flex-col items-center">
+    // Đã xóa absolute, chuyển sang flex block bám đáy tự nhiên của container
+    <div className="w-full px-4 pb-4 pt-2 shrink-0 flex flex-col z-20">
       
       {replyingTo && !editingMessage && (
-         <div className="w-full max-w-3xl flex items-center justify-between mb-2 p-3 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md border border-[#EAF3EA] dark:border-zinc-700 rounded-2xl shadow-sm pointer-events-auto">
+         <div className="w-full flex items-center justify-between mb-2 p-3 bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-700/50 rounded-[16px] backdrop-blur-md">
             <div className="flex items-center gap-3 overflow-hidden flex-1">
-                <div className="w-8 h-8 rounded-full bg-[#F4FAF6] flex items-center justify-center"><Reply className="w-4 h-4 text-[#75B085]" /></div>
+                <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center"><Reply className="w-4 h-4 text-zinc-600 dark:text-zinc-300" /></div>
                 <div className="flex flex-col min-w-0 flex-1">
-                   <span className="text-[13px] font-bold text-zinc-800 dark:text-white truncate" style={{ fontFamily: '"Nunito", sans-serif' }}>Đang trả lời tin nhắn</span>
+                   <span className="text-[13px] font-bold text-zinc-800 dark:text-zinc-200 truncate" style={{ fontFamily: '"Nunito", sans-serif' }}>Đang trả lời tin nhắn</span>
                    <span className="text-[14px] font-semibold text-zinc-500 dark:text-zinc-400 truncate" style={{ fontFamily: '"Nunito", sans-serif' }}>
                        {replyingTo.type === 'IMAGE' ? '[Hình ảnh]' : replyingTo.type === 'VOICE' ? '[Ghi âm]' : replyingTo.content}
                    </span>
                 </div>
             </div>
-            <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full"><X className="w-4 h-4" /></button>
+            <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full text-zinc-500 transition-colors"><X className="w-4 h-4" /></button>
          </div>
       )}
 
       {editingMessage && (
-         <div className="w-full max-w-3xl flex items-center justify-between mb-2 p-3 bg-blue-50/95 dark:bg-blue-900/20 backdrop-blur-md border border-blue-100 dark:border-blue-800/30 rounded-2xl shadow-sm pointer-events-auto">
+         <div className="w-full flex items-center justify-between mb-2 p-3 bg-blue-50/80 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-[16px] backdrop-blur-md">
             <div className="flex items-center gap-3 overflow-hidden flex-1">
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center"><Edit2 className="w-4 h-4 text-blue-500" /></div>
                 <div className="flex flex-col min-w-0 flex-1">
                    <span className="text-[13px] font-bold text-blue-800 dark:text-blue-300 truncate" style={{ fontFamily: '"Nunito", sans-serif' }}>Đang chỉnh sửa tin nhắn</span>
                 </div>
             </div>
-            <button onClick={() => { setEditingMessage(null); setText(''); }} className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-full"><X className="w-4 h-4 text-blue-500" /></button>
+            <button onClick={() => { setEditingMessage(null); setText(''); }} className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-full transition-colors"><X className="w-4 h-4 text-blue-500" /></button>
          </div>
       )}
 
-      <div className="w-full max-w-3xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-[32px] p-2 shadow-[0_8px_24px_rgba(117,176,133,0.08)] flex items-end gap-2 pointer-events-auto border border-white/60 dark:border-zinc-700 focus-within:ring-4 focus-within:ring-[#D5E8D8]/50 transition-all">
+      <div className="w-full bg-white dark:bg-zinc-800 rounded-[24px] p-2 flex items-end gap-2 border border-transparent dark:border-zinc-700 shadow-[0_2px_12px_rgba(0,0,0,0.04)] focus-within:ring-2 focus-within:ring-zinc-200 dark:focus-within:ring-zinc-700 transition-all">
 
         {!recorder.isRecording && (
           <div className="relative shrink-0 flex gap-1" ref={emojiPickerRef}>
               
               {showEmojiPicker && (
-                  <div className="absolute bottom-16 left-0 z-50 shadow-2xl rounded-3xl overflow-hidden border border-[#D5E8D8] dark:border-zinc-700">
+                  <div className="absolute bottom-14 left-0 z-50 shadow-2xl rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
                       <EmojiPicker theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} onEmojiClick={(e) => setText(p => p + e.emoji)} width={300} height={400} />
                   </div>
               )}
               {showGifPicker && (
-                  <div className="absolute bottom-16 left-0 z-50 shadow-2xl rounded-3xl overflow-hidden border border-[#D5E8D8] dark:border-zinc-700">
+                  <div className="absolute bottom-14 left-0 z-50 shadow-2xl rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
                       <GifPicker onSelect={handleSendGif} />
                   </div>
               )}
               {showStickerPicker && (
-                  <div className="absolute bottom-16 left-0 z-50 shadow-2xl rounded-3xl overflow-hidden border border-[#D5E8D8] dark:border-zinc-700">
+                  <div className="absolute bottom-14 left-0 z-50 shadow-2xl rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
                       <StickerPicker onSelect={handleSendSticker} />
                   </div>
               )}
 
-              <button onClick={toggleEmoji} className="w-10 h-10 rounded-full bg-[#F4FAF6] dark:bg-zinc-800 text-[#75B085] dark:text-zinc-400 hover:bg-[#D5E8D8] dark:hover:bg-zinc-700 flex items-center justify-center transition-transform active:scale-90" title="Emoji">
+              <button onClick={toggleEmoji} className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 flex items-center justify-center transition-transform active:scale-90" title="Emoji">
                 <Smile className="w-5 h-5" />
               </button>
-              <button onClick={toggleSticker} className="w-10 h-10 rounded-full bg-orange-50 dark:bg-zinc-800 text-orange-500 dark:text-zinc-400 hover:bg-orange-100 dark:hover:bg-zinc-700 flex items-center justify-center transition-transform active:scale-90" title="Sticker">
+              <button onClick={toggleSticker} className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 flex items-center justify-center transition-transform active:scale-90" title="Sticker">
                 <Sticker className="w-5 h-5" />
               </button>
-              <button onClick={toggleGif} className="w-10 h-10 rounded-full bg-blue-50 dark:bg-zinc-800 text-blue-500 dark:text-zinc-400 hover:bg-blue-100 dark:hover:bg-zinc-700 flex items-center justify-center font-bold text-xs transition-transform active:scale-90" style={{ fontFamily: '"Jua", sans-serif' }} title="GIF">
+              <button onClick={toggleGif} className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 flex items-center justify-center font-bold text-xs transition-transform active:scale-90" style={{ fontFamily: '"Jua", sans-serif' }} title="GIF">
                 GIF
               </button>
           </div>
@@ -87,16 +88,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onEdit }) => {
         {recorder.isRecording ? (
             <div className="flex-1 flex items-center justify-between py-[8px] px-4 mx-2 bg-red-50 dark:bg-red-500/10 rounded-full border border-red-100 dark:border-red-500/30">
                 <span className="text-red-500 font-bold tracking-wider">{recorder.recordingTime}s</span>
-                <button onClick={recorder.cancelRecording} className="text-zinc-400 hover:text-red-500"><Trash2 className="w-5 h-5" /></button>
+                <button onClick={recorder.cancelRecording} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-5 h-5" /></button>
             </div>
         ) : (
-            <div className="flex-1 min-w-0 py-2.5 px-3">
+            <div className="flex-1 min-w-0 py-2.5 px-2">
               <input 
                 value={text} 
                 onChange={handleTextChange}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
-                placeholder={editingMessage ? "Nhập nội dung mới..." : "Nói gì đó đi..."} 
-                className="w-full bg-transparent border-none outline-none text-zinc-800 dark:text-white font-semibold text-[15.5px]" 
+                placeholder={editingMessage ? "Nhập nội dung mới..." : "Nhập tin nhắn..."} 
+                className="w-full bg-transparent border-none outline-none text-zinc-800 dark:text-white font-semibold text-[15.5px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500" 
                 style={{ fontFamily: '"Nunito", sans-serif' }}
               />
             </div>
@@ -109,16 +110,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onEdit }) => {
               onMouseUp={handleStopRecording} 
               onTouchStart={recorder.startRecording} 
               onTouchEnd={handleStopRecording} 
-              className="w-11 h-11 shrink-0 rounded-[24px] bg-zinc-800 dark:bg-zinc-100 text-white dark:text-black flex items-center justify-center active:scale-95 transition-all"
+              className="w-10 h-10 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 flex items-center justify-center active:scale-95 transition-all"
             >
-              <Mic className="w-5 h-5" />
+              <Mic className="w-[18px] h-[18px]" />
             </button>
         ) : (
             <button 
               onClick={handleSend}
-              className="w-11 h-11 shrink-0 rounded-[24px] bg-[#75B085] text-white flex items-center justify-center active:scale-95"
+              className="w-10 h-10 shrink-0 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-white flex items-center justify-center active:scale-95 transition-all shadow-sm"
             >
-              <Send className="w-5 h-5 ml-0.5" />
+              <Send className="w-[18px] h-[18px] ml-0.5" />
             </button>
         )}
       </div>

@@ -1,6 +1,7 @@
+// File: src/modules/box/components/BoxCard.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Package } from 'lucide-react';
+import { Users, Package, ArrowRight } from 'lucide-react';
 import { BoxResponse } from '../types';
 
 interface BoxCardProps {
@@ -94,36 +95,47 @@ export const BoxCard: React.FC<BoxCardProps> = ({ box }) => {
                         </p>
                     )}
 
-                    {/* 4. Footer - Member Stats */}
-                    <div className="flex items-center gap-3 mt-auto pt-1">
-                        <div className="flex items-center">
-                            {box.previewMemberAvatars && box.previewMemberAvatars.length > 0 ? (
-                                <div className="flex -space-x-2">
-                                    {box.previewMemberAvatars.slice(0, 5).map((url, i) => (
-                                        <img 
-                                            key={i} 
-                                            src={url} 
-                                            alt="member" 
-                                            className="w-6 h-6 rounded-full border-2 border-white dark:border-[#18181b] object-cover bg-zinc-200 dark:bg-zinc-700" 
-                                        />
-                                    ))}
-                                    {remainingMembers > 0 && (
-                                        <div className="w-6 h-6 rounded-full border-2 border-white dark:border-[#18181b] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-600 dark:text-zinc-300 z-10">
-                                            +{remainingMembers}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="w-6 h-6 rounded-full border-2 border-white dark:border-[#18181b] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                                    <Users size={12} className="text-zinc-500 dark:text-zinc-400" />
-                                </div>
-                            )}
+                    {/* 4. Footer - Member Stats & Action Button */}
+                    <div className="flex items-center justify-between mt-auto pt-1">
+                        
+                        {/* Member Stats (Bên trái) */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center">
+                                {box.previewMemberAvatars && box.previewMemberAvatars.length > 0 ? (
+                                    <div className="flex -space-x-2">
+                                        {box.previewMemberAvatars.slice(0, 5).map((url, i) => (
+                                            <img 
+                                                key={i} 
+                                                src={url} 
+                                                alt="member" 
+                                                className="w-6 h-6 rounded-full border-2 border-white dark:border-[#18181b] object-cover bg-zinc-200 dark:bg-zinc-700" 
+                                            />
+                                        ))}
+                                        {remainingMembers > 0 && (
+                                            <div className="w-6 h-6 rounded-full border-2 border-white dark:border-[#18181b] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-600 dark:text-zinc-300 z-10">
+                                                +{remainingMembers}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="w-6 h-6 rounded-full border-2 border-white dark:border-[#18181b] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                        <Users size={12} className="text-zinc-500 dark:text-zinc-400" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                {box.memberCount.toLocaleString()} Members
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            {box.memberCount.toLocaleString()} Members
-                        </div>
+                        {/* Nút Xem (Bên phải) */}
+                        <button className="flex items-center gap-1.5 px-4 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white text-[13px] font-bold rounded-full group-hover:bg-zinc-900 group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-zinc-900 transition-all duration-300 shadow-sm active:scale-95">
+                            Xem
+                            <ArrowRight size={14} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+
                     </div>
                 </div>
             </div>

@@ -1,4 +1,3 @@
-// File: src/modules/feed/components/JourneyPostCard.tsx
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom'; 
 import { 
@@ -117,7 +116,20 @@ export const JourneyPostCard = ({ post, isActive, headerTarget, onDelete, onUpda
       {isActive && headerTarget ? createPortal(HeaderContent, headerTarget) : null}
 
       <div className="relative w-full aspect-square z-10 mt-1">
-        <div className="absolute inset-0 rounded-[28px] overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-sm border border-zinc-200 dark:border-white/10">
+        
+        {/* [MỚI] AMBIENT GLOW - Lớp hào quang phía sau (Chỉ bật khi active) */}
+        {isActive && post.image && (
+          <div 
+            className="absolute inset-0 -z-10 opacity-40 dark:opacity-[0.65] blur-[80px] md:blur-[60px] scale-110 md:scale-100 transition-all duration-700 ease-in-out rounded-[28px]"
+            style={{
+              backgroundImage: `url(${post.image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          />
+        )}
+
+        <div className="absolute inset-0 z-10 rounded-[28px] overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-sm border border-zinc-200 dark:border-white/10">
           <LivePhotoViewer imageUrl={post.image} videoUrl={post.videoUrl} className="w-full h-full" />
           <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
         </div>

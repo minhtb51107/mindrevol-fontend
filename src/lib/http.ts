@@ -1,8 +1,4 @@
-// src/lib/http.ts
 import axios from 'axios';
-
-console.log(">>> VITE_API_URL:", import.meta.env.VITE_API_URL);
-console.log(">>> CURRENT DOMAIN:", import.meta.env.VITE_API_URL || 'http://localhost:8080');
 
 export const DOMAIN = import.meta.env.VITE_API_URL || 'http://localhost:8080'; 
 export const API_URL = `${DOMAIN}/api/v1`;
@@ -62,7 +58,7 @@ http.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            originalRequest.headers['Authorization'] = 'Bearer ' + token;
+            originalRequest.headers['Authorization'] = `Bearer ${token}`;
             return http(originalRequest);
           })
           .catch((err) => {
@@ -82,7 +78,7 @@ http.interceptors.response.use(
       }
 
       try {
-        // Dùng axios thường để gọi refresh (tránh loop vô tận với instance http)
+        // Dùng axios thường để gọi refresh
         const response = await axios.post(`${API_URL}/auth/refresh-token`, {}, {
           headers: { Authorization: `Bearer ${refreshToken}` }
         });
@@ -94,8 +90,11 @@ http.interceptors.response.use(
           localStorage.setItem('refreshToken', newRefreshToken);
         }
 
-        http.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
-        originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
+        // SỬA Ở ĐÂY: Gán trực tiếp Object thay vì Bracket notation để tránh lỗi version Axios
+        http.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+        if (originalRequest.headers) {
+             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        }
 
         processQueue(null, accessToken);
         isRefreshing = false;

@@ -18,10 +18,19 @@ export const MobileBottomNav: React.FC<MobileNavProps> = ({
   return (
     <div className={cn(
       "fixed z-[100] bottom-0 left-0 w-full block md:hidden pointer-events-none",
-      "bg-transparent flex items-end justify-center pb-4 pt-10"
+      "flex items-end justify-center pb-4 pt-12" // Tăng pt-12 để phần mờ vuốt lên dài hơn
     )}>
       
-      <div className="flex items-center justify-between w-full max-w-[360px] px-6 pointer-events-auto">
+      {/* Lớp nền blur gradient mượt mà (không viền) */}
+      <div 
+        className="absolute inset-0 -z-10 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-[#121212] dark:via-[#121212]/80 backdrop-blur-md pointer-events-none"
+        style={{ 
+          WebkitMaskImage: 'linear-gradient(to top, black 50%, transparent 100%)', 
+          maskImage: 'linear-gradient(to top, black 50%, transparent 100%)' 
+        }}
+      />
+
+      <div className="flex items-center justify-between w-full max-w-[360px] px-6 pointer-events-auto relative z-10">
         
         <NavButton to="/" icon={Home} />
         <NavButton to="/box" icon={Box} />
@@ -31,13 +40,13 @@ export const MobileBottomNav: React.FC<MobileNavProps> = ({
           className={cn(
             "relative flex items-center justify-center w-14 h-14 rounded-full",
             "bg-white dark:bg-[#121212]",
-            "border border-zinc-200 dark:border-white/10 shadow-sm",
+            "border border-zinc-200 dark:border-zinc-800 shadow-sm",
             "hover:scale-105 active:scale-95 transition-all"
           )}
         >
           <div className={cn(
             "w-[42px] h-[42px] flex items-center justify-center rounded-full",
-            "bg-zinc-900 text-white dark:bg-white dark:text-black"
+            "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
           )}>
             <Camera strokeWidth={2} className="w-5 h-5" />
           </div>

@@ -47,4 +47,11 @@ body {
   font-family: var(--font-sans);
 }
 
-/* ... Các phần code css ở dưới của bạn giữ nguyên ... */
+/* THÊM VÀO ĐÂY: "Thần chú" để sửa lỗi Sticky bị trượt đi mất trên toàn hệ thống */
+html, body, #root {
+  overflow-x: clip !important;
+}
+
+html {
+  scroll-behavior: smooth;
+}

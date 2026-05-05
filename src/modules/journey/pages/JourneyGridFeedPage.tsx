@@ -6,21 +6,19 @@ import MainLayout from '@/components/layout/MainLayout';
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { cn } from '@/lib/utils';
 import { GlobalRecapModal } from '@/modules/recap/components/GlobalRecapModal';
-// [THÊM MỚI] Import Modal chi tiết bài đăng
+// [THÊM MỚI] Import Modal chi tiết Locket
 import { CheckinDetailModal } from '@/modules/checkin/components/CheckinDetailModal';
 import { Checkin } from '@/modules/checkin/types';
 
 const JourneyGridFeedPage = () => {
   const { items, isLoading, hasMore, loadMore } = useJourneyGridFeed();
   const { user: currentUser } = useAuth(); 
-  
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
   const [showGlobalRecap, setShowGlobalRecap] = useState(false);
-  
-  // [THÊM MỚI] State lưu trữ bài đăng đang được chọn để xem chi tiết
+
+  // [THÊM MỚI] State lưu trữ Checkin đang được click để xem chi tiết
   const [selectedPost, setSelectedPost] = useState<Checkin | null>(null);
 
   useEffect(() => {
@@ -84,7 +82,7 @@ const JourneyGridFeedPage = () => {
 
   const otherUsers = uniqueUsers.filter(u => u.id !== currentUser?.id);
 
-  // ĐÃ SỬA: Bổ sung kiểu dữ liệu mở rộng cho PostProps
+  // ÉP KIỂU: Bổ sung kiểu mở rộng cho PostProps
   const openPostDetail = (post: PostProps & { journeyId?: string; videoUrl?: string }) => {
       const checkinObj: any = {
           id: post.id,
@@ -98,7 +96,7 @@ const JourneyGridFeedPage = () => {
           emotion: post.emotion,
           activityName: post.activityName,
           locationName: post.locationName,
-          createdAt: post.timestamp, // Tạm mượn trường này
+          createdAt: post.timestamp, // Tên trường ngày tháng
           reactionCount: post.reactionCount,
           commentCount: post.commentCount,
           latestReactions: post.latestReactions
@@ -109,14 +107,14 @@ const JourneyGridFeedPage = () => {
   return (
     <MainLayout>
       <div className="flex flex-col h-[100dvh] bg-gradient-to-b from-[#F4EBE1] to-[#FFFFFF] dark:from-[#121212] dark:to-[#0A0A0A] w-full relative font-quicksand transition-colors duration-500">
-        
-        {/* Sticky Header: Gồm Filter ở giữa và Nút Video góc phải */}
+         
+        {/* Sticky Header: Gồm Filter ở giữa và nút Video góc phải */}
         <div className="sticky top-0 z-30 px-4 md:px-6 pt-4 pb-4 bg-gradient-to-b from-[#F4EBE1] via-[#F4EBE1]/95 to-transparent dark:from-[#121212] dark:via-[#121212]/95 pointer-events-none">
           <div className="grid grid-cols-3 items-center">
             
             <div></div>
 
-            {/* Cột giữa: Combobox Filter viền nét đứt */}
+            {/* Cột giữa: Combobox Filter theo người viết */}
             <div className="flex justify-center relative pointer-events-auto" ref={dropdownRef}>
               <button 
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -196,7 +194,8 @@ const JourneyGridFeedPage = () => {
 
             {/* Cột phải: Nút Recap Máy Quay */}
             <div className="flex justify-end pointer-events-auto">
-               <button
+               <button 
+                  data-tour="global-recap"
                   onClick={() => setShowGlobalRecap(true)}
                   className="w-12 h-12 bg-white dark:bg-[#1A1A1A] rounded-[18px] border-2 border-dashed border-[#D6CFC7] dark:border-[#3A3734] flex items-center justify-center hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] hover:scale-105 active:scale-95 transition-all shadow-sm text-purple-500 group"
                   title="Nấu thước phim tổng hợp"
@@ -204,7 +203,6 @@ const JourneyGridFeedPage = () => {
                   <Video size={22} strokeWidth={2.5} className="group-hover:fill-purple-500/20 transition-all" />
                </button>
             </div>
-
           </div>
         </div>
 
@@ -218,14 +216,14 @@ const JourneyGridFeedPage = () => {
             {filteredItems.map((item) => {
               if (item.type !== 'POST') return null;
               
-              // ĐÃ SỬA: Ép kiểu mở rộng khi gọi map
+              // Ép kiểu sang định dạng có thể gọi modal
               const post = item as PostProps & { journeyId?: string; videoUrl?: string };
 
               return (
                 <div 
-                  key={post.id} 
-                  onClick={() => openPostDetail(post)} 
-                  className="relative aspect-square bg-[#F4EBE1] dark:bg-[#2B2A29] overflow-hidden cursor-pointer group rounded-[16px] md:rounded-[24px] shadow-sm border border-white/50 dark:border-white/5"
+                   key={post.id} 
+                   onClick={() => openPostDetail(post)}
+                   className="relative aspect-square bg-[#F4EBE1] dark:bg-[#2B2A29] overflow-hidden cursor-pointer group rounded-[16px] md:rounded-[24px] shadow-sm border border-white/50 dark:border-white/5"
                 >
                   <img 
                     src={post.image} 
@@ -253,7 +251,7 @@ const JourneyGridFeedPage = () => {
           
           {!hasMore && items.length > 0 && (
             <div className="py-10 text-center text-[0.85rem] font-extrabold uppercase tracking-widest text-[#8A8580] dark:text-[#A09D9A] flex items-center justify-center gap-2 opacity-60">
-              <Sparkles className="w-4 h-4" /> Bạn đã xem hết kỷ niệm
+              <Sparkles className="w-4 h-4" /> Bạn đã xem hết
             </div>
           )}
 
@@ -266,21 +264,21 @@ const JourneyGridFeedPage = () => {
                 <p className="text-[0.9rem] font-semibold text-[#8A8580] dark:text-[#A09D9A]">Người dùng này chưa đăng ảnh.</p>
              </div>
           )}
+
         </div>
       </div>
 
       {/* [THÊM MỚI] Modal xem chi tiết Locket */}
       {selectedPost && (
         <CheckinDetailModal 
-          checkin={selectedPost} 
-          onClose={() => setSelectedPost(null)} 
-        />
+           checkin={selectedPost} 
+           onClose={() => setSelectedPost(null)} 
+         />
       )}
 
       {showGlobalRecap && (
         <GlobalRecapModal isOpen={true} onClose={() => setShowGlobalRecap(false)} />
       )}
-
     </MainLayout>
   );
 };

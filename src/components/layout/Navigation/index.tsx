@@ -2,14 +2,16 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useChatStore } from '@/modules/chat/store/useChatStore';
 import { journeyService } from "@/modules/journey/services/journey.service";
+import { friendService } from '@/modules/user/services/friend.service'; 
 import { toast } from 'react-hot-toast'; 
 
 import { DesktopSidebar } from './DesktopSidebar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationPanel } from './NotificationPanel';
+import { DesktopHeader } from './DesktopHeader';
 
 interface NavigationProps {
-  onCheckinClick: (file: File | null) => void; // Cho phép truyền null để mở Camera
+  onCheckinClick: (file: File | null) => void;
   onJourneyClick: () => void;
   onSettingsClick?: () => void; 
   refreshTrigger?: number;
@@ -18,6 +20,10 @@ interface NavigationProps {
   toggleSidebar?: () => void;
   setSidebarExpanded?: (expanded: boolean) => void; 
   hideBottomNav?: boolean; 
+  
+  myJourneys?: any[];
+  activeJourneyId?: string | null;
+  onCreateJourneyClick?: () => void;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({ 
@@ -28,11 +34,17 @@ export const Navigation: React.FC<NavigationProps> = ({
   isSidebarExpanded = true,
   toggleSidebar = () => {},
   setSidebarExpanded,
-  hideBottomNav = false 
+  hideBottomNav = false,
+  
+  myJourneys = [],
+  activeJourneyId = null,
+  onCreateJourneyClick
 }) => {
   
   const location = useLocation();
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+
+  const [friendsList, setFriendsList] = useState<any[]>([]);
 
   const conversations = useChatStore((state) => state.conversations);
   const totalUnread = useMemo(() => {
@@ -40,6 +52,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   }, [conversations]);
 
   const [hasJourneyAlerts, setHasJourneyAlerts] = useState(false);
+  
   const checkJourneyAlerts = async () => {
     try {
       const data = await journeyService.getAlerts();
@@ -50,41 +63,34 @@ export const Navigation: React.FC<NavigationProps> = ({
     }
   };
 
+  const fetchFriends = async () => {
+    try {
+      const data = await friendService.getMyFriends();
+      const formattedFriends = data.map((item) => ({
+        id: item.friend.id,
+        name: item.friend.fullname,
+        avatarUrl: item.friend.avatarUrl
+      }));
+      setFriendsList(formattedFriends);
+    } catch (error) {
+      console.error("Failed to fetch friends for sidebar", error);
+    }
+  };
+
   useEffect(() => {
     checkJourneyAlerts();
+    fetchFriends(); 
+    
     const interval = setInterval(checkJourneyAlerts, 30000);
     return () => clearInterval(interval);
   }, [refreshTrigger]);
 
-  // [ĐÃ SỬA] Khi nhấn dấu Cộng (+) -> Chỉ cần gọi onCheckinClick(null) để báo mở Camera
   const triggerUpload = () => {
       onCheckinClick(null);
   };
 
   const handleNotificationClick = () => {
-      if (!isNotificationPanelOpen) {
-          setIsNotificationPanelOpen(true);
-          if (setSidebarExpanded) {
-              setSidebarExpanded(false); 
-          }
-      } else {
-          setIsNotificationPanelOpen(false);
-          const isChatPage = location.pathname.startsWith('/chat');
-          const isProfilePage = location.pathname.startsWith('/profile');
-          if (!isChatPage && !isProfilePage && setSidebarExpanded) {
-              const saved = localStorage.getItem('sidebar_expanded');
-              if (saved === 'true') {
-                  setSidebarExpanded(true); 
-              }
-          }
-      }
-  };
-
-  const handleSidebarToggle = () => {
-      if (!isSidebarExpanded) {
-          setIsNotificationPanelOpen(false); 
-      }
-      toggleSidebar(); 
+      setIsNotificationPanelOpen(!isNotificationPanelOpen);
   };
 
   const viewProps = {
@@ -92,13 +98,14 @@ export const Navigation: React.FC<NavigationProps> = ({
     triggerUpload, 
     totalUnread,
     hasJourneyAlerts,
-    onSettingsClick 
+    onSettingsClick,
+    myJourneys,
+    activeJourneyId,
+    onCreateJourneyClick
   };
 
   return (
     <>
-      {/* Đã xóa thẻ <input type="file"> ở đây */}
-      
       {!hideBottomNav && (
           <MobileBottomNav {...viewProps} />
       )}
@@ -106,24 +113,21 @@ export const Navigation: React.FC<NavigationProps> = ({
       <DesktopSidebar 
         {...viewProps} 
         isExpanded={isSidebarExpanded} 
-        toggleSidebar={handleSidebarToggle} 
+        toggleSidebar={toggleSidebar} 
         onNotificationClick={handleNotificationClick} 
         isNotificationOpen={isNotificationPanelOpen}  
+        friends={friendsList} 
+      />
+
+      <DesktopHeader 
+        isSidebarExpanded={isSidebarExpanded}
+        onNotificationClick={handleNotificationClick}
+        totalUnread={totalUnread}
       />
 
       <NotificationPanel 
         isOpen={isNotificationPanelOpen}
-        onClose={() => {
-            setIsNotificationPanelOpen(false);
-            const isChatPage = location.pathname.startsWith('/chat');
-            const isProfilePage = location.pathname.startsWith('/profile');
-            if (!isChatPage && !isProfilePage && setSidebarExpanded) {
-                const saved = localStorage.getItem('sidebar_expanded');
-                if (saved === 'true') {
-                    setSidebarExpanded(true);
-                }
-            }
-        }}
+        onClose={() => setIsNotificationPanelOpen(false)}
       />
     </>
   );

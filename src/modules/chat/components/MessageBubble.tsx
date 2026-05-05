@@ -1,8 +1,8 @@
-// File: src/modules/chat/components/MessageBubble.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Message } from '../types';
 import { cn } from '@/lib/utils';
-import { Reply, Trash2, Edit2, SmilePlus, MoreVertical, Forward, Pin } from 'lucide-react'; 
+// BỔ SUNG IMPORT ICON CUỘC GỌI
+import { Reply, Trash2, Edit2, SmilePlus, MoreVertical, Forward, Pin, Phone, Video, PhoneMissed } from 'lucide-react'; 
 import { useChatStore } from '../store/useChatStore'; 
 import { useAuth } from '@/modules/auth/store/AuthContext';
 import { chatService } from '../services/chat.service';
@@ -50,7 +50,7 @@ const RepliedMessagePreview = ({ messageId, conversationId, currentUserId }: { m
       if (originalMsg) {
           const isMeOrigin = originalMsg.senderId === currentUserId;
           const displayName = isMeOrigin ? "Bạn" : (conversation?.partner?.id === originalMsg.senderId ? conversation?.partner?.fullname : "Người dùng");
-          const previewText = originalMsg.isDeleted ? 'Tin nhắn đã bị thu hồi' : (originalMsg.type === 'IMAGE' ? '[Hình ảnh]' : originalMsg.type === 'VOICE' ? '[Ghi âm]' : originalMsg.content);
+          const previewText = originalMsg.isDeleted ? 'Tin nhắn đã bị thu hồi' : (originalMsg.type === 'IMAGE' ? '[Hình ảnh]' : originalMsg.type === 'VOICE' ? '[Ghi âm]' : originalMsg.type === 'CALL_LOG' ? '[Cuộc gọi]' : originalMsg.content);
   
           return (
               <div className="mb-1.5 opacity-80 cursor-pointer hover:opacity-100 transition-opacity flex items-center gap-2 p-2 rounded-[16px] bg-black/5 dark:bg-white/10 w-fit border border-black/5 dark:border-white/5">
@@ -119,6 +119,49 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
       acc[reaction] = (acc[reaction] || 0) + 1; return acc;
   }, {});
 
+  // TẠO GIAO DIỆN LỊCH SỬ CUỘC GỌI (CALL LOG)
+  const renderCallLog = () => {
+      const parts = message.content.split('|');
+      const callType = parts[0];
+      const status = parts[1];
+      const duration = parseInt(parts[2] || '0');
+
+      const formatDuration = (sec: number) => {
+          const m = Math.floor(sec / 60).toString().padStart(2, '0');
+          const s = (sec % 60).toString().padStart(2, '0');
+          return `${m}:${s}`;
+      };
+
+      let Icon = callType === 'VIDEO' ? Video : Phone;
+      let text = "Cuộc gọi";
+      let colorClass = isMe ? "text-white" : "text-zinc-800 dark:text-white";
+      let iconColor = isMe ? "text-white" : "text-[#756A91] dark:text-white";
+
+      if (status === 'REJECTED' || status === 'MISSED') {
+          text = isMe ? "Cuộc gọi đi không thành công" : "Cuộc gọi nhỡ";
+          iconColor = "text-red-500";
+          if (status === 'MISSED') Icon = PhoneMissed;
+      } else {
+          text = `Cuộc gọi ${callType === 'VIDEO' ? 'video' : 'thoại'}`;
+      }
+
+      return (
+          <div className={cn("flex items-center gap-3 p-3.5 rounded-2xl w-64 mb-1 cursor-pointer active:scale-95 transition-transform", isMe ? 'bg-[#756A91]' : 'bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 shadow-sm')} onClick={() => setShowTime(!showTime)}>
+              <div className={cn("w-10 h-10 shrink-0 rounded-full flex items-center justify-center bg-black/10 dark:bg-white/10", iconColor)}>
+                  <Icon size={20} />
+              </div>
+              <div className="flex flex-col">
+                  <span className={cn("font-bold text-[15px]", colorClass)} style={{ fontFamily: '"Nunito", sans-serif' }}>{text}</span>
+                  {status === 'COMPLETED' ? (
+                      <span className={cn("text-xs mt-0.5 font-semibold opacity-80", colorClass)} style={{ fontFamily: '"Nunito", sans-serif' }}>{formatDuration(duration)}</span>
+                  ) : (
+                      <span className={cn("text-xs mt-0.5 font-semibold opacity-80", colorClass)} style={{ fontFamily: '"Nunito", sans-serif' }}>Chạm để xem giờ</span>
+                  )}
+              </div>
+          </div>
+      );
+  };
+
   return (
     <div className={cn("flex flex-col w-full group relative", isMe ? "items-end" : "items-start")}>
       <div className={cn("flex gap-2.5 w-full items-end", isMe ? "justify-end" : "justify-start")}>
@@ -127,7 +170,6 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
         <div className={cn("flex flex-col max-w-[75%] relative", isMe ? "items-end" : "items-start")}>
           
           {!message.isDeleted && (
-              // [FIX MOBILE] Đổi từ opacity-0 thành opacity-100 md:opacity-0 để trên điện thoại luôn hiện nút bấm
               <div className={cn("absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-20", isMe ? "-left-[72px]" : "-right-[72px]")}>
                 
                 <div className="relative" ref={reactRef}>
@@ -165,16 +207,17 @@ export const MessageBubble: React.FC<Props> = ({ message, isMe, showAvatar, avat
               <div className="px-4 py-2.5 text-[15px] italic text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded-[24px] bg-transparent" style={{ fontFamily: '"Nunito", sans-serif' }}>Tin nhắn đã bị thu hồi</div>
           ) : message.type === 'VOICE' ? (
                <div className="relative z-10 py-1"><audio controls src={message.content} className="max-w-[250px] h-10 outline-none rounded-full" /></div>
+          ) : message.type === 'CALL_LOG' ? (
+               renderCallLog()
           ) : (
               message.content && message.content.trim() !== "" && (
-                   <div onClick={() => setShowTime(!showTime)} className={cn(
+                    <div onClick={() => setShowTime(!showTime)} className={cn(
                       "px-4 py-2.5 text-[15.5px] shadow-[0_4px_16px_rgba(146,136,173,0.08)] dark:shadow-none break-words leading-relaxed transition-all duration-200 inline-block cursor-pointer active:scale-[0.98] relative",
                       message.type === 'IMAGE' ? "bg-transparent p-0 shadow-none border-none" : 
                       isMe ? "bg-white text-zinc-800 dark:bg-[#756A91] dark:text-white rounded-[24px] rounded-br-[6px] border border-zinc-100 dark:border-[#756A91] font-sans font-semibold" 
                            : "bg-[#FFF5E8] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100 rounded-[24px] rounded-bl-[6px] border border-[#FFF5E8] dark:border-zinc-700 font-sans font-semibold" 
                     )} style={{ fontFamily: '"Nunito", sans-serif' }}>
                       
-                      {/* [FIX SHOW NAME] Bỏ isGroup, luôn hiện tên nếu không phải là mình */}
                       {!isMe && message.type !== 'IMAGE' && <div className="text-[11px] text-[#9288AD] mb-0.5 font-bold">{message.senderName || "Thành viên"}</div>}
                       
                       {message.type === 'IMAGE' ? (

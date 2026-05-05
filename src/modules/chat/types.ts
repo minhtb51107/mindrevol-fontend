@@ -5,7 +5,8 @@ export enum MessageType {
   VIDEO = 'VIDEO',
   SYSTEM = 'SYSTEM',
   VOICE = 'VOICE',
-  FILE = 'FILE'
+  FILE = 'FILE',
+  CALL_LOG = 'CALL_LOG' // <--- THÊM MỚI
 }
 
 export interface UserSummary {
@@ -22,7 +23,8 @@ export interface Message {
   senderId: string;
   receiverId?: string; 
   content: string;
-  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'SYSTEM' | 'VOICE' | 'FILE';
+  // <--- THÊM 'CALL_LOG' VÀO ĐÂY
+  type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'SYSTEM' | 'VOICE' | 'FILE' | 'CALL_LOG';
   metadata?: any;
   createdAt: string;
   
@@ -30,12 +32,12 @@ export interface Message {
   status?: 'SENDING' | 'SENT' | 'ERROR' | 'SEEN';
   replyToMsgId?: string;
 
-  senderName?: string;   // [THÊM]
-  senderAvatar?: string; // [THÊM]
+  senderName?: string;   
+  senderAvatar?: string; 
 
   isDeleted?: boolean;
   reactions?: Record<string, string>; 
-  isPinned?: boolean; // [THÊM MỚI] Cờ báo hiệu tin nhắn được ghim
+  isPinned?: boolean; 
 }
 
 export interface Conversation {
@@ -62,7 +64,8 @@ export interface SendMessageRequest {
   conversationId?: string;   
   boxId?: string;
   content: string;
-  type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE';
+  // Không bắt buộc thêm CALL_LOG ở đây vì FE không bao giờ gửi loại tin nhắn này lên, nhưng cứ thêm cho đồng bộ
+  type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE' | 'CALL_LOG';
   metadata?: any;
   clientSideId?: string;
   replyToMsgId?: string;

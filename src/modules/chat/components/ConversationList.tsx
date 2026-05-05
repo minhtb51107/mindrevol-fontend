@@ -16,40 +16,44 @@ export const ConversationList: React.FC = () => {
   } = useConversationList();
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#F7F6FA]/60 dark:bg-[#121212]/80 backdrop-blur-xl transition-colors border-r border-[#E1DDE8] dark:border-zinc-800">
-      <div className="p-6 pb-2">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/')} className="md:hidden w-10 h-10 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 shadow-sm active:scale-95">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h2 className="text-3xl text-zinc-800 dark:text-white font-jua">Tin nhắn</h2>
-          </div>
+    <div className="flex flex-col h-full w-full bg-transparent">
+      
+      {/* 1. HEADER CỐ ĐỊNH (76px) TẠO ĐƯỜNG CUT-LINE */}
+      <div className="h-[76px] px-6 flex items-center border-b border-[#E1DDE8] dark:border-zinc-800 shrink-0">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/')} className="md:hidden w-10 h-10 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 shadow-sm active:scale-95 transition-all">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl text-zinc-800 dark:text-white font-jua translate-y-[2px]">Tin nhắn</h2>
         </div>
-        
+      </div>
+      
+      {/* 2. KHU VỰC TÌM KIẾM & PHÂN LOẠI TAB */}
+      <div className="px-6 pt-5 pb-2 shrink-0">
         <div className="relative">
           <Search className="absolute left-4 top-3.5 w-5 h-5 text-zinc-400" />
           <input 
             value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Tìm người đồng hành..." 
-            className="w-full bg-white dark:bg-zinc-900 rounded-[24px] py-3.5 pl-12 pr-4 text-[15px] focus:outline-none focus:ring-4 focus:ring-[#E1DDE8]/50 dark:focus:ring-zinc-700 shadow-sm text-zinc-700 dark:text-zinc-200 font-bold placeholder:text-zinc-400 transition-all border border-transparent"
+            className="w-full bg-white dark:bg-zinc-800/80 rounded-[24px] py-3.5 pl-12 pr-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.04)] text-zinc-700 dark:text-zinc-200 font-bold placeholder:text-zinc-400 transition-all border border-transparent dark:border-zinc-700"
             style={{ fontFamily: '"Nunito", sans-serif' }}
           />
         </div>
 
         <div className="flex items-center gap-2 mt-4 px-1 pb-2 overflow-x-auto custom-scrollbar">
-          <button onClick={() => setActiveTab('ALL')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'ALL' ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
+          <button onClick={() => setActiveTab('ALL')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'ALL' ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm" : "bg-white/60 text-zinc-500 hover:bg-white dark:bg-zinc-800/60 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
             Tất cả
           </button>
-          <button onClick={() => setActiveTab('UNREAD')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'UNREAD' ? "bg-blue-500 text-white shadow-sm shadow-blue-500/20" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
+          <button onClick={() => setActiveTab('UNREAD')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'UNREAD' ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm" : "bg-white/60 text-zinc-500 hover:bg-white dark:bg-zinc-800/60 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
             Chưa đọc
           </button>
-          <button onClick={() => setActiveTab('GROUP')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'GROUP' ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm" : "bg-white/50 text-zinc-500 hover:bg-white dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
+          <button onClick={() => setActiveTab('GROUP')} className={cn("px-4 py-1.5 rounded-full text-[14px] font-bold transition-all whitespace-nowrap", activeTab === 'GROUP' ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm" : "bg-white/60 text-zinc-500 hover:bg-white dark:bg-zinc-800/60 dark:text-zinc-400 dark:hover:bg-zinc-800")} style={{ fontFamily: '"Nunito", sans-serif' }}>
             Nhóm chat
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 custom-scrollbar">
+      {/* 3. DANH SÁCH HỘI THOẠI */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2 custom-scrollbar">
         {isLoading ? <div className="text-center text-zinc-400 text-sm mt-10" style={{ fontFamily: '"Nunito", sans-serif' }}>Đang kết nối...</div>
         : displayList.length === 0 ? <div className="text-center text-zinc-400 mt-10 text-[15px] font-semibold" style={{ fontFamily: '"Nunito", sans-serif' }}>
             {activeTab === 'UNREAD' ? 'Bạn đã đọc hết tin nhắn rồi 🎉' : activeTab === 'GROUP' ? 'Chưa có nhóm trò chuyện nào.' : 'Chưa có ai ở đây cả.'}
@@ -65,13 +69,13 @@ export const ConversationList: React.FC = () => {
                   <div 
                     onClick={() => handleItemClick(item)} 
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-[28px] cursor-pointer transition-all active:scale-[0.98]",
-                      isActive ? "bg-white dark:bg-zinc-800 shadow-[0_8px_24px_rgba(146,136,173,0.12)] border border-[#F0EFF5] dark:border-zinc-700" : "hover:bg-white/50 dark:hover:bg-zinc-800/50 border border-transparent"
+                      "flex items-center gap-3 p-3 rounded-[24px] cursor-pointer transition-all active:scale-[0.98]",
+                      isActive ? "bg-white dark:bg-zinc-800/80 shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-[#F0EFF5] dark:border-zinc-700/50" : "hover:bg-white/60 dark:hover:bg-zinc-800/50 border border-transparent"
                     )}
                   >
                     <div className="relative shrink-0">
                       {item.isGroup ? (
-                          <div className="w-14 h-14 rounded-[20px] bg-[#F0EFF5] dark:bg-zinc-700 flex items-center justify-center overflow-hidden">
+                          <div className="w-[52px] h-[52px] rounded-[18px] bg-[#F0EFF5] dark:bg-zinc-700 flex items-center justify-center overflow-hidden">
                               {item.avatar?.startsWith('http') ? (
                                   <img src={item.avatar} alt={item.name} className="w-full h-full object-cover" />
                               ) : (
@@ -79,25 +83,25 @@ export const ConversationList: React.FC = () => {
                               )}
                           </div>
                       ) : (
-                          <img src={item.avatar || `https://ui-avatars.com/api/?name=${item.name || 'U'}&background=random`} alt={item.name} className="w-14 h-14 rounded-[20px] object-cover" />
+                          <img src={item.avatar || `https://ui-avatars.com/api/?name=${item.name || 'U'}&background=random`} alt={item.name} className="w-[52px] h-[52px] rounded-[18px] object-cover" />
                       )}
-                      {isUnread && <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 border-2 border-white dark:border-zinc-800 rounded-full animate-bounce" />}
-                      {item.isOnline && !item.isGroup && !isUnread && <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-zinc-800" />}
+                      {isUnread && <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-orange-500 border-[2.5px] border-[#F7F6FA] dark:border-zinc-900 rounded-full" />}
+                      {item.isOnline && !item.isGroup && !isUnread && <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-[2.5px] border-[#F7F6FA] dark:border-zinc-900 rounded-full" />}
                     </div>
 
                     <div className="flex-1 min-w-0 pr-6">
                       <div className="flex justify-between items-center mb-0.5">
-                        <h4 className="font-jua text-[18px] text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 truncate">
+                        <h4 className="font-jua text-[17px] text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 truncate">
                             {item.name}
                             {item.isMuted && <BellOff className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
                         </h4>
                         
                         <div className="flex items-center gap-1.5 shrink-0">
-                            {item.isPinned && <Pin className="w-3.5 h-3.5 text-blue-500 fill-blue-500 shrink-0" />}
-                            {item.lastMessageAt && <span className="text-[12px] font-bold text-[#9288AD] bg-[#F7F6FA] dark:bg-zinc-800 px-2 py-0.5 rounded-full whitespace-nowrap">{formatDistanceToNow(new Date(item.lastMessageAt), { addSuffix: false, locale: vi }).replace('khoảng ', '')}</span>}
+                            {item.isPinned && <Pin className="w-3.5 h-3.5 text-zinc-900 dark:text-white fill-zinc-900 dark:fill-white shrink-0" />}
+                            {item.lastMessageAt && <span className="text-[12px] font-bold text-zinc-400 dark:text-zinc-500 whitespace-nowrap">{formatDistanceToNow(new Date(item.lastMessageAt), { addSuffix: false, locale: vi }).replace('khoảng ', '')}</span>}
                         </div>
                       </div>
-                      <p className={cn("text-[14px] truncate transition-colors pr-2", isUnread ? "text-zinc-800 dark:text-white font-bold" : "text-zinc-500 dark:text-zinc-400 font-semibold")} style={{ fontFamily: '"Nunito", sans-serif' }}>{messagePreview}</p>
+                      <p className={cn("text-[14px] truncate transition-colors pr-2", isUnread ? "text-zinc-900 dark:text-white font-bold" : "text-zinc-500 dark:text-zinc-400 font-semibold")} style={{ fontFamily: '"Nunito", sans-serif' }}>{messagePreview}</p>
                     </div>
                   </div>
 
@@ -105,16 +109,16 @@ export const ConversationList: React.FC = () => {
                       <div className={cn("absolute right-2 top-1/2 -translate-y-1/2 transition-opacity z-10", menuOpenId === item.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                           <button 
                             onClick={(e) => { e.stopPropagation(); toggleMenu(item.id); }} 
-                            className="p-2 bg-white dark:bg-zinc-700 rounded-full shadow-md hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-300"
+                            className="p-2 bg-white dark:bg-zinc-700 rounded-full shadow-sm border border-zinc-100 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-200 transition-colors"
                           >
                               <MoreHorizontal className="w-4 h-4" />
                           </button>
                           
                           {menuOpenId === item.id && (
-                              <div ref={menuRef} className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-[#1E1E24] shadow-xl border border-zinc-100 dark:border-zinc-800 rounded-xl py-1.5 z-[100] animate-in fade-in zoom-in-95 origin-top-right">
+                              <div ref={menuRef} className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-zinc-900 shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] border border-zinc-100 dark:border-zinc-800 rounded-2xl py-1.5 z-[100] animate-in fade-in zoom-in-95 origin-top-right">
                                   <button onClick={(e) => { e.stopPropagation(); togglePin(item.conversationId!); toggleMenu(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"><Pin className="w-4 h-4 text-zinc-400"/> {item.isPinned ? 'Bỏ ghim' : 'Ghim hội thoại'}</button>
                                   <button onClick={(e) => { e.stopPropagation(); toggleMute(item.conversationId!); toggleMenu(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-3 transition-colors"><BellOff className="w-4 h-4 text-zinc-400"/> {item.isMuted ? 'Bật thông báo' : 'Tắt thông báo'}</button>
-                                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1"></div>
+                                  <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1 mx-2"></div>
                                   <button onClick={(e) => { e.stopPropagation(); hideConversation(item.conversationId!); toggleMenu(null); }} className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"><Trash2 className="w-4 h-4"/> Xóa đoạn chat</button>
                               </div>
                           )}

@@ -43,9 +43,12 @@ export const MoodSelectionSheet: React.FC<Props> = ({ isOpen, onClose, onSubmit,
                     <div className="w-full bg-white/10 rounded-3xl p-4 flex flex-col items-center gap-3">
                         <span className="text-4xl">{icon}</span>
                         <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="+ Add a note..." className="bg-transparent text-center text-white placeholder:text-white/50 text-sm w-full focus:ring-0 border-none px-2 font-sans font-medium" />
-                        <button onClick={handleSubmit} disabled={loading} className="w-full py-3 mt-2 bg-white text-[#70645c] rounded-2xl tracking-wide hover:bg-zinc-100 transition text-[15px]">
+                        
+                        {/* FIX: Bọc handleSubmit trong hàm mũi tên để tránh nhận Event object */}
+                        <button onClick={() => handleSubmit()} disabled={loading} className="w-full py-3 mt-2 bg-white text-[#70645c] rounded-2xl tracking-wide hover:bg-zinc-100 transition text-[15px]">
                             {loading ? 'Saving...' : 'Create status'}
                         </button>
+
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-8">

@@ -27,50 +27,51 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
         <div 
             onClick={handleClick}
             className={cn(
-                "px-5 py-4 transition-all duration-300 cursor-pointer flex gap-4 relative border-b border-[#D6CFC7]/30 dark:border-[#2B2A29]/50 group",
-                // Highlight nhẹ màu Be/Đen mờ cho thông báo chưa đọc
+                "px-5 py-4 transition-all duration-300 cursor-pointer flex gap-4 relative border-b border-zinc-100 dark:border-white/5 group",
+                // Background xanh nhạt cho thông báo chưa đọc, hover xám nhạt cho thông báo đã đọc
                 !noti.isRead 
-                    ? "bg-[#F4EBE1]/40 dark:bg-[#2B2A29]/40" 
-                    : "hover:bg-[#F4EBE1]/20 dark:hover:bg-[#1A1A1A]/40"
+                    ? "bg-blue-50/60 dark:bg-blue-500/10" 
+                    : "bg-transparent hover:bg-zinc-50 dark:hover:bg-white/5"
             )}
         >
             {/* Chấm xanh báo chưa đọc */}
-            {!noti.isRead && <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />}
+            {!noti.isRead && <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />}
             
-            {/* Avatar viền bo góc vuông mềm mại */}
-            <div className="w-14 h-14 rounded-[18px] bg-[#E2D9CE] dark:bg-[#3A3734] shrink-0 flex items-center justify-center text-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-white/50 dark:border-white/5">
+            {/* Avatar viền bo tròn mềm mại */}
+            <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0 flex items-center justify-center text-xl overflow-hidden shadow-sm border border-zinc-300/50 dark:border-white/10">
                 {noti.imageUrl ? (
                     noti.imageUrl.startsWith('http') ? <img src={noti.imageUrl} alt="" className="w-full h-full object-cover" /> : noti.imageUrl
                 ) : (
-                    <Bell size={22} className="text-[#8A8580] dark:text-[#A09D9A]" strokeWidth={2.5} />
+                    <Bell size={20} className="text-zinc-500 dark:text-zinc-400" strokeWidth={2.5} />
                 )}
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <h4 className="text-[1rem] font-extrabold text-[#1A1A1A] dark:text-white mb-1 leading-snug line-clamp-2 tracking-tight">
+            <div className="flex-1 min-w-0 flex flex-col justify-center mt-0.5">
+                <h4 className="text-[0.95rem] font-bold text-zinc-900 dark:text-white mb-1 leading-snug line-clamp-2 tracking-tight">
                     {noti.title}
                 </h4>
                 <p className={cn(
-                    "text-[0.9rem] leading-relaxed pr-4 line-clamp-3", 
-                    !noti.isRead ? "text-[#4A4A4A] dark:text-[#D6CFC7] font-bold" : "text-[#8A8580] dark:text-[#A09D9A] font-semibold"
+                    "text-[0.85rem] leading-relaxed pr-4 line-clamp-3", 
+                    !noti.isRead ? "text-zinc-700 dark:text-zinc-300 font-medium" : "text-zinc-500 dark:text-zinc-400"
                 )}>
                     {noti.message}
                 </p>
-                <p className="text-[0.75rem] text-[#A09D9A] dark:text-[#8A8580] font-extrabold mt-2 uppercase tracking-widest">
+                <p className="text-[0.7rem] text-zinc-400 dark:text-zinc-500 font-bold mt-2 uppercase tracking-widest">
                     {formatDistanceToNow(new Date(noti.createdAt), { addSuffix: true, locale: vi })}
                 </p>
 
+                {/* Các nút hành động (Nếu có) */}
                 {requiresAction && (
-                    <div className="flex gap-2.5 mt-3.5">
+                    <div className="flex gap-2 mt-3.5">
                         <button 
                             onClick={(e) => { e.stopPropagation(); onAction(e, 'ACCEPT', noti); }}
-                            className="px-5 py-2.5 bg-[#1A1A1A] dark:bg-white hover:bg-black active:scale-95 text-white dark:text-[#1A1A1A] text-[0.85rem] font-extrabold rounded-[14px] transition-all shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+                            className="px-4 py-2 bg-zinc-900 dark:bg-white hover:bg-black dark:hover:bg-zinc-200 active:scale-95 text-white dark:text-zinc-900 text-[0.8rem] font-bold rounded-[12px] transition-all shadow-sm"
                         >
                             Chấp nhận
                         </button>
                         <button 
                             onClick={(e) => { e.stopPropagation(); onAction(e, 'REJECT', noti); }}
-                            className="px-5 py-2.5 bg-[#F4EBE1] hover:bg-[#E2D9CE] dark:bg-[#2B2A29] dark:hover:bg-[#3A3734] active:scale-95 text-[#1A1A1A] dark:text-white text-[0.85rem] font-extrabold rounded-[14px] transition-all border border-transparent dark:border-[#4A4D55]/30"
+                            className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-95 text-zinc-700 dark:text-zinc-200 text-[0.8rem] font-bold rounded-[12px] transition-all border border-transparent"
                         >
                             Từ chối
                         </button>
@@ -78,12 +79,13 @@ export const NotificationItem: React.FC<Props> = ({ noti, onClick, onDelete, onA
                 )}
             </div>
 
+            {/* Nút Xóa (Hiện khi Hover) */}
             <button 
                 onClick={(e) => onDelete(e, noti.id)}
-                className="absolute right-4 top-4 p-2 rounded-[14px] text-[#A09D9A] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all active:scale-90"
+                className="absolute right-4 top-4 p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all active:scale-90"
                 title="Xóa"
             >
-                <X size={18} strokeWidth={2.5} />
+                <X size={16} strokeWidth={2.5} />
             </button>
         </div>
     );

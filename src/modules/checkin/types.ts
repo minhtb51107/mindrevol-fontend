@@ -74,4 +74,5 @@ export interface MapMarkerResponse {
   thumbnailUrl: string;
   userAvatar: string;
   fullname: string;
+  createdAt?: string; // THÊM DÒNG NÀY ĐỂ FIX LỖI TYPESCRIPT
 }

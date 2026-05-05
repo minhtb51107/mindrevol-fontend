@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query'; 
 import { journeyService } from '@/modules/journey/services/journey.service';
 import { feedService } from '../services/feed.service';
-import { useJourneyList } from '@/modules/journey/hooks/useJourneyList'; 
-import { FeedItem, PostProps } from '../types'; // [CẬP NHẬT] Import FeedItem
+import { FeedItem } from '../types'; 
 import { useAuth } from '@/modules/auth/store/AuthContext';
 
 export type MemberStatus = 'COMPLETED' | 'FAILED' | 'COMEBACK' | 'LATE_SOON' | 'NORMAL' | 'REST';
@@ -20,7 +19,6 @@ export interface FilterMember {
   totalActiveDays?: number;
 }
 
-// [CẬP NHẬT] Dùng FeedItem[] thay vì PostProps[]
 interface FeedQueryData {
   posts: FeedItem[]; 
   members: FilterMember[];
@@ -34,13 +32,20 @@ export const useFeedData = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null); 
   const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(searchParams.get('journeyId'));
 
-  // 1. DÙNG HOOK NÀY ĐỂ TỰ ĐỘNG CẬP NHẬT DANH SÁCH
-  const { data: rawJourneys, isLoading: listLoading } = useJourneyList();
+  // 1. [ĐÃ SỬA] DÙNG useQuery ĐỂ GỌI API TRỰC TIẾP THAY VÌ DÙNG HOOK CỦA MODAL
+  const { data: rawJourneys, isLoading: listLoading } = useQuery({
+      queryKey: ['feed_journeys_list'],
+      queryFn: async () => {
+          return await journeyService.getMyJourneys();
+      },
+      staleTime: 1000 * 60 * 5, // Cache 5 phút
+  });
 
   const journeys = useMemo(() => {
     if (!rawJourneys) return [];
     const now = new Date();
-    return rawJourneys.filter(j => {
+    // [ĐÃ SỬA] Định nghĩa kiểu dữ liệu (any hoặc JourneyResponse) cho biến j để tránh lỗi Typescript
+    return rawJourneys.filter((j: any) => {
         if (j.status === 'COMPLETED' || j.status === 'FINISHED') return false;
         if (j.endDate) {
             const end = new Date(j.endDate);
@@ -55,13 +60,13 @@ export const useFeedData = () => {
   useEffect(() => {
     if (journeys.length > 0) {
         const urlId = searchParams.get('journeyId');
-        const isValid = urlId && journeys.some(j => j.id === urlId);
+        const isValid = urlId && journeys.some((j: any) => j.id === urlId);
         
         if (!isValid) {
             const defaultId = journeys[0].id;
             setSelectedJourneyId(defaultId);
             setSearchParams({ journeyId: defaultId }, { replace: true });
-        } else if (!selectedJourneyId) {
+        } else if (selectedJourneyId !== urlId) { 
              setSelectedJourneyId(urlId);
         }
     }
@@ -99,7 +104,6 @@ export const useFeedData = () => {
     staleTime: 1000 * 60,
   });
 
-  // [CẬP NHẬT] Ép kiểu thành FeedItem[]
   const posts = (feedDataRaw?.posts as FeedItem[]) || [];
   const members = (feedDataRaw?.members as FilterMember[]) || [];
   
@@ -135,11 +139,10 @@ export const useFeedData = () => {
 
   const filteredPosts = useMemo(() => {
     if (!selectedUserId) return posts; 
-    // [LOGIC MỚI] Nếu đang lọc theo User, chỉ hiện bài POST của user đó (bỏ qua AD)
     return posts.filter((p: FeedItem) => p.type === 'POST' && String(p.userId) === String(selectedUserId));
   }, [posts, selectedUserId]);
 
-  const currentJourneyName = journeys.find(j => j.id === selectedJourneyId)?.name || "Tất cả hành trình";
+  const currentJourneyName = journeys.find((j: any) => j.id === selectedJourneyId)?.name || "Tất cả hành trình";
 
   return {
     user, 

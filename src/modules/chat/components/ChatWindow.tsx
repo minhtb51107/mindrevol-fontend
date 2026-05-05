@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChatHeader } from './ChatHeader';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { VoiceCallModal } from './VoiceCallModal';
 import { ForwardMessageModal } from './ForwardMessageModal';
 import { useChatWindow } from '../hooks/useChatWindow';
+import { cn } from '@/lib/utils';
+import { useBoxMembers } from '@/modules/box/hooks/useBoxMembers';
+import { ChatInfoSidebar } from './ChatInfoSidebar'; 
+import { useChatStore } from '../store/useChatStore'; // Gọi store để lấy hàm xử lý
 
 interface ChatWindowProps {
   isSidebarOpen?: boolean;
@@ -18,8 +22,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isSidebarOpen, toggleSid
       remoteAudioRef, chatData, callData, handleAcceptCall
   } = useChatWindow();
 
+  // Lấy các function quản lý cuộc hội thoại
+  const { togglePin, toggleMute, hideConversation } = useChatStore();
+
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const toggleRightSidebar = () => setIsRightSidebarOpen(!isRightSidebarOpen);
+
+  const isGroup = !!activeConv?.boxId;
+  const { members, isLoading: isLoadingMembers } = useBoxMembers({
+    boxId: activeConv?.boxId || '',
+    isOpen: isRightSidebarOpen,
+    onClose: toggleRightSidebar,
+    onMemberChange: () => {}
+  });
+
   const scrollbarStyles = `
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #E1DDE8; border-radius: 20px; }
     .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; }
@@ -40,35 +58,59 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isSidebarOpen, toggleSid
   }
 
   return (
-    <div className="flex flex-col h-full w-full relative overflow-hidden bg-[#F0EFF5] dark:bg-[#121212]">
+    <div className="flex h-full w-full relative overflow-hidden bg-[#F0EFF5] dark:bg-[#121212]">
       <style>{scrollbarStyles}</style>
 
-      <ForwardMessageModal 
-        isOpen={!!forwardingMessage} 
-        onClose={() => setForwardingMessage(null)} 
-      />
+      {/* MAIN CHAT AREA */}
+      <div className={cn(
+        "flex flex-col flex-1 h-full min-w-0 transition-all duration-300 ease-in-out relative",
+        isRightSidebarOpen ? "md:mr-[300px]" : "mr-0"
+      )}>
+        <ForwardMessageModal isOpen={!!forwardingMessage} onClose={() => setForwardingMessage(null)} />
 
-      <ChatHeader 
-        partner={activeConv.partner} 
-        onBlock={chatData.blockUser}        
-        onUnfriend={chatData.unfriendUser} 
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        onBackMobile={onBackMobile} 
-      />
+        <ChatHeader 
+          partner={activeConv.partner} 
+          isSidebarOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+          onBackMobile={onBackMobile} 
+          onToggleInfo={toggleRightSidebar} 
+        />
 
-      <div className="flex-1 min-h-0 relative">
-          <MessageList 
-            messages={chatData.messages}
-            currentUserId={chatData.currentUserId}
-            partnerAvatar={activeConv.partner?.avatarUrl}
-            onLoadMore={chatData.loadMoreMessages} 
-            hasMore={chatData.hasMore}            
-            isLoadingMore={chatData.isLoadingMore} 
-          />
+        <div className="flex-1 min-h-0 relative">
+            <MessageList 
+              messages={chatData.messages}
+              currentUserId={chatData.currentUserId}
+              partnerAvatar={activeConv.partner?.avatarUrl}
+              onLoadMore={chatData.loadMoreMessages} 
+              hasMore={chatData.hasMore}            
+              isLoadingMore={chatData.isLoadingMore} 
+            />
+        </div>
+
+        <ChatInput onSend={chatData.sendMessage} onEdit={chatData.editMessage} />
       </div>
 
-      <ChatInput onSend={chatData.sendMessage} onEdit={chatData.editMessage} />
+      {/* SIDEBAR CHI TIẾT */}
+      <ChatInfoSidebar 
+        isOpen={isRightSidebarOpen}
+        onClose={toggleRightSidebar}
+        isGroup={isGroup}
+        members={members}
+        isLoadingMembers={isLoadingMembers}
+        partner={activeConv.partner}
+        activeConv={activeConv}
+        onTogglePin={() => togglePin(activeConv.id)}
+        onToggleMute={() => toggleMute(activeConv.id)}
+        onHideConversation={() => hideConversation(activeConv.id)}
+        onUnfriend={() => {
+            chatData.unfriendUser();
+            toggleRightSidebar(); // Tự động đóng sau khi xóa KB
+        }}
+        onBlock={() => {
+            chatData.blockUser();
+            toggleRightSidebar();
+        }}
+      />
 
       <VoiceCallModal 
         incomingCall={callData.incomingCall} 

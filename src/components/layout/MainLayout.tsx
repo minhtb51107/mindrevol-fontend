@@ -1,4 +1,3 @@
-// File: src/components/layout/MainLayout.tsx
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { Navigation } from './Navigation'; 
@@ -10,6 +9,7 @@ import { SettingsModal } from '@/modules/user/components/SettingsModal';
 import { journeyService } from '@/modules/journey/services/journey.service';
 import { cn } from '@/lib/utils';
 import { usePaymentSuccessHandler } from '@/modules/payment/hooks/usePaymentSuccessHandler';
+import { OnboardingTour } from '../common/OnboardingTour'; // [THÊM MỚI]
 
 interface MainLayoutProps {
   children?: React.ReactNode;
@@ -17,14 +17,12 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   usePaymentSuccessHandler();
-
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJourneyListOpen, setIsJourneyListOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false); 
-
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
   const [checkinFile, setCheckinFile] = useState<File | null>(null);
@@ -36,126 +34,109 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const [navRefreshKey, setNavRefreshKey] = useState(0);
   const [defaultJourneyId, setDefaultJourneyId] = useState<string | null>(null);
+  const [myJourneys, setMyJourneys] = useState<any[]>([]); 
 
   const urlJourneyId = searchParams.get('journeyId');
   const activeJourneyId = urlJourneyId || defaultJourneyId;
 
   const isHomePage = location.pathname === '/';
   const isChatPage = location.pathname.startsWith('/chat');
-  const isProfilePage = location.pathname.startsWith('/profile');
+  const isBoxDetailPage = location.pathname.startsWith('/box/'); 
 
   useEffect(() => {
-      if (isChatPage || isProfilePage) {
+      if (isChatPage) {
           setIsSidebarExpanded(false);
       } else {
           const saved = localStorage.getItem('sidebar_expanded');
           setIsSidebarExpanded(saved !== null ? saved === 'true' : true);
       }
-  }, [isChatPage, isProfilePage]);
+  }, [isChatPage]);
 
   useEffect(() => {
     const fetchDefaultJourney = async () => {
         try {
-            const myJourneys = await journeyService.getMyJourneys();
-            if (myJourneys.length > 0) {
-                setDefaultJourneyId(myJourneys[0].id);
-            }
-        } catch (error) {
-            console.error("Failed to fetch journeys", error);
+            const allJourneys = await journeyService.getMyJourneys();
+            
+            const activeJourneys = allJourneys.filter(j => {
+                const validStatus = ['ACTIVE', 'ONGOING', 'UPCOMING'].includes(j.status);
+                let isNotExpired = true;
+                if (j.endDate) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); 
+                    
+                    const endDate = new Date(j.endDate);
+                    endDate.setHours(0, 0, 0, 0); 
+                    
+                    isNotExpired = endDate >= today; 
+                }
+                return validStatus && isNotExpired;
+            });
+            
+            setMyJourneys(activeJourneys); 
+            if (activeJourneys.length > 0) setDefaultJourneyId(activeJourneys[0].id);
+        } catch (error) { 
+            console.error("Lỗi khi tải danh sách hành trình:", error); 
         }
     };
     fetchDefaultJourney();
-  }, []);
-
-  const handleCheckinClick = () => {
-    setIsCameraModalOpen(true);
-  };
-
-  const handleCaptureComplete = (file: File) => {
-    setCheckinFile(file);
-    setIsCameraModalOpen(false);
-    setTimeout(() => setIsCheckinModalOpen(true), 150); 
-  };
-
-  const handleDataRefresh = () => {
-     setNavRefreshKey(prev => prev + 1); 
-  };
-
-  const handleToggleSidebar = () => {
-      const newVal = !isSidebarExpanded;
-      setIsSidebarExpanded(newVal);
-      localStorage.setItem('sidebar_expanded', String(newVal)); 
-  };
+  }, [navRefreshKey]);
 
   return (
     <div className={cn(
-      "min-h-[100dvh] w-full text-zinc-900 dark:text-white font-sans relative flex transition-colors duration-300 ease-in-out",
-      isHomePage ? "bg-zinc-50 dark:bg-black" : "bg-[#fcfcfc] dark:bg-[#121212]"
+      "w-full text-zinc-900 dark:text-white font-sans relative block transition-colors duration-300 ease-in-out",
+      "md:bg-zinc-50 md:dark:bg-[#09090b]",
+      "max-md:min-h-[100dvh] max-md:bg-white max-md:dark:bg-[#121212]",
+      isHomePage && "max-md:bg-zinc-50 max-md:dark:bg-black"
     )}>
       
+      {/* [THÊM MỚI] Gắn tour vào layout */}
+      <OnboardingTour />
+
       <Navigation 
-        onCheckinClick={handleCheckinClick} 
+        onCheckinClick={(f) => { setCheckinFile(f); setIsCameraModalOpen(true); }} 
         onJourneyClick={() => setIsJourneyListOpen(true)}
         onSettingsClick={() => setIsSettingsModalOpen(true)} 
         refreshTrigger={navRefreshKey}
         isSidebarExpanded={isSidebarExpanded}
-        toggleSidebar={handleToggleSidebar} 
-        setSidebarExpanded={setIsSidebarExpanded} 
+        toggleSidebar={() => {
+            const newState = !isSidebarExpanded;
+            setIsSidebarExpanded(newState);
+            localStorage.setItem('sidebar_expanded', String(newState));
+        }} 
+        setSidebarExpanded={(expanded) => {
+            setIsSidebarExpanded(expanded);
+            localStorage.setItem('sidebar_expanded', String(expanded));
+        }} 
         hideBottomNav={isChatPage}
+        myJourneys={myJourneys}
+        activeJourneyId={activeJourneyId}
+        onCreateJourneyClick={() => setIsCreateModalOpen(true)}
       />
 
       <main className={cn(
-        "relative w-full flex flex-col z-0", 
-        "transition-all duration-300 ease-in-out",
-        isHomePage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]",
-        (isChatPage || isHomePage) ? "pb-0" : "pb-[72px] md:pb-0", 
-        isSidebarExpanded ? "md:pl-[260px]" : "md:pl-[80px]"
+        "relative flex flex-col z-0 transition-all duration-300 ease-in-out",
+        "w-full",
+        isSidebarExpanded 
+            ? "md:w-[calc(100%-352px)] md:ml-[352px]" 
+            : "md:w-[calc(100%-160px)] md:ml-[160px]",
+        
+        "md:mt-[36px]",
+        "md:bg-white md:dark:bg-[#121212]",
+        "md:border-t md:border-zinc-200 md:dark:border-white/10",
+        
+        (isHomePage || isChatPage || isBoxDetailPage) 
+            ? "h-[100dvh] md:h-[calc(100dvh-36px)] overflow-hidden" 
+            : "min-h-[100dvh] md:min-h-[calc(100dvh-36px)]",
+        (!isHomePage && !isChatPage && !isBoxDetailPage) && "pb-[72px] md:pb-0"
       )}>
         {children || <Outlet />}
       </main>
 
-      <CreateJourneyModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
-        onSuccess={() => {
-            handleDataRefresh();
-            window.location.reload(); 
-        }} 
-      />
-
-      <JourneyListModal 
-        isOpen={isJourneyListOpen}
-        onClose={() => setIsJourneyListOpen(false)}
-      />
-
-      <CameraModal 
-         isOpen={isCameraModalOpen}
-         onClose={() => setIsCameraModalOpen(false)}
-         onCapture={handleCaptureComplete}
-      />
-
-      {/* [ĐÃ SỬA] Bỏ điều kiện activeJourneyId &&, cho phép mở modal kể cả khi chưa có hành trình */}
-      {isCheckinModalOpen && (
-          <CheckinModal 
-            isOpen={isCheckinModalOpen} 
-            onClose={() => {
-               setIsCheckinModalOpen(false);
-               setCheckinFile(null);
-            }} 
-            file={checkinFile} 
-            // Nếu không có hành trình nào thì truyền chuỗi rỗng để Modal chọn "Lưu trữ cá nhân"
-            journeyId={activeJourneyId || ''} 
-            onSuccess={() => {
-                handleDataRefresh();
-                window.location.reload(); 
-            }} 
-          />
-      )}
-
-      <SettingsModal 
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-      />
+      <CreateJourneyModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSuccess={() => window.location.reload()} />
+      <JourneyListModal isOpen={isJourneyListOpen} onClose={() => setIsJourneyListOpen(false)} />
+      <CameraModal isOpen={isCameraModalOpen} onClose={() => setIsCameraModalOpen(false)} onCapture={(f) => { setCheckinFile(f); setIsCameraModalOpen(false); setTimeout(() => setIsCheckinModalOpen(true), 150); }} />
+      {isCheckinModalOpen && <CheckinModal isOpen={isCheckinModalOpen} onClose={() => setIsCheckinModalOpen(false)} file={checkinFile} journeyId={activeJourneyId || ''} onSuccess={() => window.location.reload()} />}
+      <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
     </div>
   );
 };

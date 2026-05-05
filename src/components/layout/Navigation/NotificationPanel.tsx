@@ -39,56 +39,60 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     return (
         <div 
             className={cn(
-                "fixed transition-all duration-500 flex flex-col font-quicksand",
+                "fixed z-[100] transition-all duration-300 flex flex-col font-sans",
                 
-                // --- MOBILE: Full màn hình ---
-                "inset-0 w-full h-[100dvh] z-[999] bg-white dark:bg-[#121212]", 
+                // --- MOBILE: Full màn hình trượt từ dưới lên ---
+                "max-md:inset-0 max-md:w-full max-md:h-[100dvh] max-md:bg-white max-md:dark:bg-[#121212]",
 
-                // --- DESKTOP: Panel trượt bên trái, kính mờ ---
-                "md:inset-auto md:top-0 md:bottom-0 md:left-[88px] md:w-[400px] md:h-full md:z-40 md:bg-white/95 md:dark:bg-[#121212]/95 md:backdrop-blur-xl md:border-r md:border-[#D6CFC7]/50 md:dark:border-[#2B2A29]/50 md:shadow-[20px_0_40px_rgba(0,0,0,0.05)]",
+                // --- DESKTOP: Modal nổi ở góc trên cùng bên phải ---
+                "md:top-[44px] md:right-5 md:w-[380px] md:max-h-[calc(100vh-80px)]",
+                "md:bg-white/95 md:dark:bg-[#121212]/95 md:backdrop-blur-xl md:rounded-[24px]",
+                "md:border md:border-zinc-200/50 md:dark:border-white/10 md:shadow-[0_8px_30px_rgb(0,0,0,0.12)]",
                 
-                // Hiệu ứng trượt
-                isOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"
+                // Hiệu ứng Ẩn/Hiện (Scale & Fade cho Desktop, Translate cho Mobile)
+                isOpen 
+                    ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" 
+                    : "opacity-0 pointer-events-none max-md:translate-y-8 md:translate-y-[-10px] md:scale-95 md:origin-top-right"
             )}
         >
             {/* HEADER */}
-            <div className="p-5 md:p-6 md:pb-4 flex justify-between items-center shrink-0 border-b border-[#D6CFC7]/30 dark:border-[#2B2A29]/50 md:border-none bg-white dark:bg-transparent z-10">
+            <div className="p-4 md:px-5 md:py-4 flex justify-between items-center shrink-0 border-b border-zinc-200/50 dark:border-white/10 bg-transparent z-10">
                 
                 <div className="flex items-center gap-2 md:gap-0">
-                    {/* Nút Back (Mobile) */}
-                    <button onClick={onClose} className="md:hidden p-2 -ml-2 rounded-[14px] text-[#8A8580] hover:text-[#1A1A1A] dark:text-[#A09D9A] hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] transition-colors active:scale-95">
-                        <ArrowLeft size={24} strokeWidth={2.5} />
+                    {/* Nút Back (Chỉ hiện trên Mobile) */}
+                    <button onClick={onClose} className="md:hidden p-2 -ml-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-95">
+                        <ArrowLeft size={22} strokeWidth={2.5} />
                     </button>
                     
-                    <h2 className="text-[1.6rem] md:text-[1.8rem] font-black text-[#1A1A1A] dark:text-white tracking-tight">
+                    <h2 className="text-[1.2rem] font-bold text-zinc-900 dark:text-white tracking-wide">
                         Thông báo
                     </h2>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                    <button onClick={markAllAsRead} className="text-[#8A8580] hover:text-blue-500 dark:text-[#A09D9A] p-2.5 transition-colors rounded-[16px] hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95" title="Đánh dấu đã đọc tất cả">
-                        <CheckCheck size={22} strokeWidth={2.5} />
+                <div className="flex items-center gap-1">
+                    <button onClick={markAllAsRead} className="text-zinc-400 hover:text-blue-500 p-2 transition-colors rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 active:scale-95" title="Đánh dấu đã đọc tất cả">
+                        <CheckCheck size={20} strokeWidth={2.5} />
                     </button>
-                    <button onClick={deleteAll} className="text-[#8A8580] hover:text-red-500 dark:text-[#A09D9A] p-2.5 transition-colors rounded-[16px] hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-95" title="Xóa tất cả">
-                        <Trash2 size={20} strokeWidth={2.5} />
+                    <button onClick={deleteAll} className="text-zinc-400 hover:text-red-500 p-2 transition-colors rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 active:scale-95" title="Xóa tất cả">
+                        <Trash2 size={18} strokeWidth={2.5} />
                     </button>
                     
-                    {/* Nút Đóng (Desktop) */}
-                    <button onClick={onClose} className="hidden md:flex p-2.5 rounded-[16px] text-[#8A8580] hover:text-[#1A1A1A] dark:text-[#A09D9A] dark:hover:text-white hover:bg-[#F4EBE1] dark:hover:bg-[#2B2A29] transition-colors">
-                        <X size={22} strokeWidth={2.5} />
+                    {/* Nút Đóng (Chỉ hiện trên Desktop) */}
+                    <button onClick={onClose} className="hidden md:flex p-2 ml-1 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors">
+                        <X size={20} strokeWidth={2.5} />
                     </button>
                 </div>
             </div>
 
             {/* FILTER BUTTONS */}
-            <div className="px-5 md:px-6 py-4 flex items-center gap-3 shrink-0 border-b border-[#D6CFC7]/30 dark:border-[#2B2A29]/50">
+            <div className="px-4 md:px-5 py-3 flex items-center gap-2.5 shrink-0 border-b border-zinc-200/50 dark:border-white/10">
                 <button 
                     onClick={() => setFilter('ALL')} 
                     className={cn(
-                        "px-6 py-2 rounded-[20px] text-[0.9rem] font-extrabold transition-all active:scale-95", 
+                        "px-4 py-1.5 rounded-full text-[0.85rem] font-bold transition-all active:scale-95", 
                         filter === 'ALL' 
-                            ? "bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-[0_4px_12px_rgba(0,0,0,0.1)]" 
-                            : "bg-[#F4EBE1]/50 text-[#8A8580] hover:text-[#1A1A1A] dark:bg-[#2B2A29]/50 dark:text-[#A09D9A] dark:hover:text-white"
+                            ? "bg-zinc-900 text-white dark:bg-white dark:text-black shadow-sm" 
+                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800/50 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     )}
                 >
                     Tất cả
@@ -96,10 +100,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 <button 
                     onClick={() => setFilter('UNREAD')} 
                     className={cn(
-                        "px-6 py-2 rounded-[20px] text-[0.9rem] font-extrabold transition-all active:scale-95", 
+                        "px-4 py-1.5 rounded-full text-[0.85rem] font-bold transition-all active:scale-95", 
                         filter === 'UNREAD' 
-                            ? "bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-[0_4px_12px_rgba(0,0,0,0.1)]" 
-                            : "bg-[#F4EBE1]/50 text-[#8A8580] hover:text-[#1A1A1A] dark:bg-[#2B2A29]/50 dark:text-[#A09D9A] dark:hover:text-white"
+                            ? "bg-zinc-900 text-white dark:bg-white dark:text-black shadow-sm" 
+                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800/50 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     )}
                 >
                     Chưa đọc
@@ -107,16 +111,16 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             </div>
 
             {/* NOTIFICATION LIST */}
-            <div className="flex-1 overflow-y-auto mt-1 custom-scrollbar pb-24 md:pb-4">
+            <div className="flex-1 overflow-y-auto mt-1 pb-24 md:pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {isLoading ? (
-                    <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#A09D9A]" size={30} /></div>
+                    <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-400" size={26} /></div>
                 ) : notifications.length === 0 ? (
-                    <div className="text-center py-20 text-[#8A8580] flex flex-col items-center">
-                        <div className="w-24 h-24 bg-[#F4EBE1]/50 dark:bg-[#2B2A29]/50 rounded-[24px] flex items-center justify-center mb-6 border border-[#D6CFC7]/50 dark:border-[#3A3734] shadow-sm">
-                            <Bell size={40} className="text-[#A09D9A] dark:text-[#8A8580]" strokeWidth={2} />
+                    <div className="text-center py-16 text-zinc-500 flex flex-col items-center">
+                        <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-5 border border-zinc-200/50 dark:border-white/5 shadow-sm">
+                            <Bell size={32} className="text-zinc-400 dark:text-zinc-500" strokeWidth={2} />
                         </div>
-                        <p className="text-[1.1rem] font-extrabold text-[#4A4A4A] dark:text-[#D6CFC7]">Chưa có thông báo nào</p>
-                        <p className="text-[0.95rem] text-[#8A8580] dark:text-[#A09D9A] font-semibold mt-2 px-8">Chúng mình sẽ báo cho bạn ngay khi có tin mới.</p>
+                        <p className="text-[1rem] font-bold text-zinc-800 dark:text-zinc-200">Chưa có thông báo nào</p>
+                        <p className="text-[0.85rem] text-zinc-500 dark:text-zinc-400 font-medium mt-1 px-8">Chúng mình sẽ báo cho bạn ngay khi có tin mới.</p>
                     </div>
                 ) : (
                     <div className="flex flex-col">
