@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserAvatarLink } from '@/components/ui/UserAvatarLink'; 
 import { SearchMessageModal } from './SearchMessageModal';
 
-import { http } from '@/lib/http';
+// 🔥 CHỈ CẦN IMPORT LẤY CÁC HÀM CẦN THIẾT TỪ STORE, KHÔNG CẦN GỌI http TẠI ĐÂY NỮA
 import { useCallStore } from '@/modules/call/store/useCallStore';
 import toast from 'react-hot-toast';
 
@@ -24,32 +24,25 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const [showSearchModal, setShowSearchModal] = useState(false);
   
   const { conversations, activeConversationId, closeChat } = useChatStore(); 
-  const { setOutgoingCall } = useCallStore();
+  
+  // 🔥 LẤY CẢ 2 HÀM RA TỪ STORE
+  const { startCall, startBoxCall } = useCallStore();
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const isGroup = !!activeConversation?.boxId;
 
+  // 🔥 ĐÃ SỬA LẠI LOGIC GỌI NHÓM HOÀN CHỈNH
   const handleStartCall = async (type: 'video' | 'voice') => {
+    if (!activeConversationId) return;
+
     if (isGroup) {
-        toast.error("Gọi nhóm đang được phát triển.");
-        return;
-    }
-    if (!partner?.id || !activeConversationId) return;
-
-    try {
-        // TRUYỀN THÊM conversationId XUỐNG BACKEND ĐỂ LƯU LỊCH SỬ
-        const res = await http.post(`/calls/signaling/initiate?receiverId=${partner.id}&type=${type}&conversationId=${activeConversationId}`);
-        const session = res.data?.data || res.data;
-
-        setOutgoingCall({
-            roomId: session.roomId,
-            name: partner.fullname,
-            avatar: partner.avatarUrl,
-            callType: type
-        });
-    } catch (error: any) {
-        console.error("Call error:", error);
-        toast.error(error.response?.data?.message || "Người dùng đang bận hoặc không thể gọi lúc này.");
+        // NẾU LÀ BOX: Gọi Group Call
+        const boxId = activeConversation.boxId!;
+        startBoxCall(boxId, type, activeConversationId);
+    } else {
+        // NẾU LÀ CÁ NHÂN: Gọi 1-1
+        if (!partner?.id) return;
+        startCall(partner.id, partner.fullname, partner.avatarUrl, type, activeConversationId);
     }
   };
 

@@ -85,6 +85,7 @@ const JourneyGridFeedPage = () => {
   // ÉP KIỂU: Bổ sung kiểu mở rộng cho PostProps
   const openPostDetail = (post: PostProps & { journeyId?: string; videoUrl?: string }) => {
       const checkinObj: any = {
+          ...post, // <-- QUAN TRỌNG: Kế thừa toàn bộ data gốc để không mất displayTag, spotifyTrackId
           id: post.id,
           userId: post.user?.id,
           user: post.user,
@@ -96,7 +97,8 @@ const JourneyGridFeedPage = () => {
           emotion: post.emotion,
           activityName: post.activityName,
           locationName: post.locationName,
-          createdAt: post.timestamp, // Tên trường ngày tháng
+          createdAt: post.timestamp,
+          timestamp: post.timestamp, // Bổ sung lại trường này vì DetailPostCard cần
           reactionCount: post.reactionCount,
           commentCount: post.commentCount,
           latestReactions: post.latestReactions
@@ -106,10 +108,10 @@ const JourneyGridFeedPage = () => {
 
   return (
     <MainLayout>
-      <div className="flex flex-col h-[100dvh] bg-gradient-to-b from-[#F4EBE1] to-[#FFFFFF] dark:from-[#121212] dark:to-[#0A0A0A] w-full relative font-quicksand transition-colors duration-500">
+      <div className="flex flex-col h-[100dvh] bg-[#FFFFFF] dark:bg-[#000000] w-full relative font-quicksand transition-colors duration-500">
          
         {/* Sticky Header: Gồm Filter ở giữa và nút Video góc phải */}
-        <div className="sticky top-0 z-30 px-4 md:px-6 pt-4 pb-4 bg-gradient-to-b from-[#F4EBE1] via-[#F4EBE1]/95 to-transparent dark:from-[#121212] dark:via-[#121212]/95 pointer-events-none">
+        <div className="sticky top-0 z-30 px-4 md:px-6 pt-4 pb-4 bg-white/90 dark:bg-black/90 backdrop-blur-md pointer-events-none">
           <div className="grid grid-cols-3 items-center">
             
             <div></div>
@@ -206,13 +208,13 @@ const JourneyGridFeedPage = () => {
           </div>
         </div>
 
-        {/* Vùng cuộn chứa Grid ảnh */}
+        {/* Vùng cuộn chứa Grid ảnh (ẩn thanh cuộn) */}
         <div 
-          className="flex-1 overflow-y-auto px-1.5 md:px-2 pt-1 pb-10 custom-scrollbar"
+          className="flex-1 overflow-y-auto px-1.5 md:px-2 pt-1 pb-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           onScroll={handleScroll}
         >
-          {/* Lưới ảnh */}
-          <div className="grid grid-cols-3 gap-1.5 md:gap-2">
+          {/* Lưới ảnh: 3 cột trên Mobile, 5 cột trên Desktop */}
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 md:gap-2">
             {filteredItems.map((item) => {
               if (item.type !== 'POST') return null;
               

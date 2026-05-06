@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom'; 
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   MoreHorizontal, Trash2, Edit2, Flag, 
   MapPin, Share2, Bookmark, BookmarkCheck, Clock,
@@ -20,6 +19,7 @@ import { ActivityModal } from './ActivityModal';
 import { ShareModal } from './ShareModal'; 
 import { LivePhotoViewer } from '@/components/ui/LivePhotoViewer';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 
 interface DetailPostCardProps {
   post: PostProps & { videoUrl?: string }; 
@@ -31,7 +31,26 @@ interface DetailPostCardProps {
 
 const QUICK_REACTIONS = ['❤️', '🔥', '😂', '😮', '🥺'];
 
-export const DetailPostCard = ({ post, isActive, headerTarget, onDelete, onUpdate }: DetailPostCardProps) => {
+// Dùng chung bảng màu tùy theo cảm xúc (Mood)
+const getMoodColorTheme = (emotion?: string) => {
+    switch (emotion?.toUpperCase()) {
+        case 'EXCITED':
+        case 'HAPPY':
+            return { overlay: 'from-amber-500/40 via-orange-500/20 to-transparent', tagBg: 'bg-orange-500/80', tagBorder: 'border-orange-300/50', shadow: 'shadow-orange-500/50' };
+        case 'SAD':
+        case 'HOPELESS':
+            return { overlay: 'from-blue-600/40 via-indigo-800/20 to-transparent', tagBg: 'bg-blue-600/80', tagBorder: 'border-blue-400/50', shadow: 'shadow-blue-500/50' };
+        case 'ANGRY':
+            return { overlay: 'from-red-600/40 via-rose-700/20 to-transparent', tagBg: 'bg-red-600/80', tagBorder: 'border-red-400/50', shadow: 'shadow-red-500/50' };
+        case 'TIRED':
+            return { overlay: 'from-gray-600/40 via-slate-700/20 to-transparent', tagBg: 'bg-gray-600/80', tagBorder: 'border-gray-400/50', shadow: 'shadow-gray-500/50' };
+        case 'NORMAL':
+        default:
+            return { overlay: 'from-black/60 via-black/20 to-transparent', tagBg: 'bg-black/60', tagBorder: 'border-white/20', shadow: 'shadow-black/50' };
+    }
+};
+
+export const DetailPostCard = ({ post, isActive, onDelete, onUpdate }: DetailPostCardProps) => {
   const { theme } = useTheme(); 
 
   const { 
@@ -102,6 +121,7 @@ export const DetailPostCard = ({ post, isActive, headerTarget, onDelete, onUpdat
   const handleReact = async (emoji: string) => {
     try {
       await feedService.toggleReaction(post.id, emoji);
+      toast.success("Đã gửi cảm xúc!");
     } catch (error) {
       console.error("Lỗi thả cảm xúc", error);
     }
@@ -112,17 +132,107 @@ export const DetailPostCard = ({ post, isActive, headerTarget, onDelete, onUpdat
     setShowEmojiPicker(false);
   };
 
+  // Logic Render thẻ hiển thị (Caption, Location, Spotify...) giống Feed
+  const renderDisplayTag = () => {
+    const displayTag = (post as any).displayTag || 'NONE';
+    const spotifyTrackId = (post as any).spotifyTrackId;
+    const captionText = typeof post.caption === 'string' ? post.caption : (post.caption as any)?.caption || '';
+    
+    const moodTheme = getMoodColorTheme(post.emotion);
+
+    if (isEditing) {
+      return (
+        <div className="flex flex-col gap-2 bg-black/60 backdrop-blur-lg rounded-2xl p-3 border border-white/10 w-[300px] pointer-events-auto animate-in zoom-in duration-200">
+          <textarea value={editCaption} onChange={(e) => setEditCaption(e.target.value)} className="w-full bg-transparent p-0 text-sm text-white placeholder:text-white/50 focus:outline-none resize-none min-h-[60px]" placeholder="Viết ghi chú..." autoFocus />
+          <div className="flex justify-end gap-1.5 pt-1">
+            <button onClick={handlers.handleCancelEdit} className="px-3 py-1 text-white/80 text-xs font-medium hover:text-white transition-colors">Hủy</button>
+            <button onClick={handlers.handleSaveEdit} disabled={isSaving} className="px-3 py-1 bg-white text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">Lưu</button>
+          </div>
+        </div>
+      );
+    }
+
+    const baseTagClass = cn(
+        "backdrop-blur-xl px-5 py-3 rounded-[20px] text-white shadow-2xl border flex items-center gap-2 max-w-[85%] pointer-events-auto animate-in zoom-in duration-300",
+        moodTheme.tagBg,
+        moodTheme.tagBorder,
+        moodTheme.shadow
+    );
+
+    switch (displayTag) {
+      case 'CAPTION':
+        if (!captionText) return null;
+        return (
+          <div className={cn(baseTagClass, "text-center")}>
+            <p className="text-[14px] font-medium leading-relaxed whitespace-pre-line line-clamp-3">
+              {captionText}
+            </p>
+          </div>
+        );
+      case 'LOCATION':
+        if (!post.locationName) return null;
+        return (
+          <div className={baseTagClass}>
+            <MapPin className="w-4 h-4 shrink-0 drop-shadow-md" strokeWidth={2.5} />
+            <span className="text-[13px] font-bold tracking-wide truncate max-w-[200px] drop-shadow-md">{post.locationName}</span>
+          </div>
+        );
+      case 'ACTIVITY':
+        if (!post.activityName) return null;
+        return (
+          <div className={baseTagClass}>
+            <Activity className="w-4 h-4 shrink-0 drop-shadow-md" strokeWidth={2.5} />
+            <span className="text-[13px] font-bold tracking-wide truncate max-w-[200px] drop-shadow-md">{post.activityName}</span>
+          </div>
+        );
+      case 'TIME':
+        return (
+          <div className={baseTagClass}>
+            <Clock className="w-4 h-4 shrink-0 drop-shadow-md" strokeWidth={2.5} />
+            <span className="text-[13px] font-bold tracking-widest drop-shadow-md">{post.timestamp}</span>
+          </div>
+        );
+      case 'SPOTIFY':
+        if (!spotifyTrackId) return null;
+        return (
+          <div className="w-[300px] h-[80px] rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-zinc-900 pointer-events-auto animate-in zoom-in duration-300">
+            <iframe
+              src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
+              width="100%"
+              height="80"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-2xl"
+            />
+          </div>
+        );
+      case 'NONE':
+      default:
+        if (captionText) {
+          return (
+            <div className="bg-black/40 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/10 shadow-inner pointer-events-auto animate-in zoom-in duration-300">
+              <p className="text-[14px] text-white font-medium leading-relaxed whitespace-pre-line line-clamp-3">
+                {captionText}
+              </p>
+            </div>
+          );
+        }
+        return null;
+    }
+  };
+
   const HeaderContent = (
-    <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col pointer-events-auto">
-      <div className="flex items-center justify-between px-2 pb-3">
+    <div className="w-full max-w-[400px] md:max-w-[500px] lg:max-w-[600px] mx-auto flex flex-col pointer-events-auto animate-in fade-in duration-300">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar className="w-10 h-10 border border-white/20 shadow-lg">
-            <AvatarImage src={post.user.avatar} />
+            <AvatarImage src={post.user?.avatar || (post as any).userAvatar} />
             <AvatarFallback>U</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <span className="text-[15px] font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none hover:underline cursor-pointer tracking-tight">
-              {post.user.name}
+              {post.user?.name || (post as any).userFullName || "Người dùng"}
             </span>
             <div className="flex items-center gap-1.5 mt-1">
               <span className="text-[12px] font-medium text-white/90 drop-shadow-md">{post.timestamp}</span>
@@ -143,7 +253,7 @@ export const DetailPostCard = ({ post, isActive, headerTarget, onDelete, onUpdat
                   <Share2 className="w-4 h-4 text-zinc-500"/> Chia sẻ
                 </button>
                 <button onClick={handleToggleSave} className="w-full text-left px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors">
-                  {isSaved ? <><BookmarkCheck className="w-4 h-4 text-primary"/> Bỏ lưu bài viết</> : <><Bookmark className="w-4 h-4 text-zinc-500"/> Lưu bài viết</>}
+                  {isSaved ? <><BookmarkCheck className="w-4 h-4 text-primary"/> Bỏ lưu bài</> : <><Bookmark className="w-4 h-4 text-zinc-500"/> Lưu bài viết</>}
                 </button>
                 {isOwner ? (
                   <>
@@ -170,58 +280,40 @@ export const DetailPostCard = ({ post, isActive, headerTarget, onDelete, onUpdat
   return (
     <div className="w-full relative flex flex-col">
 
-      {isActive && headerTarget ? createPortal(HeaderContent, headerTarget) : null}
-
+      {/* ẢNH CHÍNH & OVERLAY */}
       <div className="relative w-full aspect-square z-10">
+        
+        {/* Lớp nền phát sáng khi có ảnh */}
+        {isActive && post.image && (
+          <div 
+            className="absolute inset-0 -z-10 opacity-40 dark:opacity-[0.65] blur-[80px] md:blur-[60px] scale-110 md:scale-100 transition-all duration-700 ease-in-out rounded-[28px]"
+            style={{
+              backgroundImage: `url(${post.image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          />
+        )}
+
         <div className="absolute inset-0 rounded-[32px] overflow-hidden bg-zinc-100 dark:bg-zinc-900 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-zinc-200/50 dark:border-white/10">
-          <LivePhotoViewer imageUrl={post.image} videoUrl={post.videoUrl} className="w-full h-full" />
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+          <LivePhotoViewer imageUrl={post.image} videoUrl={post.videoUrl} className="w-full h-full object-cover" />
+          {/* Gradient trên và dưới để chữ luôn dễ đọc */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none opacity-80" />
         </div>
 
-        <div className="absolute bottom-4 left-4 right-12 z-10 pointer-events-none flex flex-col gap-2 items-start">
-          <div className="flex flex-wrap gap-1.5 pointer-events-auto">
-            {post.locationName && (
-                <div className="flex items-center gap-1 px-2.5 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white shadow-sm">
-                    <MapPin className="w-3 h-3 text-white" />
-                    <span className="text-[11px] font-bold tracking-wide truncate max-w-[120px] drop-shadow-md">{post.locationName}</span>
-                </div>
-            )}
-            
-            {post.activityName && (
-                <div className="flex items-center gap-1 px-2.5 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white shadow-sm">
-                    <span className="text-[11px] font-bold tracking-wide truncate max-w-[200px] drop-shadow-md">{post.activityName}</span>
-                </div>
-            )}
+        {/* HEADER ĐƯỢC ĐƯA LÊN ĐẦU BÀI ĐĂNG (Nằm trong ảnh) */}
+        <div className="absolute top-4 left-0 right-0 z-30 pointer-events-none px-4">
+           {HeaderContent}
+        </div>
 
-            <div className="flex items-center gap-1 px-2.5 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white shadow-sm">
-                <Clock className="w-3 h-3 text-white" />
-                <span className="text-[11px] font-bold tracking-wide drop-shadow-md">{post.timestamp}</span>
-            </div>
-          </div>
-
-          <div className="pointer-events-auto">
-              {isEditing ? (
-                <div className="flex flex-col gap-2 bg-black/60 backdrop-blur-lg rounded-2xl p-3 border border-white/10 w-[300px]">
-                  <textarea value={editCaption} onChange={(e) => setEditCaption(e.target.value)} className="w-full bg-transparent p-0 text-sm text-white placeholder:text-white/50 focus:outline-none resize-none min-h-[60px]" placeholder="Viết ghi chú..." autoFocus />
-                  <div className="flex justify-end gap-1.5 pt-1">
-                    <button onClick={handlers.handleCancelEdit} className="px-3 py-1 text-white/80 text-xs font-medium hover:text-white transition-colors">Hủy</button>
-                    <button onClick={handlers.handleSaveEdit} disabled={isSaving} className="px-3 py-1 bg-white text-black text-xs font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50">Lưu</button>
-                  </div>
-                </div>
-              ) : (
-                post.caption && (
-                  <div className="bg-black/40 backdrop-blur-md rounded-2xl px-4 py-2.5 border border-white/10 shadow-inner">
-                    <p className="text-[14px] text-white font-medium leading-relaxed whitespace-pre-line line-clamp-3">
-                      {typeof post.caption === 'string' ? post.caption : (post.caption as any).caption || ''}
-                    </p>
-                  </div>
-                )
-              )}
-          </div>
+        {/* THẺ TAG HIỂN THỊ (GÓC DƯỚI BÊN TRÁI) */}
+        <div className="absolute bottom-4 left-4 right-12 z-20 pointer-events-none flex flex-col gap-2 items-start">
+           {renderDisplayTag()}
         </div>
       </div>
 
-      {/* CHÂN BÀI ĐĂNG DÀNH RIÊNG CHO MODAL */}
+      {/* CHÂN BÀI ĐĂNG DÀNH RIÊNG CHO MODAL (Thanh chat / Tương tác) */}
       <div className="mt-3.5 px-1 w-full z-10 pointer-events-auto relative">
         {isOwner ? (
           <button 
@@ -251,7 +343,7 @@ export const DetailPostCard = ({ post, isActive, headerTarget, onDelete, onUpdat
                 value={message}
                 onChange={e => setMessage(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                placeholder={`Nhắn cho ${post.user.name.split(' ')[0]}...`}
+                placeholder={`Nhắn cho ${post.user?.name?.split(' ')[0] || "người dùng"}...`}
                 className="bg-transparent text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-white/60 outline-none w-full text-[15px] font-medium"
                 style={{ fontFamily: '"Jua", sans-serif' }}
               />
@@ -282,6 +374,7 @@ export const DetailPostCard = ({ post, isActive, headerTarget, onDelete, onUpdat
         )}
       </div>
 
+      {/* Các Modal Hỗ trợ */}
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} targetId={post.id} targetType={ReportTargetType.CHECKIN} />
       {isActivityModalOpen && <ActivityModal isOpen={isActivityModalOpen} onClose={() => setIsActivityModalOpen(false)} postId={post.id} />}
       {isShareModalOpen && <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} postId={post.id} postImage={post.image} />}

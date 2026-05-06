@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Home, Box, MessageCircle, PlusSquare, User, Settings, ChevronLeft, ChevronRight,
-  Flame, Crown, Plus, BookOpen, Sparkles, Zap, Download
+  Flame, Crown, Plus, BookOpen, Sparkles, Zap, Download, LayoutGrid
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UpgradeModal } from '@/modules/payment/components/UpgradeModal'; 
 import { useAuth } from '@/modules/auth/store/AuthContext';
+import { FriendsModal } from '@/modules/user/components/FriendsModal'; // 1. IMPORT THÊM FRIENDS MODAL
 
 interface Friend {
   id: string;
@@ -40,9 +41,9 @@ const JourneyIcon = ({ name, avatar, imageUrl, isActive, onClick, onMouseEnter, 
          "w-12 h-12 transition-all duration-300 overflow-hidden flex items-center justify-center font-bold text-lg shadow-sm shrink-0", 
          isActive ? "rounded-[16px] bg-indigo-500 text-white" : "rounded-[24px] group-hover:rounded-[16px] bg-[#F4EBE1] dark:bg-[#1A1A1A] text-[#1A1A1A] dark:text-white group-hover:bg-indigo-500 group-hover:text-white"
        )}>
-          {avatar ? <span className="text-[1.6rem] leading-none transition-transform duration-300 drop-shadow-sm group-hover:scale-110">{avatar}</span> 
-          : imageUrl && !imgError ? <img src={imageUrl} alt={name} className="w-full h-full object-cover" onError={() => setImgError(true)} /> 
-          : <BookOpen size={20} strokeWidth={2.5} className={cn(isActive ? "text-white" : "text-[#8A8580] dark:text-[#A09D9A] group-hover:text-white")} />}
+         {avatar ? <span className="text-[1.6rem] leading-none transition-transform duration-300 drop-shadow-sm group-hover:scale-110">{avatar}</span> 
+         : imageUrl && !imgError ? <img src={imageUrl} alt={name} className="w-full h-full object-cover" onError={() => setImgError(true)} /> 
+         : <BookOpen size={20} strokeWidth={2.5} className={cn(isActive ? "text-white" : "text-[#8A8580] dark:text-[#A09D9A] group-hover:text-white")} />}
        </div>
     </div>
   );
@@ -53,6 +54,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   onSettingsClick, myJourneys = [], activeJourneyId, onCreateJourneyClick, onAddFriendClick, friends = []
 }) => {
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false); // 2. THÊM STATE CHO FRIENDS MODAL
   const [tooltip, setTooltip] = useState<{ text: string, top: number, left: number } | null>(null);
   
   const { user, logout } = useAuth();
@@ -140,6 +142,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           
           {/* MENU CÁC TRANG - Đã gắn dataTour cho Chuỗi ngày và Hộp */}
           <DesktopNavItem to="/" icon={Home} label="Bảng tin" isExpanded={isExpanded} />
+          <DesktopNavItem to="/journeys/grid" icon={LayoutGrid} label="Khám phá" isExpanded={isExpanded} /> {/* ĐÃ BỔ SUNG MỤC NÀY */}
           <DesktopNavItem dataTour="streak-flame" to="/streak" icon={Flame} label="Chuỗi ngày" isExpanded={isExpanded} />
           <DesktopNavItem dataTour="nav-box" to="/box" icon={Box} label="Hộp" isExpanded={isExpanded} />
           <DesktopNavItem to="/chat" icon={MessageCircle} label="Tin nhắn" badge={totalUnread} isExpanded={isExpanded} />
@@ -158,7 +161,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               {isExpanded && <span className="text-[0.7rem] font-bold text-zinc-400 uppercase tracking-widest">Bạn bè</span>}
               
               <button 
-                onClick={onAddFriendClick} 
+                onClick={() => {
+                  if (onAddFriendClick) onAddFriendClick();
+                  else setIsFriendsModalOpen(true); // 3. GỌI STATE MỞ MODAL NẾU KHÔNG CÓ PROP
+                }} 
                 onMouseEnter={!isExpanded ? handleMouseEnter('Thêm bạn bè', 'right') : undefined}
                 onMouseLeave={!isExpanded ? () => setTooltip(null) : undefined}
                 className="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-black dark:hover:text-white transition-all rounded-[8px] hover:bg-zinc-100 dark:hover:bg-white/10 shrink-0"
@@ -204,7 +210,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         </div>
       )}
 
+      {/* 4. RENDER CÁC MODAL */}
       {isUpgradeOpen && <UpgradeModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />}
+      {isFriendsModalOpen && <FriendsModal isOpen={isFriendsModalOpen} onClose={() => setIsFriendsModalOpen(false)} />}
     </div>
   );
 };

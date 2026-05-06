@@ -6,6 +6,8 @@ import imageCompression from 'browser-image-compression';
 import { trackEvent } from '@/lib/analytics';
 import { toast } from 'react-hot-toast'; 
 import exifr from 'exifr'; 
+import { http } from '@/lib/http'; 
+import { DisplayTag } from '../types';
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
@@ -40,13 +42,13 @@ export enum UIActivityType {
 }
 
 export const ACTIVITY_PRESETS = [
-  { type: UIActivityType.DEFAULT, label: 'Bỏ chọn', emoji: '✖️' },
+  { type: UIActivityType.DEFAULT, label: 'Bình thường', emoji: '🫧' },
   { type: UIActivityType.LEARNING, label: 'Học bài', emoji: '📚' },
-  { type: UIActivityType.WORKING, label: 'Làm việc', emoji: '💼' },
-  { type: UIActivityType.EXERCISING, label: 'Tập gym', emoji: '💪' },
-  { type: UIActivityType.CHILLING, label: 'Chill', emoji: '🌿' },
+  { type: UIActivityType.WORKING, label: 'Làm việc', emoji: '💻' },
+  { type: UIActivityType.EXERCISING, label: 'Tập gym', emoji: '🏋️' },
+  { type: UIActivityType.CHILLING, label: 'Chill', emoji: '☕' },
   { type: UIActivityType.EATING, label: 'Ăn uống', emoji: '🍜' },
-  { type: UIActivityType.DATING, label: 'Hẹn hò', emoji: '💕' },
+  { type: UIActivityType.DATING, label: 'Hẹn hò', emoji: '💖' },
   { type: UIActivityType.GAMING, label: 'Game', emoji: '🎮' },
   { type: UIActivityType.TRAVELING, label: 'Du lịch', emoji: '✈️' },
 ];
@@ -72,40 +74,47 @@ const fetchLocationName = async (lat: number, lng: number): Promise<string> => {
             if (localArea && city) return `${localArea}, ${city}`;
             if (city) return city;
         }
-        return data.display_name?.split(',').slice(0, 2).join(',') || "Vị trí của bạn";
+        return data.display_name?.split(',').slice(0, 2).join(',') || "Vị trí không xác định";
     } catch (error) {
         return "Đang xác định vị trí...";
     }
 };
 
 export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseCheckinModalProps) => {
+  const [activeTag, setActiveTag] = useState<DisplayTag>('NONE');
+
   const [caption, setCaption] = useState('');
-  const [location, setLocation] = useState('');
   const [selectedActivity, setSelectedActivity] = useState(ACTIVITY_PRESETS[0]); 
   const [customContext, setCustomContext] = useState('');
 
+  // --- [ĐÃ GỘP] CHUNG 1 BIẾN QUẢN LÝ VỊ TRÍ CHO CẢ MAP VÀ TAG ---
+  const [locationSearch, setLocationSearch] = useState('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState(false);
-  
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Tìm nhạc Spotify
+  const [searchMusicQuery, setSearchMusicQuery] = useState("");
+  const [isSearchingMusic, setIsSearchingMusic] = useState(false);
+  const [musicSearchResults, setMusicSearchResults] = useState<any[]>([]);
+  const [selectedTrack, setSelectedTrack] = useState<any | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isVideo, setIsVideo] = useState(false);
-  
   const [videoDuration, setVideoDuration] = useState(0);
   const [startTime, setStartTime] = useState(0);
-  
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [emojiTarget, setEmojiTarget] = useState<'caption' | 'activity'>('caption');
 
   const [activeJourneys, setActiveJourneys] = useState<UserActiveJourneyResponse[]>([]);
-  const [selectedJourneyId, setSelectedJourneyId] = useState<string>(journeyId);
+  const [selectedJourneyId, setSelectedJourneyId] = useState<string>(journeyId); 
   const [isJourneyDropdownOpen, setIsJourneyDropdownOpen] = useState(false);
-  
+
   const journeyDropdownRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const locationContainerRef = useRef<HTMLDivElement>(null);
@@ -120,7 +129,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
       try {
         const journeys = await journeyService.getUserActiveJourneys('me');
         setActiveJourneys(journeys);
-        // [ĐÃ SỬA] Nếu có journeyId truyền vào thì dùng, không thì để trống mặc định (Lưu trữ cá nhân)
         if (!selectedJourneyId && journeyId) setSelectedJourneyId(journeyId);
       } catch (error) {}
     };
@@ -142,18 +150,15 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
           };
       } else {
           const extractExifLocation = async () => {
-              setIsLocating(true);
               try {
                   const gps = await exifr.gps(file);
                   if (gps && gps.latitude && gps.longitude) {
                       setLatitude(gps.latitude);
                       setLongitude(gps.longitude);
                       const locName = await fetchLocationName(gps.latitude, gps.longitude);
-                      setLocation(locName);
-                      toast.success("Đã tìm thấy vị trí gốc của ảnh!");
+                      setLocationSearch(locName);
                   }
               } catch (error) {} 
-              finally { setIsLocating(false); }
           };
           extractExifLocation();
       }
@@ -177,10 +182,11 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
   const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
-      setLocation(val);
+      setLocationSearch(val);
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
       if (!val.trim()) {
-          setLocationSuggestions([]); setLatitude(null); setLongitude(null); return;
+          setLocationSuggestions([]); 
+          return;
       }
       searchTimeoutRef.current = setTimeout(async () => {
           setIsSearchingLocation(true);
@@ -195,7 +201,7 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
   const handleSelectSuggestion = (suggestion: any) => {
       const shortName = suggestion.name || suggestion.display_name.split(',')[0];
-      setLocation(shortName);
+      setLocationSearch(shortName);
       setLatitude(parseFloat(suggestion.lat));
       setLongitude(parseFloat(suggestion.lon));
       setLocationSuggestions([]);
@@ -206,14 +212,33 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
         async (position) => {
-            const lat = position.coords.latitude; const lng = position.coords.longitude;
-            setLatitude(lat); setLongitude(lng);
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            setLatitude(lat);
+            setLongitude(lng);
             const locName = await fetchLocationName(lat, lng);
-            setLocation(locName); toast.success("Đã lấy vị trí hiện tại!"); setIsLocating(false);
+            setLocationSearch(locName);
+            toast.success("Đã lấy được vị trí!");
+            setIsLocating(false);
         },
         () => { setIsLocating(false); toast.error("Không thể lấy vị trí"); },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  const handleSearchMusic = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const query = e.target.value;
+      setSearchMusicQuery(query);
+      if (query.trim().length > 2) {
+          setIsSearchingMusic(true);
+          try {
+              const response = await http.get(`/spotify/search`, { params: { q: query } });
+              setMusicSearchResults(response.data?.data || []);
+          } catch (error) {} 
+          finally { setIsSearchingMusic(false); }
+      } else {
+          setMusicSearchResults([]);
+      }
   };
 
   const handleEmojiSelect = (emojiObj: any) => {
@@ -227,9 +252,6 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
   const handleSubmit = async () => {
     if (!file || !previewUrl) return;
-    
-    // [ĐÃ SỬA] Bỏ check bắt buộc hành trình, cho phép submit với selectedJourneyId rỗng (Archive)
-    
     try {
       setIsSubmitting(true);
       let fileToUpload = file;
@@ -254,24 +276,27 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
 
       const payload: any = {
         file: fileToUpload,
-        caption, locationName: location,
+        caption: activeTag === 'CAPTION' ? caption : '', 
+        locationName: locationSearch, // Luôn gửi locationSearch lên dù tag gì (để phục vụ Map)
         activityType: isCustom ? UIActivityType.CUSTOM : selectedActivity.type,
-        activityName: finalActivityName,
+        activityName: activeTag === 'ACTIVITY' ? finalActivityName : null,
+        
+        displayTag: activeTag, 
+        spotifyTrackId: activeTag === 'SPOTIFY' && selectedTrack ? selectedTrack.id : null, 
+
         statusRequest: 'NORMAL'
       };
 
-      // [ĐÃ SỬA] Chỉ gửi journeyId nếu user có chọn
-      if (selectedJourneyId) {
-          payload.journeyId = selectedJourneyId;
-      }
-
+      if (selectedJourneyId) payload.journeyId = selectedJourneyId;
+      
       if (isVideo) {
           payload.videoStartTime = startTime;
           payload.videoDuration = 3; 
       }
 
       if (latitude !== null && longitude !== null) {
-          payload.latitude = latitude; payload.longitude = longitude;
+          payload.latitude = latitude; 
+          payload.longitude = longitude;
       }
 
       await checkinService.createCheckin(payload);
@@ -286,15 +311,22 @@ export const useCheckinModal = ({ file, journeyId, onSuccess, onClose }: UseChec
   };
 
   return {
-    caption, setCaption, location, setLocation, selectedActivity, setSelectedActivity,
+    activeTag, setActiveTag, 
+    caption, setCaption, selectedActivity, setSelectedActivity,
     customContext, setCustomContext, previewUrl, isSubmitting,
     showEmojiPicker, setShowEmojiPicker, pickerRef, emojiTarget, setEmojiTarget, handleEmojiSelect,
     handleSubmit, crop, setCrop, zoom, setZoom, aspect, setAspect, onCropComplete,
     activeJourneys, selectedJourneyId, setSelectedJourneyId, 
     isJourneyDropdownOpen, setIsJourneyDropdownOpen, journeyDropdownRef,
-    latitude, isLocating, handleAutoLocate, locationSearch: location, 
+    
+    // Đã gộp Location
+    latitude, isLocating, handleAutoLocate, locationSearch, setLocationSearch,
     handleLocationInputChange, locationSuggestions, isSearchingLocation, handleSelectSuggestion, locationContainerRef,
-    isVideo,
-    videoDuration, startTime, setStartTime 
+    
+    // Tìm kiếm nhạc
+    searchMusicQuery, setSearchMusicQuery, isSearchingMusic, musicSearchResults, setMusicSearchResults,
+    selectedTrack, setSelectedTrack, handleSearchMusic,
+
+    isVideo, videoDuration, startTime, setStartTime 
   };
 };

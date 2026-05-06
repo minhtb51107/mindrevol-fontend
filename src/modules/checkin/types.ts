@@ -23,47 +23,54 @@ export enum ActivityType {
 
 export type Emotion = string;
 
+// --- [MỚI] THẺ HIỂN THỊ TRÊN GIAO DIỆN ---
+export type DisplayTag = 'CAPTION' | 'ACTIVITY' | 'SPOTIFY' | 'TIME' | 'LOCATION' | 'NONE';
+
 export interface Checkin {
   id: string;
   userId: string; 
   userFullName: string;
   userAvatar: string;
-  // [ĐÃ SỬA] Thay đổi journeyId thành Optional vì bài lưu trữ không có hành trình
   journeyId?: string;
-  
   imageUrl: string;
   thumbnailUrl: string;
   videoUrl?: string; 
   caption: string;
-  
   activityType: ActivityType;
   activityName?: string;
   locationName?: string;
   emotion?: string;
   tags?: string[];
+  
+  // --- [MỚI] THẺ HIỂN THỊ VÀ SPOTIFY ---
+  displayTag?: DisplayTag;
+  spotifyTrackId?: string;
 
   status: CheckinStatus;
   createdAt: string;
   checkinDate: string;
-  
   reactionCount: number;
   commentCount: number;
   latestReactions?: any[]; 
 }
 
 export interface CreateCheckinRequest {
-  // [ĐÃ SỬA] Thay đổi journeyId thành Optional khi client gửi dữ liệu lên
   journeyId?: string;
   file: File;
   caption?: string;
-  
-  emotion?: string;       
+  emotion?: string;         
   activityType?: ActivityType;
-  activityName?: string;  
+  activityName?: string;    
   locationName?: string;
   tags?: string[];
   
-  statusRequest?: 'NORMAL' | 'REST'; 
+  // --- [MỚI] THẺ HIỂN THỊ, SPOTIFY VÀ MAP ---
+  displayTag?: DisplayTag;
+  spotifyTrackId?: string;
+  latitude?: number;
+  longitude?: number;
+
+  statusRequest?: 'NORMAL' | 'REST';   
   visibility?: 'PUBLIC' | 'PRIVATE' | 'FRIENDS';
 }
 
@@ -74,5 +81,5 @@ export interface MapMarkerResponse {
   thumbnailUrl: string;
   userAvatar: string;
   fullname: string;
-  createdAt?: string; // THÊM DÒNG NÀY ĐỂ FIX LỖI TYPESCRIPT
+  createdAt?: string;
 }

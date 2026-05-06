@@ -6,7 +6,7 @@ import { StickerPicker } from './StickerPicker';
 import { useChatInput } from '../hooks/useChatInput';
 
 interface ChatInputProps {
-  onSend: (content: string, type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE', file?: File) => void;
+  onSend: (content: string, type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE', file?: File | Blob) => void;
   onEdit?: (messageId: string, content: string) => void; 
 }
 
@@ -22,7 +22,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onEdit }) => {
   } = useChatInput(onSend, onEdit);
 
   return (
-    // Đã xóa absolute, chuyển sang flex block bám đáy tự nhiên của container
     <div className="w-full px-4 pb-4 pt-2 shrink-0 flex flex-col z-20">
       
       {replyingTo && !editingMessage && (
@@ -56,7 +55,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onEdit }) => {
 
         {!recorder.isRecording && (
           <div className="relative shrink-0 flex gap-1" ref={emojiPickerRef}>
-              
               {showEmojiPicker && (
                   <div className="absolute bottom-14 left-0 z-50 shadow-2xl rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
                       <EmojiPicker theme={theme === 'dark' ? Theme.DARK : Theme.LIGHT} onEmojiClick={(e) => setText(p => p + e.emoji)} width={300} height={400} />
@@ -103,14 +101,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, onEdit }) => {
             </div>
         )}
 
-        {(!text.trim() && !selectedFile && !recorder.isRecording) ? (
+        {/* --- ĐÃ SỬA LỖI Ở ĐÂY --- */}
+        {(!text.trim() && !selectedFile) ? (
             <button
               type="button" 
               onMouseDown={recorder.startRecording} 
               onMouseUp={handleStopRecording} 
+              onMouseLeave={handleStopRecording} // Đề phòng user kéo chuột ra ngoài nút rồi mới thả
               onTouchStart={recorder.startRecording} 
               onTouchEnd={handleStopRecording} 
-              className="w-10 h-10 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 flex items-center justify-center active:scale-95 transition-all"
+              className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center active:scale-95 transition-all ${
+                recorder.isRecording 
+                  ? "bg-red-500 text-white animate-pulse shadow-md" 
+                  : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+              }`}
             >
               <Mic className="w-[18px] h-[18px]" />
             </button>

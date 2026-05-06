@@ -71,8 +71,15 @@ export const LandingHeader = () => {
           
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 dark:bg-indigo-500 rounded-xl flex items-center justify-center font-black text-xl text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-colors">
-              M
+            <div className="w-11 h-11 shrink-0 drop-shadow-sm transition-transform hover:scale-105 bg-white dark:bg-zinc-800 rounded-[14px] p-1 flex items-center justify-center border border-slate-200 dark:border-white/10">
+              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                <path d="M10 50C10 27.9086 27.9086 10 50 10C72.0914 10 90 27.9086 90 50C90 72.0914 72.0914 90 50 90C35 90 25 90 10 90C10 75 10 72.0914 10 50Z" fill="#FFF2F2" stroke="#2B2A29" strokeWidth="4" strokeLinejoin="round"/>
+                <circle cx="35" cy="45" r="5" fill="#2B2A29"/>
+                <circle cx="65" cy="45" r="5" fill="#2B2A29"/>
+                <ellipse cx="25" cy="55" rx="4" ry="3" fill="#FFB7C5" opacity="0.6"/>
+                <ellipse cx="75" cy="55" rx="4" ry="3" fill="#FFB7C5" opacity="0.6"/>
+                <path d="M45 55C45 55 48 58 50 58C52 58 55 55 55 55" stroke="#2B2A29" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             <span className="font-extrabold text-2xl tracking-tight text-slate-900 dark:text-white hidden sm:block transition-colors">MindRevol</span>
           </div>

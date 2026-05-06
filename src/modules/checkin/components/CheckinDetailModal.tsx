@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom'; // BỔ SUNG ĐỂ FIX LỖI NẰM DƯỚI SIDEBAR
 import { X, Package, FolderInput, Loader2 } from 'lucide-react';
 import { Checkin } from '../types';
 import { DetailPostCard } from '@/modules/feed/components/DetailPostCard';
@@ -17,16 +18,29 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
       handleOpenMoveMenu, handleMoveToJourney, postData
   } = useCheckinDetail({ checkin, onClose });
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-6 font-quicksand animate-in fade-in duration-200">
-      
-      <button onClick={onClose} className="absolute top-6 right-6 z-[10000] p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/70 hover:text-white hover:scale-110 active:scale-95 transition-all backdrop-blur-md">
-        <X className="w-6 h-6" strokeWidth={2.5} />
-      </button>
+  // Đảm bảo bảo toàn các thẻ nhãn nếu Hook useCheckinDetail lỡ xoá mất
+  const enrichedPostData = { ...checkin, ...postData };
 
-      <div className="absolute inset-0 z-0" onClick={onClose} />
+  // Dùng createPortal để Modal luôn nằm đè lên mọi element trên web
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 md:p-6 font-quicksand animate-in fade-in duration-300">
+      
+      {/* Lớp nền nhấp để đóng */}
+      <div className="absolute inset-0 z-0 cursor-pointer" onClick={onClose} />
+
+      {/* Vùng Header Portal - DetailPostCard sẽ inject HeaderContent vào đây */}
+      <div className="w-full max-w-[500px] flex justify-between items-center mb-4 z-20 pointer-events-auto">
+         {/* Container cho Header Portal */}
+         <div ref={setHeaderTarget} className="flex-1 min-w-0" />
+         
+         {/* Nút Đóng Modal Tùy Chỉnh (Nằm cùng hàng với Header) */}
+         <button onClick={onClose} className="ml-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white/70 hover:text-white transition-all backdrop-blur-md shrink-0 active:scale-95">
+           <X className="w-5 h-5" strokeWidth={2.5} />
+         </button>
+      </div>
 
       <div className="w-full max-w-[500px] flex flex-col items-center justify-center relative z-10 pointer-events-none">
+          {/* Nút chuyển vào hành trình (nếu checkin chưa có hành trình) */}
           {!checkin.journeyId && (
               <div className="relative w-full mb-4 pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-300 z-[100]">
                   <button onClick={handleOpenMoveMenu} className="w-full py-3.5 px-5 bg-white/10 backdrop-blur-xl text-white hover:bg-white/20 font-bold rounded-[24px] transition-all flex items-center justify-center gap-2 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.2)] active:scale-[0.98]">
@@ -60,12 +74,13 @@ export const CheckinDetailModal: React.FC<Props> = ({ checkin, onClose }) => {
           )}
 
           <div className="w-full pointer-events-auto relative z-10 filter drop-shadow-2xl">
-             <div ref={setHeaderTarget} className="w-full absolute -top-[70px] left-0 z-20 pointer-events-none"></div>
-             <div className="w-full relative">
-                 <DetailPostCard post={postData} isActive={true} headerTarget={headerTarget} />
-             </div>
+              <div className="w-full relative">
+                  {/* Truyền enrichedPostData vào DetailPostCard để đảm bảo thẻ nhãn được nhận diện */}
+                  <DetailPostCard post={enrichedPostData as any} isActive={true} headerTarget={headerTarget} />
+              </div>
           </div>
       </div>
-    </div>
+    </div>,
+    document.body // Dịch chuyển Node này ra tận cùng HTML
   );
 };

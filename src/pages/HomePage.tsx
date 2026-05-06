@@ -15,7 +15,6 @@ const HomePage = () => {
   const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
-
   const { userProfile } = useProfileData("me", false);
   const { archivedCheckins } = useProfileContent("me", true, "ARCHIVED");
 
@@ -47,7 +46,7 @@ const HomePage = () => {
     const journeyIdFromUrl = searchParams.get('journeyId');
     if (journeyIdFromUrl) setSelectedJourneyId(journeyIdFromUrl);
     else setSelectedJourneyId(null);
-    
+         
     const handleJourneySelected = (e: any) => {
       const id = e.detail;
       setSelectedJourneyId(id);
@@ -66,7 +65,7 @@ const HomePage = () => {
   return (
     <MainLayout>
       <div className="flex flex-col flex-1 w-full h-full bg-zinc-50 dark:bg-[#121212] relative transition-colors duration-300">
-          
+        
         {/* MOBILE */}
         <div className="flex md:hidden flex-col w-full h-full">
             {!selectedJourneyId ? (
@@ -76,7 +75,13 @@ const HomePage = () => {
                     </div>
                     
                     <div className="w-full mb-6">
-                        <MobileActiveJourneyList />
+                        <MobileActiveJourneyList 
+                            selectedId={selectedJourneyId}
+                            onJourneySelect={(id) => {
+                                // Cập nhật URL param để chuyển màn hình sang Feed
+                                setSearchParams({ journeyId: id });
+                            }}
+                        />
                     </div>
                     
                     <div className="w-full px-6 mb-8">
@@ -85,18 +90,18 @@ const HomePage = () => {
                         </h2>
                         
                         <div className="grid grid-cols-2 gap-4">
-                            {/* Chuỗi (Streak) - Đã gắn data-tour */}
+                            {/* Chuỗi (Streak) */}
                             <button 
                                  data-tour="streak-flame"
                                  onClick={() => navigate('/streak')}
                                 className="relative overflow-hidden flex flex-col items-start p-5 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md rounded-[32px] border border-white/50 dark:border-zinc-800 active:scale-95 transition-all text-left shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] group"
                             >
                                 <img 
-                                     src="/moscow/moscow (14).png" 
-                                     alt="Streak Decoration" 
-                                     className="absolute bottom-0 right-0 w-28 h-28 object-contain opacity-70 pointer-events-none rounded-br-[32px] translate-x-4 translate-y-4 group-hover:scale-110 transition-transform duration-500" 
-                                 />
-                                
+                                      src="/moscow/moscow (14).png" 
+                                      alt="Streak Decoration" 
+                                      className="absolute bottom-0 right-0 w-28 h-28 object-contain opacity-70 pointer-events-none rounded-br-[32px] translate-x-4 translate-y-4 group-hover:scale-110 transition-transform duration-500" 
+                                  />
+                                 
                                 <div className="z-10 relative flex flex-col items-start h-full w-full">
                                     <div className="w-10 h-10 rounded-[14px] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-900 dark:text-white mb-3 shadow-sm border border-zinc-200/50 dark:border-transparent">
                                         <Flame size={22} strokeWidth={2.5} />
@@ -111,17 +116,17 @@ const HomePage = () => {
                                 </div>
                             </button>
 
-                            {/* Lưu trữ - Đã gắn data-tour */}
+                            {/* Lưu trữ */}
                             <button 
                                  data-tour="archive"
                                  onClick={() => setIsArchiveModalOpen(true)}
                                 className="relative overflow-hidden flex flex-col items-start p-5 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md rounded-[32px] border border-white/50 dark:border-zinc-800 active:scale-95 transition-all text-left shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] group"
                             >
                                 <img 
-                                     src="/moscow/moscow (12).png" 
-                                     alt="Archive Decoration" 
-                                     className="absolute bottom-0 right-0 w-28 h-28 object-contain opacity-70 pointer-events-none rounded-br-[32px] translate-x-4 translate-y-4 group-hover:scale-110 transition-transform duration-500" 
-                                 />
+                                      src="/moscow/moscow (12).png" 
+                                      alt="Archive Decoration" 
+                                      className="absolute bottom-0 right-0 w-28 h-28 object-contain opacity-70 pointer-events-none rounded-br-[32px] translate-x-4 translate-y-4 group-hover:scale-110 transition-transform duration-500" 
+                                  />
                                 <div className="z-10 relative flex flex-col items-start h-full w-full">
                                     <div className="w-10 h-10 rounded-[14px] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-900 dark:text-white mb-3 shadow-sm border border-zinc-200/50 dark:border-transparent">
                                         <Archive size={20} strokeWidth={2.5} />
@@ -159,13 +164,12 @@ const HomePage = () => {
             <HomeFeed selectedJourneyId={selectedJourneyId} />
           </div>
         </div>
-
       </div>
 
       <ArchivedCheckinsModal 
-        isOpen={isArchiveModalOpen} 
-        onClose={() => setIsArchiveModalOpen(false)} 
-        checkins={archivedCheckins}
+         isOpen={isArchiveModalOpen} 
+         onClose={() => setIsArchiveModalOpen(false)} 
+         checkins={archivedCheckins}
       />
     </MainLayout>
   );

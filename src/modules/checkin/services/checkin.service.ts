@@ -1,9 +1,9 @@
 import { http } from '@/lib/http';
-import { Checkin, CreateCheckinRequest } from '@/modules/feed/types'; 
+import { Checkin, CreateCheckinRequest } from '../types'; 
 
 class CheckinService {
-  private readonly BASE_URL = '/checkins'; 
-  private readonly SAVED_BASE_URL = '/saved-checkins'; 
+  private readonly BASE_URL = '/checkins';
+  private readonly SAVED_BASE_URL = '/saved-checkins';
 
   async getJourneyFeed(journeyId: string, page = 0, limit = 20): Promise<Checkin[]> {
     const res = await http.get<{ data: any }>(`${this.BASE_URL}/journey/${journeyId}`, { params: { page, limit } });
@@ -24,10 +24,15 @@ class CheckinService {
     if (req.activityType) formData.append('activityType', req.activityType);
     if (req.activityName) formData.append('activityName', req.activityName);
     if (req.locationName) formData.append('locationName', req.locationName);
+    
+    // --- [ĐÃ SỬA] THÊM 2 TRƯỜNG NÀY ĐỂ GỬI DATA XUỐNG BACKEND ---
+    if (req.displayTag) formData.append('displayTag', req.displayTag);
+    if (req.spotifyTrackId) formData.append('spotifyTrackId', req.spotifyTrackId);
+
     if (req.latitude !== undefined && req.latitude !== null) formData.append('latitude', req.latitude.toString());
     if (req.longitude !== undefined && req.longitude !== null) formData.append('longitude', req.longitude.toString());
     if (req.tags && req.tags.length > 0) req.tags.forEach(tag => formData.append('tags', tag));
-
+    
     const res = await http.post<{ data: Checkin }>(this.BASE_URL, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -49,8 +54,8 @@ class CheckinService {
 
   async toggleSave(checkinId: string): Promise<boolean> {
       const res = await http.post<{ data: boolean }>(`${this.SAVED_BASE_URL}/toggle/${checkinId}`);
-      return res.data.data; 
-  }
+      return res.data.data;
+  } 
 
   async getSavedCheckins(page = 0, size = 20): Promise<Checkin[]> {
       const res = await http.get<{ data: { content: Checkin[] } }>(`${this.SAVED_BASE_URL}/me`, { params: { page, size } });
@@ -67,7 +72,6 @@ class CheckinService {
       return res.data.data || [];
   }
 
-  // --- [THÊM MỚI] GỌI API LẤY ẢNH TỪ NHIỀU HÀNH TRÌNH CÙNG LÚC ---
   async getMultipleJourneysPhotos(journeyIds: string[]): Promise<Checkin[]> {
       const res = await http.post<{ data: Checkin[] }>(`${this.BASE_URL}/journeys/photos/batch`, journeyIds);
       return res.data.data || [];

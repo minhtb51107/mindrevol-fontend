@@ -1,4 +1,4 @@
-//src/modules/chat/hooks/useChat.ts
+// File: src/modules/chat/hooks/useChat.ts
 import { useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../store/useChatStore';
 import { chatService } from '../services/chat.service';
@@ -19,20 +19,19 @@ export const useChat = (conversationId: any, partnerId: any) => {
   const { 
     messages: messagesMap, 
     addMessage,
-    updateMessage, // THÊM HÀM NÀY ĐỂ EDIT
-    setCursorData, // [ĐÃ ĐỔI TỪ setMessages SANG setCursorData]
+    updateMessage, 
+    setCursorData, 
     updateMessageStatus,
     replyingTo,        
     setReplyingTo,
-    hasMoreMessages,   // [THÊM MỚI TỪ STORE]
-    cursors            // [THÊM MỚI TỪ STORE]
+    hasMoreMessages,   
+    cursors            
   } = useChatStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Lấy danh sách messages của phòng hiện tại
   const messages = (messagesMap && Array.isArray(messagesMap[conversationId])) 
     ? messagesMap[conversationId] 
     : [];
@@ -42,12 +41,10 @@ export const useChat = (conversationId: any, partnerId: any) => {
 
   useChatSocket(conversationId); 
 
-  // Lấy dữ liệu lần đầu tiên khi vào phòng
   useEffect(() => {
     const fetchMessages = async () => {
       if (!conversationId) return;
       
-      // Nếu là ID tạm (chưa có phòng thật trên DB) -> Reset rỗng
       if (conversationId.startsWith('friend_') || conversationId.startsWith('new_')) {
           setCursorData(conversationId, { data: [], nextCursor: null, hasNext: false });
           return;
@@ -57,7 +54,6 @@ export const useChat = (conversationId: any, partnerId: any) => {
       setError(null);
       
       try {
-        // [SỬA LOGIC] Chuyển page, size thành cursor, limit
         const pageData = await chatService.getMessages(conversationId, null, 50); 
         setCursorData(conversationId, pageData);
       } catch (err) {
@@ -69,7 +65,6 @@ export const useChat = (conversationId: any, partnerId: any) => {
     fetchMessages();
   }, [conversationId, setCursorData]);
 
-  // Hàm tải thêm tin nhắn cũ bằng Cursor
   const loadMoreMessages = useCallback(async () => {
       if (isLoadingMore || !hasMore || !conversationId || conversationId.startsWith('friend_') || conversationId.startsWith('new_')) return;
       
@@ -84,22 +79,29 @@ export const useChat = (conversationId: any, partnerId: any) => {
       }
   }, [conversationId, currentCursor, hasMore, isLoadingMore, setCursorData]);
 
-  // Gửi tin nhắn mới
-  const sendMessage = useCallback(async (content: string, type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE' = 'TEXT', file?: File) => {
+  const sendMessage = useCallback(async (content: string, type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'FILE' = 'TEXT', file?: File | Blob) => {
     if (!content.trim() && type === 'TEXT') return;
     if (!currentUserId || (!partnerId && !conversationId)) return;
 
     let finalContent = content;
 
-    // UPLOAD FILE GHI ÂM/HÌNH ẢNH LÊN BACKEND TRƯỚC KHI GỬI SOCKET
     if (file && (type === 'VOICE' || type === 'IMAGE' || type === 'FILE')) {
         try {
             const formData = new FormData();
-            formData.append('file', file);
+            
+            const isUnnamedBlob = !(file instanceof File) || !file.name || file.name === 'blob';
+            if (type === 'VOICE' && isUnnamedBlob) {
+                formData.append('file', file, 'voice-message.webm');
+            } else {
+                formData.append('file', file);
+            }
+
+            // ĐÃ THÊM LẠI HEADER: Ép client gửi dưới dạng multipart để SpringBoot đọc được file
             const uploadRes = await http.post('/files/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            finalContent = uploadRes.data.data; // Lấy link URL thật
+            
+            finalContent = uploadRes.data.data; 
         } catch (error) {
             toast.error("Không thể tải lên file đính kèm");
             return; 
@@ -138,27 +140,30 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   }, [conversationId, partnerId, currentUserId, addMessage, updateMessageStatus, replyingTo, setReplyingTo]);
 
-  // [THÊM MỚI] Hàm sửa tin nhắn
   const editMessage = useCallback(async (messageId: string, newContent: string) => {
       if (!newContent.trim()) return;
 
-      // Tìm tin nhắn hiện tại để lưu tạm đề phòng bị lỗi (Rollback)
       const currentMsg = messages.find(m => m.id === messageId);
       if (!currentMsg) return;
 
-      // Optimistic Update UI
       updateMessage({ ...currentMsg, content: newContent, metadata: { ...currentMsg.metadata, isEdited: true } });
 
       try {
           await chatService.editMessage(messageId, newContent);
-          // Socket sẽ bắn về update toàn diện nên không cần làm gì thêm
       } catch (error) {
           toast.error("Chỉnh sửa thất bại");
-          updateMessage(currentMsg); // Rollback
+          updateMessage(currentMsg); 
       }
   }, [messages, updateMessage]);
 
-  // Logic Chặn
+  const deleteMessage = useCallback(async (messageId: string) => {
+      try {
+          await chatService.deleteMessage(messageId);
+      } catch (err) {
+          toast.error("Không thể thu hồi tin nhắn");
+      }
+  }, []);
+
   const blockUser = async () => { 
     if (!partnerId) return;
     try {
@@ -171,7 +176,6 @@ export const useChat = (conversationId: any, partnerId: any) => {
     }
   };
 
-  // Logic Hủy kết bạn
   const unfriendUser = async () => { 
     if (!partnerId) return;
     try {
@@ -190,7 +194,8 @@ export const useChat = (conversationId: any, partnerId: any) => {
     error,
     currentUserId,
     sendMessage,
-    editMessage, // [TRẢ VỀ HÀM EDIT]
+    editMessage, 
+    deleteMessage,
     blockUser,   
     unfriendUser,
     loadMoreMessages, 

@@ -1,80 +1,112 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ZegoExpressEngine } from 'zego-express-engine-webrtc';
-import { http, DOMAIN } from '@/lib/http'; // Nhớ import DOMAIN từ http.ts
+import { http } from '@/lib/http';
 import toast from 'react-hot-toast';
-
-export type CallStatus = 'INITIALIZING' | 'FETCHING_TOKEN' | 'CONNECTING_SERVER' | 'REQUESTING_MEDIA' | 'WAITING_REMOTE' | 'CONNECTED' | 'ERROR';
 
 export const useCustomWebRTC = (roomId: string, user: any, isVideoCall: boolean) => {
     const zgRef = useRef<ZegoExpressEngine | null>(null);
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+    const [remoteStreams, setRemoteStreams] = useState<{ id: string, stream: MediaStream }[]>([]);
     const [isMicMuted, setIsMicMuted] = useState(false);
     const [isCamMuted, setIsCamMuted] = useState(!isVideoCall);
-    const [callStatus, setCallStatus] = useState<CallStatus>('INITIALIZING');
+    const [callStatus, setCallStatus] = useState<string>("Đang kết nối...");
 
     const APP_ID = 2099025482; 
-    const streamIdRef = useRef(`stream_${user?.id}_${Date.now()}`);
+    const userId = String(user?.id);
+    const userName = String(user?.fullname || "User");
+    const streamIdRef = useRef(`stream_${userId}_${Date.now()}`);
 
     useEffect(() => {
         let isMounted = true; 
+        if (!roomId || !userId || userId === 'undefined') return;
+
+        const SERVER_URL = 'wss://webliveroom2099025482-api.coolzcloud.com/ws';
+        const zg = new ZegoExpressEngine(APP_ID, SERVER_URL);
         
-        if (!roomId || !user || !user.id) return;
-
-        // BẮT SỰ KIỆN REFRESH / ĐÓNG TAB ĐỂ BÁO VỀ BACKEND
-        const handleUnload = () => {
-            const token = localStorage.getItem('accessToken');
-            if (token) {
-                fetch(`${DOMAIN}/api/v1/calls/signaling/end/${roomId}`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    keepalive: true // Cờ quan trọng giúp request chạy ngầm khi tab đóng
-                }).catch(() => {});
-            }
-            if (zgRef.current) zgRef.current.logoutRoom(roomId);
-        };
-        window.addEventListener('beforeunload', handleUnload);
-
-        const zg = new ZegoExpressEngine(APP_ID, `wss://webliveroom2099025482-api.coolzcloud.com/ws`);
         zgRef.current = zg;
 
         const initZego = async () => {
             try {
-                setCallStatus('FETCHING_TOKEN');
+                // 1. LẤY TOKEN
                 const res = await http.get(`/calls/token/${roomId}`);
-                const payload = res.data;
-                const token = payload?.data?.token || payload?.data || payload?.token || (typeof payload === 'string' ? payload : "");
+                let token = "";
+                if (typeof res.data === 'string') {
+                    token = res.data;
+                } else if (typeof res.data?.message === 'string' && res.data.message.startsWith('04')) {
+                    token = res.data.message; 
+                } else if (typeof res.data?.data === 'string') {
+                    token = res.data.data;
+                }
                 
-                if (!token) throw new Error("Không lấy được Token");
+                if (!token) {
+                    if (isMounted) setCallStatus("❌ Không lấy được Token từ Backend!");
+                    return;
+                }
 
-                if (!isMounted) return;
+                // 🔥 LẮNG NGHE TRẠNG THÁI PHÒNG (QUAN TRỌNG NHẤT ĐỂ TÌM LỖI)
+                zg.on('roomStateUpdate', (roomID, state, errorCode, extendedData) => {
+                    console.log("📍 [Zego] Trạng thái phòng:", state, "Mã lỗi:", errorCode);
+                    if (!isMounted) return;
+                    
+                    if (state === 'DISCONNECTED') {
+                        setCallStatus(`❌ Bị ngắt kết nối! (Mã lỗi: ${errorCode})`);
+                    } else if (state === 'CONNECTING') {
+                        setCallStatus("⏳ Đang cố gắng kết nối lại...");
+                    } else if (state === 'CONNECTED') {
+                        setCallStatus(""); // Kết nối thành công, xóa status
+                    }
+                });
 
+                // 🔥 LẮNG NGHE TRẠNG THÁI ĐẨY STREAM CỦA MÌNH LÊN
+                zg.on('publisherStateUpdate', (result) => {
+                    console.log("📍 [Zego] Trạng thái đẩy Stream:", result);
+                    if (result.state === 'NO_PUBLISH' && isMounted) {
+                        setCallStatus(`❌ Lỗi đẩy Video lên mạng! (Mã: ${result.errorCode})`);
+                    }
+                });
+
+                // 🔥 LẮNG NGHE NGƯỜI VÀO RA PHÒNG
                 zg.on('roomStreamUpdate', async (roomID, updateType, streamList) => {
+                    console.log("📍 [Zego] Có biến động stream:", updateType, streamList);
                     if (updateType === 'ADD' && streamList.length > 0) {
-                        const remoteId = streamList[0].streamID;
-                        const stream = await zg.startPlayingStream(remoteId);
-                        if (isMounted) {
-                            setRemoteStream(stream);
-                            setCallStatus('CONNECTED');
+                        for (const streamInfo of streamList) {
+                            try {
+                                const stream = await zg.startPlayingStream(streamInfo.streamID);
+                                if (isMounted) {
+                                    setRemoteStreams(prev => {
+                                        if (prev.find(s => s.id === streamInfo.streamID)) return prev;
+                                        return [...prev, { id: streamInfo.streamID, stream }];
+                                    });
+                                }
+                            } catch (e: any) {
+                                console.error("Lỗi kéo video người khác:", e);
+                                if (isMounted) setCallStatus(`❌ Kéo video thất bại: ${e.code || e.message}`);
+                            }
                         }
                     } else if (updateType === 'DELETE') {
-                        if (isMounted) {
-                            setRemoteStream(null);
-                            setCallStatus('WAITING_REMOTE');
+                        for (const streamInfo of streamList) {
+                            zg.stopPlayingStream(streamInfo.streamID);
+                            if (isMounted) {
+                                setRemoteStreams(prev => prev.filter(s => s.id !== streamInfo.streamID));
+                            }
                         }
                     }
                 });
 
-                setCallStatus('CONNECTING_SERVER');
-                await zg.loginRoom(roomId, token, { userID: String(user.id), userName: user.fullname }, { userUpdate: true });
-
-                if (!isMounted) {
+                // 2. ĐĂNG NHẬP VÀO PHÒNG
+                const loginResult = await zg.loginRoom(roomId, token, { userID: userId, userName: userName }, { userUpdate: true });
+                console.log("📍 [Zego] Kết quả Login Room:", loginResult);
+                
+                if (!loginResult || !isMounted) {
                     zg.logoutRoom(roomId);
+                    if (isMounted) setCallStatus("❌ Đăng nhập phòng Zego thất bại!");
                     return;
                 }
 
-                setCallStatus('REQUESTING_MEDIA');
-                const local = await zg.createStream({ camera: { video: !isCamMuted, audio: !isMicMuted } });
+                // 3. KHỞI TẠO CAMERA & MIC
+                const local = await zg.createStream({
+                    camera: { video: !isCamMuted, audio: !isMicMuted }
+                });
                 
                 if (!isMounted) {
                     zg.destroyStream(local);
@@ -83,13 +115,16 @@ export const useCustomWebRTC = (roomId: string, user: any, isVideoCall: boolean)
                 
                 setLocalStream(local);
                 zg.startPublishingStream(streamIdRef.current, local);
-                setCallStatus('WAITING_REMOTE'); 
+
+                if (isMounted && remoteStreams.length === 0) setCallStatus("Đang chờ đối phương...");
                 
             } catch (error: any) {
-                console.error("Zego WebRTC Init Error:", error);
-                setCallStatus('ERROR');
-                if (error.code === 1103010 || error.message?.includes('Permission denied')) {
-                    toast.error("Vui lòng cấp quyền Micro/Camera!");
+                console.error("🔥 Lỗi WebRTC bắt được:", error);
+                if (isMounted) {
+                    if (error?.name === 'NotAllowedError') setCallStatus("❌ Bị chặn Camera/Mic!");
+                    else if (error?.name === 'NotFoundError') setCallStatus("❌ Không tìm thấy thiết bị thu!");
+                    // 👉 IN RÕ MÃ LỖI VÀ TEXT LÊN MÀN HÌNH:
+                    else setCallStatus(`❌ Lỗi Zego: Mã ${error?.code || ''} - ${error?.message || 'Không xác định'}`);
                 }
             }
         };
@@ -98,16 +133,14 @@ export const useCustomWebRTC = (roomId: string, user: any, isVideoCall: boolean)
 
         return () => {
             isMounted = false;
-            window.removeEventListener('beforeunload', handleUnload);
             if (zgRef.current) {
-                zgRef.current.stopPublishingStream(streamIdRef.current);
                 if (localStream) zgRef.current.destroyStream(localStream);
+                zgRef.current.stopPublishingStream(streamIdRef.current);
                 zgRef.current.logoutRoom(roomId);
             }
         };
-    }, [roomId, user]);
+    }, [roomId, userId, userName]); 
 
-    // ... (Phần toggleMic, toggleCam, hangUp giữ nguyên như cũ) ...
     const toggleMic = useCallback(() => {
         if (!zgRef.current || !localStream) return;
         const state = !isMicMuted;
@@ -118,19 +151,17 @@ export const useCustomWebRTC = (roomId: string, user: any, isVideoCall: boolean)
     const toggleCam = useCallback(() => {
         if (!zgRef.current || !localStream) return;
         const state = !isCamMuted;
-        zgRef.current.mutePublishStreamVideo(localStream, state);
+        zgRef.current.mutePublishStreamVideo(localStream, state); 
         setIsCamMuted(state);
     }, [isCamMuted, localStream]);
 
     const hangUp = useCallback(async () => {
         try { await http.post(`/calls/signaling/end/${roomId}`); } catch (e) {}
-        
         if (zgRef.current) {
-            zgRef.current.stopPublishingStream(streamIdRef.current);
             if (localStream) zgRef.current.destroyStream(localStream);
             zgRef.current.logoutRoom(roomId);
         }
     }, [roomId, localStream]);
 
-    return { localStream, remoteStream, isMicMuted, isCamMuted, callStatus, toggleMic, toggleCam, hangUp };
+    return { localStream, remoteStreams, isMicMuted, isCamMuted, toggleMic, toggleCam, hangUp, callStatus };
 };

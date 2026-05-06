@@ -1,5 +1,5 @@
 // src/main.tsx
-import { createRoot } from 'react-dom/client'; // Bỏ StrictMode ở đây
+import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 import { AuthProvider } from '@/modules/auth/store/AuthContext';
@@ -13,6 +13,19 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 initAnalytics();
 
+// [THÊM MỚI] Đăng ký Service Worker cho Firebase chạy ngầm
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then((registration) => {
+        console.log('Service Worker đăng ký thành công với scope:', registration.scope);
+      })
+      .catch((err) => {
+        console.log('Service Worker đăng ký thất bại:', err);
+      });
+  });
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -23,7 +36,6 @@ const queryClient = new QueryClient({
 });
 
 createRoot(document.getElementById('root')!).render(
-  // XÓA <StrictMode> Ở ĐÂY
   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

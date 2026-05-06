@@ -41,7 +41,7 @@ export const useCheckinDetail = ({ checkin, onClose }: UseCheckinDetailProps) =>
         try {
             setIsMoving(true);
             await checkinService.updateCheckin(checkin.id, { journeyId: journeyId });
-            toast.success('Đã chuyển bài đăng vào Hành trình!');
+            toast.success('Đã chuyển bài đăng về hành trình!');
             setShowMoveMenu(false);
             onClose(); 
             window.location.reload(); 
@@ -114,7 +114,11 @@ export const useCheckinDetail = ({ checkin, onClose }: UseCheckinDetailProps) =>
         timestamp: safeTimestamp,
         reactionCount: checkin.reactionCount || 0,
         commentCount: checkin.commentCount || 0,
-        latestReactions: checkin.latestReactions || [] 
+        latestReactions: checkin.latestReactions || [],
+
+        // --- [SỬA LỖI] TRUYỀN THẺ HIỂN THỊ VÀ SPOTIFY VÀO ĐÂY ---
+        displayTag: checkin.displayTag,
+        spotifyTrackId: checkin.spotifyTrackId 
     };
 
     return {

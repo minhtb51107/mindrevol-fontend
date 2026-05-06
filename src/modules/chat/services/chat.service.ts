@@ -105,7 +105,6 @@ export const chatService = {
     return res.data.data || [];
   },
 
-  // [THÊM MỚI] Gọi API nhảy đến tin nhắn cũ
   jumpToMessage: async (conversationId: string, messageId: string, limit: number = 50): Promise<CursorPage<Message>> => {
     const res = await http.get(`/chat/conversations/${conversationId}/messages/jump`, {
         params: { messageId, limit }
